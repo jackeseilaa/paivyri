@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#1a1f3a;--surface:#242947;--card:#2d3358;--card2:#353c66;
+  --bg:#1a3a6c;--surface:#1e4582;--card:#234f94;--card2:#2a5aa6;
   --border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.22);
   --text:#f0f2ff;--muted:#9ba3cc;--dim:#5a6394;
   --accent:#5b8cff;--a2:#00e5a0;--warn:#ffb830;--danger:#ff5c7a;--pur:#b48aff;
@@ -20,7 +20,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px}
 body{display:flex;flex-direction:column;overscroll-behavior:none}
-.screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;gap:24px;background:linear-gradient(160deg,#1a1f3a,#0f1628)}
+.screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;gap:24px;background:linear-gradient(160deg,#1a3a6c,#0d2650)}
 .auth-logo{font-size:56px;filter:drop-shadow(0 0 20px rgba(91,140,255,.5))}
 .auth-title{font-size:28px;font-weight:700;color:#fff;letter-spacing:-.5px}
 .auth-sub{font-size:14px;color:var(--muted);text-align:center;line-height:1.7}
@@ -31,7 +31,7 @@ body{display:flex;flex-direction:column;overscroll-behavior:none}
 .spinner{width:40px;height:40px;border:3px solid rgba(91,140,255,.2);border-top-color:#5b8cff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* TOPBAR */
-.topbar{position:sticky;top:0;z-index:100;background:rgba(26,31,58,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:11px 16px 9px;display:flex;align-items:center;gap:10px}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(26,58,108,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:11px 16px 9px;display:flex;align-items:center;gap:10px}
 .topbar-brand{font-size:16px;font-weight:700;color:#fff}
 .topbar-date{font-family:var(--mono);font-size:12px;color:var(--accent);background:rgba(91,140,255,.15);border:1px solid rgba(91,140,255,.35);border-radius:8px;padding:5px 10px;cursor:pointer;font-weight:500}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -43,7 +43,7 @@ body{display:flex;flex-direction:column;overscroll-behavior:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .ubtn{width:30px;height:30px;border-radius:50%;background:rgba(91,140,255,.2);border:1px solid rgba(91,140,255,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent)}
 /* TIME BANNER */
-.tbanner{background:var(--surface);border-bottom:2px solid rgba(91,140,255,.2);padding:10px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:61px;z-index:98}
+.tbanner{background:#1e4582;border-bottom:2px solid rgba(91,140,255,.3);padding:10px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:61px;z-index:98}
 .tpill{display:flex;align-items:center;gap:6px;flex:1;background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:8px 10px}
 .tpill label{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.08em;white-space:nowrap;text-transform:uppercase}
 .tpill input[type=time]{background:none;border:none;color:#fff;font-family:var(--mono);font-size:15px;font-weight:500;outline:none;flex:1;min-width:0;-webkit-appearance:none;padding:0}
@@ -53,7 +53,7 @@ body{display:flex;flex-direction:column;overscroll-behavior:none}
 .dur-w{background:rgba(255,184,48,.18);color:var(--warn);border:1px solid rgba(255,184,48,.4)}
 .pvr-ab{font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;cursor:pointer;border:1px solid rgba(255,184,48,.5);background:rgba(255,184,48,.18);color:var(--warn);white-space:nowrap;display:none}
 /* TABS */
-.tabs{display:flex;overflow-x:auto;gap:2px;padding:0 8px;border-bottom:2px solid rgba(91,140,255,.15);scrollbar-width:none;position:sticky;top:119px;z-index:97;background:rgba(26,31,58,.98);backdrop-filter:blur(8px)}
+.tabs{display:flex;overflow-x:auto;gap:2px;padding:0 8px;border-bottom:2px solid rgba(91,140,255,.15);scrollbar-width:none;position:sticky;top:119px;z-index:97;background:rgba(26,58,108,.98);backdrop-filter:blur(8px)}
 .tabs::-webkit-scrollbar{display:none}
 .tab{font-family:var(--sans);font-size:12px;font-weight:700;white-space:nowrap;border:none;background:none;color:var(--muted);padding:12px 12px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
@@ -163,7 +163,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .modal-item-top{display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .modal-item-sub{font-size:12px;color:var(--muted)}
 /* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(26,31,58,.98);backdrop-filter:blur(20px);border-top:1.5px solid rgba(91,140,255,.2);padding:10px 8px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:4px}
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(26,58,108,.98);backdrop-filter:blur(20px);border-top:1.5px solid rgba(91,140,255,.2);padding:10px 8px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:4px}
 .nbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--dim);cursor:pointer;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.04em;padding:6px 3px;border-radius:12px;transition:all .15s}
 .nbtn.on{color:var(--accent);background:rgba(91,140,255,.15)}
 .nbtn svg{width:22px;height:22px}
@@ -188,7 +188,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="rgba(255,255,255,.85)" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="rgba(255,255,255,.7)" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="rgba(255,255,255,.9)" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
     Kirjaudu Google-tunnuksilla
   </button>
-  <div class="auth-note">Vain jacke.seilaa@gmail.com</div>
+  <div class="auth-note">Vain <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="315b50525a541f4254585d505071565c50585d1f525e5c">[email&#160;protected]</a></div>
   <div class="err" id="auth-err" style="display:none"></div>
 </div>
 
@@ -319,9 +319,31 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- 4 RAPORTIT -->
 <div class="panel" id="p4">
+
+  <!-- PÄIVÄRAHA AUTOMAATTI -->
   <div class="sec">
-    <div class="slbl">Päivän yhteenveto</div>
-    <div class="sgrid" id="stat-grid"></div>
+    <div class="slbl">⏰ Päiväraha — verottaja 2026</div>
+    <div class="card" id="pvr-auto-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div id="pvr-auto-status" style="font-size:20px;font-weight:700;color:#fff">—</div>
+          <div id="pvr-auto-rule" style="font-size:12px;color:var(--muted);margin-top:2px">Kirjaa kellonajat Matkat-välilehdellä</div>
+        </div>
+        <div id="pvr-auto-eur" style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--warn)">—</div>
+      </div>
+      <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--muted);line-height:1.7">
+        <strong style="color:var(--text)">Verottajan 2026 säännöt:</strong><br>
+        Osapäiväraha <strong style="color:var(--warn)">25 €</strong> — matka/työ yli 6h, yli 15km kodista/työpaikasta<br>
+        Kokopäiväraha <strong style="color:var(--warn)">54 €</strong> — matka/työ yli 10h<br>
+        Kilometrikorvaus <strong style="color:var(--a2)">0,55 €/km</strong> (2026)
+      </div>
+    </div>
+  </div>
+
+  <!-- KM ERITTELY -->
+  <div class="sec">
+    <div class="slbl">🚗 Kilometrierittely</div>
+    <div id="km-breakdown"></div>
   </div>
 
   <!-- OY MATKALASKU -->
@@ -578,7 +600,6 @@ function rdTrips(){
         <div class="field"><label>Tai syötä suoraan</label><input type="number" value="${t.km||''}" oninput="ST.trips[${i}].km=this.value;updTripKm(${i})" placeholder="km" min="0" step="1"/></div>
       </div>
       ${showCalc?`<div class="kmcalc" id="trip-km-calc-${i}"><span>Mittarista laskettu</span>${calc} km</div>`:`<div id="trip-km-calc-${i}"></div>`}
-      <a href="${esc(gcalUrl(t.from||'Ajomatka',curDate,t.ts||null,t.te||null,'['+t.role+'] '+(t.from||'')+' '+calc+'km'))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Kalenteriin</a>
     </div>`;}).join('');
 }
 
@@ -610,7 +631,6 @@ function rdSail(){
       </div>
       ${showCalc?`<div class="kmcalc" id="sail-km-calc-${i}"><span>Lokista laskettu</span>${calc} mpk</div>`:`<div id="sail-km-calc-${i}"></div>`}
       <div class="field"><label>Tarkoitus</label><input type="text" value="${esc(t.notes)}" oninput="ST.sails[${i}].notes=this.value;autoSave()" placeholder="kurssi, charter, siirtoajo..."/></div>
-      <a href="${esc(gcalUrl((t.notes||'Purjehdus')+' — Absolut 37',curDate,t.ts||null,t.te||null,'['+t.role+'] '+(t.from||'')+'→'+(t.to||'')+' '+calc+'km/mpk'))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Kalenteriin</a>
     </div>`;}).join('');
 }
 
@@ -641,7 +661,7 @@ function rdVisits(){
         <div class="field"><label>Käynnin aihe</label><input type="text" value="${esc(v.topic)}" oninput="ST.visits[${i}].topic=this.value;autoSave()" placeholder="tarjous, sopimus..."/></div>
       </div>
       <div class="field"><label>Muistiinpanot</label><textarea oninput="ST.visits[${i}].notes=this.value;autoSave()" style="min-height:52px">${esc(v.notes)}</textarea></div>
-      <a href="${esc(gcalUrl('Asiakaskäynti: '+(v.client||'asiakas'),curDate,v.ts||null,v.te||null,'Tmi meklaus · '+(v.client||'')+' / '+(v.contact||'')+' · '+(v.topic||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Kalenteriin</a>
+      <a href="${esc(gcalUrl((v.topic||'Asiakastapaaminen')+': '+(v.client||'asiakas'),curDate,v.ts||null,v.te||null,'Asiakaskäynti · '+(v.client||'')+' / '+(v.contact||'')+'\n'+(v.topic||'')+'\n'+(v.notes||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Lisää kalenteriin tapahtumana</a>
     </div>`;}).join('');
 }
 
@@ -681,26 +701,88 @@ function allTripsKm(role){
 }
 function sailKm(role){let km=0;ST.sails.filter(t=>!role||t.role===role).forEach(t=>km+=calcTripKm(t));return km;}
 
-// ── REPORTS ────────────────────────────────────────────
-function rdReports(){
-  rdStats();rdOyReport();rdTmiReport();
+// ── AUTO PÄIVÄRAHA (verottaja 2026) ────────────────────
+function calcAutoPvr(){
+  if(!ST.ts||!ST.te) return{min:0,pvr:0,label:'Ei kellonaikoja',rule:'Kirjaa aika Matkat-välilehdellä',color:''};
+  let d=toM(ST.te)-toM(ST.ts);if(d<0)d+=1440;
+  const h=Math.floor(d/60),m=d%60;
+  const ds=`${h}h${m>0?' '+m+'min':''}`;
+  if(d>600) return{min:d,pvr:54,label:'Kokopäiväraha 54 €',rule:`${ds} — yli 10h → kokopäiväraha`,color:'full'};
+  if(d>360) return{min:d,pvr:25,label:'Osapäiväraha 25 €',rule:`${ds} — yli 6h → osapäiväraha`,color:'on'};
+  return{min:d,pvr:0,label:'Ei päivärahaa',rule:`${ds} — alle 6h (raja: 6h)`,color:''};
 }
 
-function rdStats(){
-  const kmTmi=allTripsKm('Tmi'),kmOy=allTripsKm('Oy'),kmHlo=allTripsKm('Hlö');
-  const kmSail=sailKm(),pvr=getPvr();
-  const lOy=se(ST.bOy),lTmi=se(ST.bTmi),lS=se(ST.bSail);
-  let dur='—';if(ST.ts&&ST.te){let d=toM(ST.te)-toM(ST.ts);if(d<0)d+=1440;dur=`${Math.floor(d/60)}h${d%60>0?' '+d%60+'min':''}`;}
-  document.getElementById('stat-grid').innerHTML=`
-    <div class="stat wa"><div class="slb">⏰ Työaika</div><div class="svl">${dur}</div><div class="ssb">${ST.ts||'—'} – ${ST.te||'—'}</div></div>
-    <div class="stat wa"><div class="slb">💰 Päiväraha</div><div class="svl">${pvr} €</div><div class="ssb">${ST.pvrRole}</div></div>
-    <div class="stat gr"><div class="slb">🟢 Tmi km</div><div class="svl">${Math.round(kmTmi)} km</div><div class="ssb">vähennys ${(kmTmi*KM_RATE).toFixed(2)} €</div></div>
-    <div class="stat ac"><div class="slb">🔵 Oy km</div><div class="svl">${Math.round(kmOy)} km</div><div class="ssb">korvaus ${(kmOy*KM_RATE).toFixed(2)} €</div></div>
-    <div class="stat pu"><div class="slb">🟣 Omat km</div><div class="svl">${Math.round(kmHlo)} km</div><div class="ssb">ei korvausta</div></div>
-    <div class="stat ac"><div class="slb">⛵ Purjehdus</div><div class="svl">${Math.round(kmSail)} km</div><div class="ssb">lask. ${lS.toFixed(0)} €</div></div>
-    <div class="stat gr"><div class="slb">💶 Laskutus yht.</div><div class="svl">${(lOy+lTmi+lS).toFixed(0)} €</div><div class="ssb">Oy ${lOy.toFixed(0)} + Tmi ${lTmi.toFixed(0)} €</div></div>
-    <div class="stat gr"><div class="slb">📍 Km-korvaus</div><div class="svl">${((kmTmi+kmOy)*KM_RATE).toFixed(2)} €</div><div class="ssb">${Math.round(kmTmi+kmOy)} km × 0,55 €</div></div>`;
+// ── REPORTS ────────────────────────────────────────────
+function rdReports(){
+  rdPvrAutoCard();rdKmBreakdown();rdOyReport();rdTmiReport();
 }
+
+function rdPvrAutoCard(){
+  const auto=calcAutoPvr();
+  const manual=getPvr();
+  document.getElementById('pvr-auto-status').textContent=auto.label;
+  const eurEl=document.getElementById('pvr-auto-eur');
+  eurEl.textContent=auto.pvr>0?auto.pvr+' €':'0 €';
+  eurEl.style.color=auto.color==='full'?'var(--a2)':auto.pvr>0?'var(--warn)':'var(--dim)';
+  const card=document.getElementById('pvr-auto-card');
+  if(manual>0&&manual!==auto.pvr){
+    card.style.borderColor='rgba(255,92,122,.4)';
+    document.getElementById('pvr-auto-rule').innerHTML=
+      auto.rule+' <span style="color:var(--danger);font-size:11px">(manuaalisesti: '+manual+'€)</span>';
+  } else {
+    card.style.borderColor=auto.pvr>0?'rgba(255,184,48,.35)':'rgba(255,255,255,.12)';
+    document.getElementById('pvr-auto-rule').textContent=auto.rule;
+  }
+}
+
+function rdKmBreakdown(){
+  const kmTmi=allTripsKm('Tmi'),kmOy=allTripsKm('Oy'),kmHlo=allTripsKm('Hlö');
+  const kmSailOy=sailKm('Oy'),kmSailTmi=sailKm('Tmi');
+  const kmTotal=kmTmi+kmOy+kmHlo+kmSailOy+kmSailTmi;
+  let html='<div class="rpt-section">';
+  ST.trips.forEach(t=>{
+    const km=calcTripKm(t);
+    const korv=t.role!=='Hlö'?(km*KM_RATE).toFixed(2)+' €':'—';
+    const col=t.role==='Oy'?'var(--oy)':t.role==='Tmi'?'var(--tmi)':'var(--hlo)';
+    html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span>${esc(t.from||'Ajomatka')}</div><div style="font-size:11px;color:var(--dim)">${t.ts||''}${t.te?' – '+t.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${col}">${km} km</div><div style="font-size:11px;color:var(--muted)">${korv}</div></div></div>`;
+  });
+  ST.visits.forEach(v=>{
+    const km=calcVisitKm(v);
+    html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-tmi">Tmi</span>${esc(v.client||'Asiakaskäynti')}</div><div style="font-size:11px;color:var(--dim)">${v.ts||''}${v.te?' – '+v.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--tmi)">${km} km</div><div style="font-size:11px;color:var(--muted)">${(km*KM_RATE).toFixed(2)} €</div></div></div>`;
+  });
+  ST.sails.forEach(t=>{
+    const km=calcTripKm(t);
+    const col=t.role==='Oy'?'var(--oy)':'var(--tmi)';
+    html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span>⛵ ${esc(t.from||'Purjehdus')}</div><div style="font-size:11px;color:var(--dim)">${t.ts||''}${t.te?' – '+t.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${col}">${km} mpk</div><div style="font-size:11px;color:var(--muted)">${(km*KM_RATE).toFixed(2)} €</div></div></div>`;
+  });
+  if(!ST.trips.length&&!ST.visits.length&&!ST.sails.length)
+    html+='<div style="color:var(--dim);font-size:13px;padding:8px 0">Ei matkoja — lisää Matkat-välilehdellä.</div>';
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:2px solid var(--border2)">
+    <div style="background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);border-radius:10px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟢 Tmi</div>
+      <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--tmi)">${Math.round(kmTmi+kmSailTmi)} km</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">= ${((kmTmi+kmSailTmi)*KM_RATE).toFixed(2)} €</div>
+    </div>
+    <div style="background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.3);border-radius:10px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase;margin-bottom:4px">🔵 Oy</div>
+      <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--oy)">${Math.round(kmOy+kmSailOy)} km</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">= ${((kmOy+kmSailOy)*KM_RATE).toFixed(2)} €</div>
+    </div>
+    <div style="background:rgba(180,138,255,.1);border:1px solid rgba(180,138,255,.3);border-radius:10px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟣 Oma</div>
+      <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--hlo)">${Math.round(kmHlo)} km</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">ei korv.</div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,.05);border-radius:10px">
+    <span style="font-size:13px;font-weight:700;color:var(--text)">Kaikki km yhteensä</span>
+    <span style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--a2)">${Math.round(kmTotal)} km</span>
+  </div>`;
+  html+='</div>';
+  document.getElementById('km-breakdown').innerHTML=html;
+}
+
+function rdStats(){}
 
 function rdOyReport(){
   const kmOy=allTripsKm('Oy');
@@ -1038,9 +1120,4 @@ window.doCopy=()=>{
 
 // ── UTILS ──────────────────────────────────────────────
 function se(a){return a.reduce((s,b)=>s+(parseFloat(b.eur)||0),0);}
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000);}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-window.esc=esc;
-</script>
-</body>
-</html>
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');cl
