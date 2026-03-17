@@ -4,2425 +4,817 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Päivyri"/>
-<meta name="theme-color" content="#1e3f6e"/>
+<meta name="theme-color" content="#0f1117"/>
 <title>Päivyri</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#eef2ff;--surface:#f8faff;--card:#ffffff;
-  --navy:#1e3f6e;--navy2:#2a5296;
-  --border:rgba(30,63,110,.15);--border2:rgba(30,63,110,.25);
-  --text:#1a2a4a;--muted:#4a6080;--dim:#8a9bb0;
-  --accent:#3b6fd4;--a2:#00a878;--warn:#d4860a;--danger:#cc2244;
-  --oy:#3b6fd4;--tmi:#00a878;--hlo:#7c5cbf;
-  --mono:'DM Mono',monospace;--sans:'Sora',sans-serif;
-  --r:14px;--r2:10px;
+  --bg:#0f1117;--surface:#181c27;--card:#1e2333;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#e8eaf0;--muted:#7a8099;--dim:#4a5068;
+  --accent:#4f9cf9;--accent2:#38d9a9;--warn:#f59e0b;--danger:#f87171;
+  --oy:#4f9cf9;--tmi:#38d9a9;--hlo:#a78bfa;
+  --mono:'DM Mono',monospace;--sans:'Sora',sans-serif;--r:14px;--r2:10px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;overscroll-behavior:none}
-body{display:flex;flex-direction:column}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px}
+body{display:flex;flex-direction:column;overscroll-behavior:none}
 
-/* LOADING / AUTH */
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:linear-gradient(160deg,#1e3f6e,#0d2650);z-index:1000}
-.spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+.loading-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(–muted);font-size:14px}
+.spinner{width:32px;height:32px;border:2px solid var(–border2);border-top-color:var(–accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.screen-title{font-size:26px;font-weight:700;color:#fff}
-.screen-sub{font-size:13px;color:rgba(255,255,255,.6);text-align:center}
-.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1a2a4a;border:none;border-radius:12px;padding:14px 28px;font-family:var(–sans);font-size:15px;font-weight:700;cursor:pointer;width:100%;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-.auth-err{font-size:13px;color:#ffaaaa;text-align:center;max-width:300px}
 
-/* APP */
-#app{flex:1;display:flex;flex-direction:column;height:100%;overflow:hidden}
+.auth-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:24px}
+.auth-logo{font-size:40px}
+.auth-title{font-size:24px;font-weight:600;text-align:center}
+.auth-sub{font-size:14px;color:var(–muted);text-align:center;line-height:1.6}
+.btn-google{display:inline-flex;align-items:center;gap:12px;background:#fff;color:#1a1a2e;border:none;border-radius:12px;padding:14px 28px;font-family:var(–sans);font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);width:100%;max-width:320px;justify-content:center}
+.auth-note{font-size:12px;color:var(–dim);text-align:center}
+.auth-error{font-size:13px;color:var(–danger);text-align:center;padding:10px 16px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:var(–r2)}
 
-/* TOPBAR */
-.topbar{background:var(–navy);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
-.t-brand{font-size:15px;font-weight:700;color:#fff}
-.t-date{font-family:var(–mono);font-size:12px;color:rgba(255,255,255,.8);background:rgba(255,255,255,.15);border-radius:8px;padding:5px 10px;cursor:pointer}
-.t-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.sdot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)}
-.sdot.ok{background:#00e5a0;box-shadow:0 0 6px #00e5a0}
-.sdot.busy{background:#ffb830;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.btn-save{font-family:var(–sans);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:6px 14px;cursor:pointer}
-.btn-logout{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(15,17,23,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(–border);padding:10px 14px 8px;display:flex;align-items:center;gap:8px}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-date{font-family:var(–mono);font-size:12px;color:var(–accent);background:rgba(79,156,249,0.1);border:1px solid rgba(79,156,249,0.25);border-radius:8px;padding:4px 9px;cursor:pointer}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.save-btn{font-family:var(–sans);font-size:13px;font-weight:600;background:var(–accent);color:#fff;border:none;border-radius:8px;padding:6px 13px;cursor:pointer}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(–dim);flex-shrink:0}
+.sync-dot.synced{background:var(–accent2)}
+.sync-dot.syncing{background:var(–warn);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.user-btn{width:28px;height:28px;border-radius:50%;background:var(–surface);border:1px solid var(–border2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(–muted)}
 
-/* TIME BANNER */
-.tbanner{background:var(–navy2);padding:8px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
-.tpill{display:flex;align-items:center;gap:6px;flex:1;background:rgba(255,255,255,.12);border-radius:10px;padding:7px 10px}
-.tpill label{font-size:10px;color:rgba(255,255,255,.6);font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.tpill input[type=time]{background:none;border:none;color:#fff;font-family:var(–mono);font-size:14px;outline:none;flex:1;min-width:0}
-.dur-badge{font-family:var(–mono);font-size:11px;font-weight:600;padding:4px 8px;border-radius:16px;white-space:nowrap;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)}
-.dur-badge.ok{background:rgba(0,229,160,.25);color:#00e5a0}
-.dur-badge.warn{background:rgba(255,184,48,.25);color:#ffb830}
-.pvr-hint{font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;background:rgba(255,184,48,.2);color:#ffb830;cursor:pointer;white-space:nowrap;display:none}
+.time-banner{background:var(–surface);border-bottom:1px solid var(–border);padding:9px 14px;display:flex;align-items:center;gap:8px;position:sticky;top:57px;z-index:98}
+.time-pill{display:flex;align-items:center;gap:5px;flex:1;background:var(–card);border:1px solid var(–border2);border-radius:10px;padding:7px 9px}
+.time-pill label{font-size:10px;color:var(–muted);font-weight:600;letter-spacing:.06em;white-space:nowrap}
+.time-pill input[type=time]{background:none;border:none;color:var(–text);font-family:var(–mono);font-size:14px;outline:none;width:auto;padding:0;flex:1;min-width:0;-webkit-appearance:none}
+.dur-badge{font-family:var(–mono);font-size:12px;font-weight:500;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.dur-ok{background:rgba(56,217,169,.15);color:var(–accent2);border:1px solid rgba(56,217,169,.3)}
+.dur-warn{background:rgba(245,158,11,.15);color:var(–warn);border:1px solid rgba(245,158,11,.3)}
+.dur-gray{background:rgba(255,255,255,.05);color:var(–muted);border:1px solid var(–border2)}
+.dieta-suggest-btn{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;cursor:pointer;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(–warn);white-space:nowrap}
 
-/* TABS */
-.tabs{background:#fff;border-bottom:2px solid var(–border);display:flex;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.tabs{display:flex;overflow-x:auto;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(–border);scrollbar-width:none;position:sticky;top:113px;z-index:97;background:rgba(15,17,23,0.97);backdrop-filter:blur(8px)}
 .tabs::-webkit-scrollbar{display:none}
-.tab{font-size:12px;font-weight:700;white-space:nowrap;border:none;background:none;color:var(–muted);padding:11px 13px;cursor:pointer;border-bottom:3px solid transparent;flex-shrink:0}
-.tab.on{color:var(–accent);border-bottom-color:var(–accent)}
+.tab{font-family:var(–sans);font-size:12px;font-weight:600;white-space:nowrap;border:none;background:none;color:var(–muted);padding:5px 11px 9px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(–accent);border-bottom-color:var(–accent)}
 
-/* CONTENT */
-.content{flex:1;overflow-y:auto;padding:14px 14px 110px;background:var(–bg)}
-.panel{display:none}.panel.on{display:block}
-.sec{margin-bottom:18px}
-.slbl{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(–accent);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:5px}
-.slbl::before{content:’’;width:3px;height:13px;background:var(–accent);border-radius:2px;display:inline-block}
-.card{background:#fff;border:1px solid var(–border);border-radius:var(–r);padding:13px;margin-bottom:10px;box-shadow:0 1px 4px rgba(30,63,110,.07)}
+.content{flex:1;overflow-y:auto;padding:12px 12px 110px}
+.panel{display:none}.panel.active{display:block}
+.section{margin-bottom:14px}
+.sec-label{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(–dim);text-transform:uppercase;margin-bottom:8px;padding-left:2px}
+.card{background:var(–card);border:1px solid var(–border);border-radius:var(–r);padding:12px 13px;margin-bottom:8px;position:relative}
 
-/* FORMS */
-.field{margin-bottom:9px}
-.field:last-child{margin-bottom:0}
-.field label{font-size:10px;color:var(–muted);display:block;margin-bottom:3px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
-width:100%;background:#f4f7ff;color:var(–text);border:1.5px solid var(–border2);
-border-radius:var(–r2);padding:9px 11px;font-family:var(–sans);font-size:14px;
-outline:none;-webkit-appearance:none;transition:border-color .15s}
-input:focus,select:focus,textarea:focus{border-color:var(–accent);background:#fff}
+.field{margin-bottom:9px}.field:last-child{margin-bottom:0}
+.field label{font-size:11px;color:var(–muted);display:block;margin-bottom:3px;font-weight:500}
+input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{width:100%;background:var(–surface);color:var(–text);border:1px solid var(–border2);border-radius:var(–r2);padding:9px 11px;font-family:var(–sans);font-size:15px;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(–accent)}
 textarea{resize:none;min-height:64px;line-height:1.5}
-select{background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘10’ height=‘10’ fill=’%234a6080’ viewBox=‘0 0 16 16’%3E%3Cpath d=‘M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+select{background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘12’ fill=’%237a8099’ viewBox=‘0 0 16 16’%3E%3Cpath d=‘M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.row-km{display:grid;grid-template-columns:1fr 68px;gap:8px}
+.row-time{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 
-/* ROLE SELECTOR */
-.rsel{display:flex;gap:6px;margin-bottom:10px}
-.rbtn{flex:1;font-size:12px;font-weight:700;padding:7px 4px;border-radius:20px;border:1.5px solid var(–border2);background:none;color:var(–muted);cursor:pointer;text-align:center}
-.rbtn.oy.on{background:rgba(59,111,212,.12);border-color:var(–oy);color:var(–oy)}
-.rbtn.tmi.on{background:rgba(0,168,120,.1);border-color:var(–tmi);color:var(–tmi)}
-.rbtn.hlo.on{background:rgba(124,92,191,.1);border-color:var(–hlo);color:var(–hlo)}
+.role-sel{display:flex;gap:5px;margin-bottom:9px}
+.role-btn{flex:1;font-family:var(–sans);font-size:12px;font-weight:600;padding:7px 4px;border-radius:20px;border:1px solid var(–border2);background:none;color:var(–muted);cursor:pointer;transition:all .15s;text-align:center}
+.role-btn.r-oy.active{background:rgba(79,156,249,.15);border-color:rgba(79,156,249,.4);color:var(–oy)}
+.role-btn.r-tmi.active{background:rgba(56,217,169,.15);border-color:rgba(56,217,169,.4);color:var(–tmi)}
+.role-btn.r-hlo.active{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.4);color:var(–hlo)}
 
-/* BADGES */
-.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px}
-.b-oy{background:rgba(59,111,212,.12);color:var(–oy);border:1px solid rgba(59,111,212,.3)}
-.b-tmi{background:rgba(0,168,120,.1);color:var(–tmi);border:1px solid rgba(0,168,120,.3)}
-.b-hlo,.b-hlö,.b-oma{background:rgba(124,92,191,.1);color:var(–hlo);border:1px solid rgba(124,92,191,.3)}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;letter-spacing:.05em}
+.badge-oy{background:rgba(79,156,249,.15);color:var(–oy);border:1px solid rgba(79,156,249,.3)}
+.badge-tmi{background:rgba(56,217,169,.15);color:var(–tmi);border:1px solid rgba(56,217,169,.3)}
+.badge-hlö,.badge-hlo{background:rgba(167,139,250,.15);color:var(–hlo);border:1px solid rgba(167,139,250,.3)}
 
-/* ADD BUTTON */
-.abtn{width:100%;background:rgba(59,111,212,.06);border:1.5px dashed rgba(59,111,212,.3);border-radius:var(–r);color:var(–accent);font-family:var(–sans);font-size:13px;font-weight:600;padding:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
-.abtn:active{background:rgba(59,111,212,.14)}
+.task-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(–card);border:1px solid var(–border);border-radius:var(–r2);margin-bottom:6px;cursor:pointer}
+.task-row.done{opacity:.5}
+.task-row.done .task-text{text-decoration:line-through}
+.task-check{width:20px;height:20px;border-radius:50%;border:2px solid var(–border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.task-row.done .task-check{background:var(–accent2);border-color:var(–accent2)}
+.task-check svg{display:none}
+.task-row.done .task-check svg{display:block}
+.task-text{flex:1;font-size:14px}
 
-/* KM CALC */
-.kmcalc{background:rgba(0,168,120,.08);border:1px solid rgba(0,168,120,.25);border-radius:var(–r2);padding:8px 12px;font-family:var(–mono);font-size:13px;font-weight:700;color:var(–tmi);margin-top:6px;display:flex;align-items:center;justify-content:space-between}
-.kmcalc span{font-size:11px;color:var(–muted);font-family:var(–sans);font-weight:500}
+.rm{position:absolute;top:10px;right:10px;background:none;border:none;color:var(–dim);font-size:18px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:6px}
+.rm:active{color:var(–danger)}
 
-/* TASK ROW */
-.trow{display:flex;align-items:center;gap:9px;padding:11px 13px;background:#fff;border:1.5px solid var(–border);border-radius:var(–r2);margin-bottom:7px;cursor:pointer}
-.trow.done{opacity:.45}.trow.done .ttxt{text-decoration:line-through}
-.chk{width:20px;height:20px;border-radius:50%;border:2px solid var(–dim);flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.trow.done .chk{background:var(–a2);border-color:var(–a2)}
-.ttxt{flex:1;font-size:14px}
+.add-btn{width:100%;background:rgba(255,255,255,.03);border:1px dashed var(–border2);border-radius:var(–r);color:var(–muted);font-family:var(–sans);font-size:13px;padding:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.add-btn:active{background:rgba(79,156,249,.08);border-color:rgba(79,156,249,.4);color:var(–accent)}
 
-/* QADD */
-.qadd{display:flex;gap:7px;margin-bottom:11px}
-.qadd input{flex:1}
-.qadd select{width:78px;flex-shrink:0}
-.qadd button{background:var(–accent);border:none;color:#fff;border-radius:var(–r2);padding:0 14px;font-size:20px;cursor:pointer;flex-shrink:0}
+.gcal-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(–sans);font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(–border2);background:var(–surface);color:var(–text);cursor:pointer;text-decoration:none;margin-top:8px;transition:all .15s}
+.gcal-btn:hover{border-color:#4285F4;color:#4285F4}
+.gcal-btn.added{background:rgba(56,217,169,.1);border-color:rgba(56,217,169,.4);color:var(–accent2)}
 
-/* DELETE BTN */
-.del-btn{width:100%;margin-top:9px;font-family:var(–sans);font-size:12px;font-weight:700;padding:8px;border-radius:8px;border:1.5px solid rgba(204,34,68,.35);background:rgba(204,34,68,.06);color:var(–danger);cursor:pointer}
-
-/* REPORT */
-.rpt-box{background:#fff;border:1px solid var(–border);border-radius:var(–r);padding:13px;margin-bottom:10px}
-.rpt-title{font-size:13px;font-weight:700;color:var(–text);margin-bottom:10px}
-.rpt-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(–border)}
-.rpt-row:last-child{border-bottom:none}
-.rpt-lbl{font-size:13px;color:var(–muted)}
-.rpt-val{font-family:var(–mono);font-size:13px;font-weight:600;color:var(–text);text-align:right}
-.rpt-total{display:flex;justify-content:space-between;padding:9px 0 0;margin-top:5px;border-top:2px solid var(–border2)}
-.rpt-total .rpt-lbl{font-weight:700;color:var(–text);font-size:14px}
-.rpt-total .rpt-val{font-size:15px;color:var(–a2)}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
-.stat{background:#fff;border:1px solid var(–border);border-radius:var(–r);padding:12px}
-.stat-lbl{font-size:10px;color:var(–muted);font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px}
-.stat-val{font-family:var(–mono);font-size:20px;font-weight:600;color:var(–text)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.stat-card{background:var(–card);border:1px solid var(–border);border-radius:var(–r);padding:12px 13px}
+.stat-label{font-size:10px;color:var(–muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.stat-val{font-family:var(–mono);font-size:20px;font-weight:500}
 .stat-sub{font-size:11px;color:var(–dim);margin-top:2px}
-.stat.ac{border-color:rgba(59,111,212,.3);background:linear-gradient(135deg,rgba(59,111,212,.06),#fff)}.stat.ac .stat-val{color:var(–oy)}
-.stat.gr{border-color:rgba(0,168,120,.25);background:linear-gradient(135deg,rgba(0,168,120,.07),#fff)}.stat.gr .stat-val{color:var(–tmi)}
-.stat.wa{border-color:rgba(212,134,10,.3);background:linear-gradient(135deg,rgba(212,134,10,.07),#fff)}.stat.wa .stat-val{color:var(–warn)}
-.stat.pu{border-color:rgba(124,92,191,.25);background:linear-gradient(135deg,rgba(124,92,191,.07),#fff)}.stat.pu .stat-val{color:var(–hlo)}
+.stat-card.accent{border-color:rgba(79,156,249,.3)}.stat-card.accent .stat-val{color:var(–accent)}
+.stat-card.green{border-color:rgba(56,217,169,.3)}.stat-card.green .stat-val{color:var(–accent2)}
+.stat-card.warn{border-color:rgba(245,158,11,.3)}.stat-card.warn .stat-val{color:var(–warn)}
 
-/* HIST */
-.hrow{display:flex;align-items:center;gap:10px;padding:11px 13px;background:#fff;border:1.5px solid var(–border);border-radius:var(–r2);margin-bottom:7px;cursor:pointer}
-.hdate{font-family:var(–mono);font-size:12px;color:var(–accent);font-weight:600;min-width:85px}
-.hinfo{flex:1;font-size:12px;color:var(–muted)}
-.hbadges{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.dieta-box{margin-top:8px;padding:10px 12px;border-radius:var(–r2);font-size:13px;font-weight:600;background:rgba(255,255,255,.04);border:1px solid var(–border);color:var(–dim)}
+.dieta-box.on{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);color:var(–warn)}
+.dieta-box.full{background:rgba(56,217,169,.1);border-color:rgba(56,217,169,.25);color:var(–accent2)}
 
-/* MODAL */
-.overlay{position:fixed;inset:0;background:rgba(10,20,50,.6);z-index:400;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
-.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;padding:18px 16px 36px;position:relative}
-.modal-handle{width:36px;height:4px;background:var(–border2);border-radius:2px;margin:0 auto 16px}
-.modal-close{position:absolute;top:16px;right:16px;background:var(–bg);border:none;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;color:var(–muted)}
-.modal-title{font-size:17px;font-weight:700;color:var(–text);margin-bottom:3px}
-.modal-date{font-family:var(–mono);font-size:12px;color:var(–accent);margin-bottom:14px}
-.msec{margin-bottom:14px}
-.msec-title{font-size:10px;font-weight:700;letter-spacing:.09em;color:var(–accent);text-transform:uppercase;margin-bottom:7px}
-.mitem{padding:8px 10px;background:var(–bg);border-radius:8px;margin-bottom:5px;font-size:13px}
+.quick-add{display:flex;gap:7px;margin-bottom:10px}
+.quick-add input{flex:1}
+.quick-add select{width:78px;flex-shrink:0}
+.quick-add button{background:var(–accent);border:none;color:#fff;border-radius:var(–r2);padding:0 13px;font-size:20px;cursor:pointer;flex-shrink:0}
 
-/* APK */
-.apk-etappi{border-left:4px solid var(–oy)}
-.apk-etappi.tmi{border-left-color:var(–tmi)}
-.apk-etappi.oma{border-left-color:var(–hlo)}
+.export-card{background:var(–card);border:1px solid var(–border);border-radius:var(–r);padding:15px;margin-bottom:10px}
+.export-title{font-size:13px;font-weight:600;margin-bottom:5px}
+.export-sub{font-size:12px;color:var(–muted);margin-bottom:11px;line-height:1.5}
+.export-btn{width:100%;background:var(–surface);border:1px solid var(–border2);color:var(–text);font-family:var(–sans);font-size:14px;font-weight:600;padding:11px;border-radius:var(–r2);cursor:pointer}
+.export-btn:active{opacity:.7}
+.export-btn.primary{background:var(–accent);border-color:transparent;color:#fff;margin-bottom:8px}
 
-/* PVRRAJA */
-.pvr-box{margin-top:8px;padding:10px 12px;border-radius:var(–r2);font-size:13px;font-weight:600;background:var(–bg);border:1px solid var(–border);color:var(–muted)}
-.pvr-box.osa{background:rgba(212,134,10,.08);border-color:rgba(212,134,10,.3);color:var(–warn)}
-.pvr-box.koko{background:rgba(0,168,120,.08);border-color:rgba(0,168,120,.3);color:var(–tmi)}
+.hist-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(–card);border:1px solid var(–border);border-radius:var(–r2);margin-bottom:6px;cursor:pointer}
+.hist-date{font-family:var(–mono);font-size:13px;color:var(–accent)}
+.hist-info{flex:1;font-size:12px;color:var(–muted)}
+.hist-arr{color:var(–dim);font-size:16px}
 
-/* EXPORT */
-.ebtn{width:100%;background:var(–bg);border:1.5px solid var(–border2);color:var(–text);font-family:var(–sans);font-size:13px;font-weight:600;padding:11px;border-radius:var(–r2);cursor:pointer;margin-bottom:7px;text-align:left}
-.ebtn.pr{background:var(–accent);border-color:transparent;color:#fff;text-align:center}
-.ebtn:last-child{margin-bottom:0}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(24,28,39,0.97);backdrop-filter:blur(16px);border-top:1px solid var(–border);padding:9px 6px;padding-bottom:max(9px,env(safe-area-inset-bottom));display:flex;gap:3px}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(–dim);cursor:pointer;font-family:var(–sans);font-size:10px;font-weight:600;letter-spacing:.04em;padding:5px 3px;border-radius:10px;transition:all .15s}
+.nav-btn.active{color:var(–accent);background:rgba(79,156,249,.1)}
+.nav-btn svg{width:20px;height:20px}
 
-/* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(–navy);border-top:1px solid rgba(255,255,255,.1);padding:8px 4px;padding-bottom:max(8px,env(safe-area-inset-bottom));display:flex;gap:2px}
-.nbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:rgba(255,255,255,.45);cursor:pointer;font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:.04em;padding:5px 2px;border-radius:10px}
-.nbtn.on{color:#fff;background:rgba(255,255,255,.15)}
-.nbtn svg{width:20px;height:20px}
-
-/* TOAST */
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(12px);background:#1a2a4a;color:#fff;font-size:13px;font-weight:600;padding:7px 18px;border-radius:18px;opacity:0;transition:all .25s;z-index:500;pointer-events:none;white-space:nowrap}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(16px);background:var(–accent2);color:#0a2a22;font-size:13px;font-weight:600;padding:7px 18px;border-radius:20px;opacity:0;transition:all .3s;z-index:300;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#date-inp{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-.gcal-a{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid rgba(59,111,212,.3);background:rgba(59,111,212,.07);color:var(–accent);text-decoration:none;margin-top:8px}
+
+#date-input-hidden{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
 </style>
 
 </head>
 <body>
 
-<!-- LOADING -->
-
-<div class="screen" id="s-load">
+<div class="loading-screen" id="loading-screen">
   <div class="spinner"></div>
-  <div style="color:rgba(255,255,255,.6);font-size:14px">Ladataan...</div>
+  <span>Ladataan...</span>
 </div>
 
-<!-- AUTH -->
-
-<div class="screen" id="s-auth" style="display:none">
-  <div style="font-size:52px">📋</div>
-  <div class="screen-title">Päivyri</div>
-  <div class="screen-sub">Jarmo Aaltosen työpäiväkirja</div>
-  <button class="btn-google" id="btn-login">
-    <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+<div class="auth-screen" id="auth-screen" style="display:none">
+  <div class="auth-logo">📋</div>
+  <div class="auth-title">Päivyri</div>
+  <div class="auth-sub">Jarmo Aaltosen päivittäinen kirjaustyökalu.<br>Kirjaudu sisään Google-tunnuksilla.</div>
+  <button class="btn-google" id="btn-google">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
     Kirjaudu Google-tunnuksilla
   </button>
-  <div id="s-auth-note" style="font-size:12px;color:rgba(255,255,255,.4)"></div>
-  <div id="auth-err" class="auth-err" style="display:none"></div>
+  <div class="auth-note">Vain jacke.seilaa@gmail.com voi kirjautua sisään.</div>
+  <div class="auth-error" id="auth-error" style="display:none"></div>
 </div>
 
-<!-- APP -->
-
-<div id="app" style="display:none">
+<div id="app" style="display:none;flex:1;flex-direction:column;height:100%;overflow:hidden">
 
 <div class="topbar">
-  <div class="t-brand">📋 Päivyri</div>
-  <div class="t-date" id="d-disp" onclick="openDP()">—</div>
-  <input type="date" id="date-inp" onchange="changeDate(this.value)"/>
-  <div class="t-right">
-    <div class="sdot" id="sdot"></div>
-    <button class="btn-save" onclick="saveDay()">Tallenna</button>
-    <button class="btn-logout" onclick="doLogout()">⏻</button>
+  <div class="topbar-title">Päivyri</div>
+  <div class="topbar-date" onclick="openDatePicker()" id="date-display">—</div>
+  <input type="date" id="date-input-hidden" onchange="changeDate(this.value)"/>
+  <div class="topbar-right">
+    <div class="sync-dot" id="sync-dot"></div>
+    <button class="save-btn" id="save-btn" onclick="saveDay()">Tallenna</button>
+    <div class="user-btn" onclick="doLogout()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    </div>
   </div>
 </div>
 
-<div class="tbanner">
-  <div class="tpill"><label>Alkoi</label><input type="time" id="t-start" oninput="onTime()"/></div>
-  <div class="tpill"><label>Loppui</label><input type="time" id="t-end" oninput="onTime()"/></div>
-  <div class="dur-badge" id="dur-badge">—</div>
-  <button class="pvr-hint" id="pvr-hint" onclick="applyPvrHint()">Pvr ✓</button>
+<div class="time-banner">
+  <div class="time-pill">
+    <label>ALKU</label>
+    <input type="time" id="time-start" oninput="onTimeChange()"/>
+  </div>
+  <div class="time-pill">
+    <label>LOPPU</label>
+    <input type="time" id="time-end" oninput="onTimeChange()"/>
+  </div>
+  <div class="dur-badge dur-gray" id="dur-badge">—</div>
+  <button class="dieta-suggest-btn" id="dieta-suggest-btn" style="display:none" onclick="applyAutoDieta()">Pvr ✓</button>
 </div>
 
-<div class="tabs" id="tabs">
-  <button class="tab on" onclick="goTab(0)">✅ Tehtävät</button>
-  <button class="tab" onclick="goTab(1)">🚗 Matkat</button>
-  <button class="tab" onclick="goTab(2)">👤 Asiakkaat</button>
-  <button class="tab" onclick="goTab(3)">💶 Laskutus</button>
-  <button class="tab" onclick="goTab(4)">📊 Raportit</button>
-  <button class="tab" onclick="goTab(5)">📅 Historia</button>
-  <button class="tab" onclick="goTab(6)">🚘 Ajopvk</button>
+<div class="tabs">
+  <button class="tab active" onclick="switchTab(0)">Tehtävät</button>
+  <button class="tab" onclick="switchTab(1)">Matkat</button>
+  <button class="tab" onclick="switchTab(2)">Asiakkaat</button>
+  <button class="tab" onclick="switchTab(3)">Laskutus</button>
+  <button class="tab" onclick="switchTab(4)">Yhteenveto</button>
+  <button class="tab" onclick="switchTab(5)">Historia</button>
 </div>
 
 <div class="content">
 
-<!-- 0 TEHTÄVÄT -->
-
-<div class="panel on" id="p0">
-  <div class="sec">
-    <div class="slbl">Uusi tehtävä</div>
-    <div class="qadd">
-      <input type="text" id="ntxt" placeholder="Tehtävä..."/>
-      <select id="nrole"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Hlö">Hlö</option></select>
+<div class="panel active" id="panel-0">
+  <div class="section">
+    <div class="sec-label">Uusi tehtävä</div>
+    <div class="quick-add">
+      <input type="text" id="new-task-txt" placeholder="Tehtävä..."/>
+      <select id="new-task-role"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Hlö">Hlö</option></select>
       <button onclick="addTask()">+</button>
     </div>
-    <div id="task-list"></div>
+  </div>
+  <div class="section">
+    <div class="sec-label">Päivän lista</div>
+    <div id="tasks-list"></div>
   </div>
 </div>
 
-<!-- 1 MATKAT -->
-
-<div class="panel" id="p1">
-  <div class="sec">
-    <div class="slbl">Ajomatkat</div>
-    <div id="trip-list"></div>
-    <button class="abtn" onclick="addTrip()">＋ Lisää ajomatka</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Purjehdus — Absolut 37</div>
-    <div id="sail-list"></div>
-    <button class="abtn" onclick="addSail()">＋ Lisää purjehdusmatka</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Kotimatkat (ei verovähennystä)</div>
+<div class="panel" id="panel-1">
+  <div class="section">
+    <div class="sec-label">Koti ↔ Toimipaikka (tiedoksi)</div>
     <div class="card">
-      <div class="r2">
-        <div class="field"><label>Meno km</label><input type="number" id="ckm" min="0" step="1" placeholder="km" oninput="autoSave()"/></div>
-        <div class="field"><label>Paluu km</label><input type="number" id="ckmr" min="0" step="1" placeholder="km" oninput="autoSave()"/></div>
+      <div class="row2">
+        <div class="field"><label>Meno km</label><input type="number" id="comm-km" min="0" step="1" placeholder="km" oninput="autoSave()"/></div>
+        <div class="field"><label>Paluu km</label><input type="number" id="comm-km-r" min="0" step="1" placeholder="km" oninput="autoSave()"/></div>
       </div>
     </div>
   </div>
-  <div class="sec">
-    <div class="slbl">Päiväraha</div>
+  <div class="section">
+    <div class="sec-label">Ajomatkat — valitse kohdistus</div>
+    <div id="trips-list"></div>
+    <button class="add-btn" onclick="addTrip()">＋ Lisää ajomatka</button>
+  </div>
+  <div class="section">
+    <div class="sec-label">Purjehdusmatkat</div>
+    <div id="trips-sail-list"></div>
+    <button class="add-btn" onclick="addSail()">＋ Lisää purjehdusmatka</button>
+  </div>
+  <div class="section">
+    <div class="sec-label">Päiväraha</div>
     <div class="card">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="rbtn" id="d-ei" onclick="setPvr('ei')" style="flex:none;padding:7px 12px">Ei pvr</button>
-        <button class="rbtn" id="d-osa" onclick="setPvr('osa')" style="flex:none;padding:7px 12px">Osa 25€</button>
-        <button class="rbtn" id="d-koko" onclick="setPvr('koko')" style="flex:none;padding:7px 12px">Koko 54€</button>
-        <button class="rbtn" id="d-ulk" onclick="setPvr('ulk')" style="flex:none;padding:7px 12px">Ulkomaan</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="role-btn" onclick="setDieta('ei')" id="d-ei" style="border-radius:20px;flex:none;padding:6px 11px">Ei pvr</button>
+        <button class="role-btn r-tmi" onclick="setDieta('osa')" id="d-osa" style="border-radius:20px;flex:none;padding:6px 11px">Osa 25 €</button>
+        <button class="role-btn r-oy" onclick="setDieta('koko')" id="d-koko" style="border-radius:20px;flex:none;padding:6px 11px">Koko 54 €</button>
+        <button class="role-btn r-hlo" onclick="setDieta('ulk')" id="d-ulk" style="border-radius:20px;flex:none;padding:6px 11px">Ulkomaan</button>
       </div>
-      <div class="r2">
+      <div class="row2">
         <div class="field"><label>Kohdistus</label>
-          <select id="pvr-role" onchange="autoSave()">
+          <select id="dieta-role" onchange="autoSave();updateDietaBox()">
             <option value="Oy">AJarmo Oy</option>
-            <option value="Tmi">Tmi</option>
-            <option value="Hlo">Hlö</option>
+            <option value="Tmi">Tmi (verovähennys)</option>
+            <option value="Hlo">Henkilökohtainen</option>
           </select>
         </div>
-        <div class="field" id="ulk-wrap" style="display:none">
-          <label>Ulkomaan € </label>
-          <input type="number" id="ulk-eur" min="0" step="0.01" oninput="autoSave()"/>
+        <div class="field" id="ulk-field" style="display:none">
+          <label>Ulkomaan pvr €</label>
+          <input type="number" id="ulk-eur" min="0" step="0.01" oninput="autoSave();updateDietaBox()"/>
         </div>
       </div>
-      <div class="pvr-box" id="pvr-box">Ei päivärahaa</div>
-      <div id="gcal-day-wrap"></div>
+      <div class="dieta-box" id="dieta-box">Ei päivärahaa</div>
+      <div id="gcal-day-wrap" style="margin-top:4px"></div>
     </div>
   </div>
 </div>
 
-<!-- 2 ASIAKKAAT -->
-
-<div class="panel" id="p2">
-  <div class="sec">
-    <div class="slbl">Asiakaskäynnit</div>
-    <div id="visit-list"></div>
-    <button class="abtn" onclick="addVisit()">＋ Lisää asiakaskäynti</button>
+<div class="panel" id="panel-2">
+  <div class="section">
+    <div class="sec-label">Asiakaskäynnit — Tmi vakuutusmeklaus</div>
+    <div id="visits-list"></div>
+    <button class="add-btn" onclick="addVisit()">＋ Lisää asiakaskäynti</button>
   </div>
 </div>
 
-<!-- 3 LASKUTUS -->
-
-<div class="panel" id="p3">
-  <div class="sec">
-    <div class="slbl">AJarmo Oy</div>
-    <div id="bill-oy"></div>
-    <button class="abtn" onclick="addBill('oy')">＋ Lisää Oy-laskutus</button>
+<div class="panel" id="panel-3">
+  <div class="section">
+    <div class="sec-label">AJarmo Oy — taksi / kuljettaja</div>
+    <div id="bill-oy-list"></div>
+    <button class="add-btn" onclick="addBill('oy')">＋ Lisää Oy-laskutus</button>
   </div>
-  <div class="sec">
-    <div class="slbl">Tmi — vakuutusmeklaus</div>
-    <div id="bill-tmi"></div>
-    <button class="abtn" onclick="addBill('tmi')">＋ Lisää Tmi-laskutus</button>
+  <div class="section">
+    <div class="sec-label">Tmi — vakuutusmeklaus</div>
+    <div id="bill-tmi-list"></div>
+    <button class="add-btn" onclick="addBill('tmi')">＋ Lisää Tmi-laskutus</button>
   </div>
-  <div class="sec">
-    <div class="slbl">Purjehdus</div>
-    <div id="bill-sail"></div>
-    <button class="abtn" onclick="addBill('sail')">＋ Lisää purjehdus-laskutus</button>
+  <div class="section">
+    <div class="sec-label">Purjehdus (Oy / Tmi)</div>
+    <div id="bill-sail-list"></div>
+    <button class="add-btn" onclick="addBill('sail')">＋ Lisää purjehdus-laskutus</button>
   </div>
 </div>
 
-<!-- 4 RAPORTIT -->
-
-<div class="panel" id="p4">
-  <div class="sec">
-    <div class="slbl">Päiväraha — verottaja 2026</div>
-    <div class="rpt-box" id="pvr-rpt"></div>
+<div class="panel" id="panel-4">
+  <div class="stats-grid" id="summary-grid"></div>
+  <div class="section">
+    <div class="sec-label">Muistiinpanot</div>
+    <textarea id="notes" placeholder="Vapaamuotoiset muistiinpanot..." oninput="autoSave()"></textarea>
   </div>
-  <div class="sec">
-    <div class="slbl">🚗 Kilometrierittely</div>
-    <div id="km-rpt"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">🔵 AJarmo Oy — matkalasku</div>
-    <div class="rpt-box" id="rpt-oy"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">🟢 Tmi — verovähennys</div>
-    <div class="rpt-box" id="rpt-tmi"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">Muistiinpanot</div>
-    <textarea id="notes" placeholder="Vapaat muistiinpanot..." oninput="autoSave()"></textarea>
-  </div>
-  <div class="sec">
-    <button class="ebtn pr" onclick="doCSV()">⬇ Lataa ajopäiväkirja CSV</button>
-    <button class="ebtn" onclick="doOyCSV()">🔵 Oy matkalasku CSV</button>
-    <button class="ebtn" onclick="doTmiCSV()">🟢 Tmi verovähennys CSV</button>
-    <button class="ebtn" onclick="doCopyText()">📋 Kopioi tekstinä</button>
-  </div>
-</div>
-
-<!-- 5 HISTORIA -->
-
-<div class="panel" id="p5">
-  <div class="sec">
-    <div class="slbl">Kuukausikoosto</div>
-    <div id="month-grid" class="stat-grid"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">Tallennetut päivät</div>
-    <div id="hist-list"></div>
-  </div>
-</div>
-
-<!-- 6 AJOPÄIVÄKIRJA -->
-
-<div class="panel" id="p6">
-  <div class="sec">
-    <div class="slbl">Päivän aloitus</div>
-    <div class="card">
-      <div class="r2">
-        <div class="field">
-          <label>Aloituskilometrit</label>
-          <input type="number" id="apk-alku" placeholder="km" min="0" step="1"
-            style="font-family:var(--mono);font-size:17px;font-weight:700"
-            oninput="ST.apkAlku=this.value;autoSave();rdApk()"/>
-        </div>
-        <div class="field">
-          <label>Lähtöaika</label>
-          <input type="time" id="apk-lahto" oninput="ST.apkLahto=this.value;autoSave();autoFillWorkTime()"/>
-        </div>
-      </div>
-      <div id="apk-alku-info" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+  <div class="section">
+    <div class="export-card">
+      <div class="export-title">Vie tiedostoon</div>
+      <div class="export-sub">Lataa CSV ajopäiväkirjaa ja kirjanpitoa varten.</div>
+      <button class="export-btn primary" onclick="exportCSV()">⬇ Lataa CSV</button>
+      <button class="export-btn" onclick="copyText()">Kopioi tekstinä</button>
     </div>
   </div>
-  <div class="sec">
-    <div class="slbl">Pysähdykset</div>
-    <div id="apk-list"></div>
-    <button class="abtn" onclick="addApkStop()">＋ Lisää pysähdys</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Päivän koosto</div>
-    <div id="apk-summary"></div>
+</div>
+
+<div class="panel" id="panel-5">
+  <div class="section">
+    <div class="sec-label">Tallennetut päivät</div>
+    <div id="history-list"></div>
   </div>
 </div>
 
-</div><!-- /content -->
-
-<div class="bnav">
-  <button class="nbtn on" onclick="goTab(0)" id="nb0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span>Tehtävät</span></button>
-  <button class="nbtn" onclick="goTab(1)" id="nb1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Matkat</span></button>
-  <button class="nbtn" onclick="goTab(2)" id="nb2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Asiakkaat</span></button>
-  <button class="nbtn" onclick="goTab(3)" id="nb3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span>Laskutus</span></button>
-  <button class="nbtn" onclick="goTab(4)" id="nb4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5-5-5 5M13 4v10"/></svg><span>Raportit</span></button>
-  <button class="nbtn" onclick="goTab(6)" id="nb6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Ajopvk</span></button>
 </div>
 
-</div><!-- /app -->
-
-<!-- MODAL -->
-
-<div class="overlay" id="modal" style="display:none" onclick="closeModal(event)">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title" id="modal-title"></div>
-    <div class="modal-date" id="modal-date"></div>
-    <div id="modal-body"></div>
-  </div>
+<div class="bottom-bar">
+  <button class="nav-btn active" onclick="switchTab(0)" id="nav-0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    <span>Tehtävät</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab(1)" id="nav-1">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>Matkat</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab(2)" id="nav-2">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    <span>Asiakkaat</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab(3)" id="nav-3">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+    <span>Laskutus</span>
+  </button>
+  <button class="nav-btn" onclick="switchTab(4)" id="nav-4">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5-5-5 5M13 4v10"/></svg>
+    <span>Yhteenveto</span>
+  </button>
+</div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,doc,getDoc,setDoc,getDocs,collection,orderBy,query,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, orderBy, query, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const FB={apiKey:"AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",authDomain:"paivuri.firebaseapp.com",projectId:"paivuri",storageBucket:"paivuri.firebasestorage.app",messagingSenderId:"602861240385",appId:"1:602861240385:web:f215c3b44388ddfe9346c0"};
-const ALLOWED="jacke.seilaa@gmail.com";
-const KM=0.55;
+const FB = {
+  apiKey: "AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",
+  authDomain: "paivuri.firebaseapp.com",
+  projectId: "paivuri",
+  storageBucket: "paivuri.firebasestorage.app",
+  messagingSenderId: "602861240385",
+  appId: "1:602861240385:web:f215c3b44388ddfe9346c0"
+};
+const ALLOWED = "jacke.seilaa@gmail.com";
+const RATE_KM = 0.55;
 
-const app=initializeApp(FB);
-const auth=getAuth(app);
-const db=getFirestore(app);
+const fbApp = initializeApp(FB);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
 
-let curDate=new Date().toISOString().slice(0,10);
-let curTab=0;
-let saveTimer=null;
-let ST=emptyDay();
+let currentDate = new Date().toISOString().slice(0,10);
+let activeTab = 0;
+let autoSaveTimer = null;
+let state = defaultState();
 
-function emptyDay(){
-  return{tasks:[],trips:[],sails:[],visits:[],bOy:[],bTmi:[],bSail:[],
-    ckm:'',ckmr:'',ts:'',te:'',pvr:'ei',pvrRole:'Oy',ulk:'',gcalDay:false,notes:'',
-    apkAlku:'',apkLahto:'',apkStops:[]};
+function defaultState() {
+  return {
+    tasks:[], trips:[], tripsSail:[], visits:[],
+    billOy:[], billTmi:[], billSail:[],
+    commKm:'', commKmR:'',
+    timeStart:'', timeEnd:'',
+    dieta:'ei', dietaRole:'Oy', ulkEur:'',
+    gcalDay: false, notes:''
+  };
 }
 
-// ── SCREENS ──────────────────────────────────────────────────────
-function showScreen(id){
-  document.getElementById('s-load').style.display='none';
-  document.getElementById('s-auth').style.display='none';
-  document.getElementById('app').style.display='none';
-  const el=document.getElementById(id);
-  if(el)el.style.display=(id==='app')?'flex':'flex';
-  // Set email note
-  const n=document.getElementById('s-auth-note');
-  if(n)n.textContent='Vain '+ALLOWED;
-}
-
-// ── AUTH ──────────────────────────────────────────────────────────
-const authFallback=setTimeout(()=>showScreen('s-auth'),8000);
-
-onAuthStateChanged(auth,user=>{
-  clearTimeout(authFallback);
-  if(user){
-    if(user.email!==ALLOWED){signOut(auth);showScreen('s-auth');showErr('Pääsy estetty.');return;}
-    showScreen('app');
+// ── AUTH ─────────────────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  document.getElementById('loading-screen').style.display = 'none';
+  if (user) {
+    if (user.email !== ALLOWED) {
+      signOut(auth);
+      showAuthErr('Pääsy estetty.');
+      return;
+    }
+    document.getElementById('auth-screen').style.display = 'none';
+    const app = document.getElementById('app');
+    app.style.display = 'flex';
+    app.style.flexDirection = 'column';
+    app.style.height = '100%';
     initApp();
-  }else{
-    showScreen('s-auth');
+  } else {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
   }
 });
 
-document.getElementById('btn-login').onclick=async()=>{
-  try{await signInWithPopup(auth,new GoogleAuthProvider());}
-  catch(e){showErr(e.message);}
-};
-window.doLogout=()=>{if(confirm('Kirjaudu ulos?'))signOut(auth);};
-function showErr(m){const e=document.getElementById('auth-err');e.textContent=m;e.style.display='block';}
-
-// ── INIT ──────────────────────────────────────────────────────────
-function initApp(){
-  setDateDisplay(curDate);
-  loadDay(curDate);
-  document.getElementById('ntxt').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});
+function showAuthErr(msg) {
+  document.getElementById('auth-screen').style.display = 'flex';
+  const el = document.getElementById('auth-error');
+  el.style.display = 'block'; el.textContent = msg;
 }
 
-// ── DATE ──────────────────────────────────────────────────────────
-function fmtDate(d){
-  const[y,m,day]=d.split('-');
-  const mo=['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'];
-  return`${parseInt(day)}. ${mo[+m-1]} ${y}`;
-}
-function setDateDisplay(d){
-  document.getElementById('d-disp').textContent=fmtDate(d);
-  document.getElementById('date-inp').value=d;
-}
-window.openDP=()=>{const i=document.getElementById('date-inp');i.focus();try{i.showPicker();}catch(e){}};
-window.changeDate=d=>{curDate=d;setDateDisplay(d);loadDay(d);};
+document.getElementById('btn-google').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e) { showAuthErr('Kirjautuminen epäonnistui: ' + e.message); }
+});
 
-// ── TIME & PVR ────────────────────────────────────────────────────
-function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
-function minToStr(m){const h=Math.floor(m/60),min=m%60;return`${h}h${min>0?' '+min+'min':''}`;}
+window.doLogout = () => { if(confirm('Kirjaudu ulos?')) signOut(auth); };
 
-window.onTime=()=>{
-  ST.ts=document.getElementById('t-start').value;
-  ST.te=document.getElementById('t-end').value;
-  updTimeBanner();autoSave();
-};
-
-function updTimeBanner(){
-  const badge=document.getElementById('dur-badge');
-  const hint=document.getElementById('pvr-hint');
-  const s=ST.ts,e=ST.te;
-  if(!s||!e){badge.className='dur-badge';badge.textContent='—';hint.style.display='none';return;}
-  let d=toMin(e)-toMin(s);if(d<0)d+=1440;
-  badge.textContent=minToStr(d);
-  if(d>600){badge.className='dur-badge ok';hint.style.display='inline-block';hint.textContent='Koko 54€ ✓';hint.dataset.t='koko';}
-  else if(d>360){badge.className='dur-badge warn';hint.style.display='inline-block';hint.textContent='Osa 25€ ✓';hint.dataset.t='osa';}
-  else{badge.className='dur-badge';hint.style.display='none';}
-}
-
-window.applyPvrHint=()=>setPvr(document.getElementById('pvr-hint').dataset.t);
-
-window.setPvr=type=>{
-  ST.pvr=type;
-  ['ei','osa','koko','ulk'].forEach(t=>{
-    const b=document.getElementById('d-'+t);
-    if(b)b.className='rbtn'+(t===type?' tmi on':'');
+// ── INIT ─────────────────────────────────────────────────────────
+function initApp() {
+  initDate();
+  loadDay(currentDate);
+  document.getElementById('new-task-txt').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addTask();
   });
-  document.getElementById('ulk-wrap').style.display=type==='ulk'?'block':'none';
-  updPvrBox();autoSave();
-};
+}
 
-function getPvr(){
-  if(ST.pvr==='osa')return 25;
-  if(ST.pvr==='koko')return 54;
-  if(ST.pvr==='ulk')return parseFloat(document.getElementById('ulk-eur').value)||0;
+// ── DATE ─────────────────────────────────────────────────────────
+function initDate() {
+  document.getElementById('date-display').textContent = fmtDate(currentDate);
+  document.getElementById('date-input-hidden').value = currentDate;
+}
+function fmtDate(d) {
+  const [y,m,day] = d.split('-');
+  const mo = ['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'];
+  return parseInt(day) + '. ' + mo[parseInt(m)-1] + ' ' + y;
+}
+window.openDatePicker = () => {
+  const i = document.getElementById('date-input-hidden');
+  i.focus(); i.click(); try { i.showPicker(); } catch(e) {}
+};
+window.changeDate = d => { currentDate = d; initDate(); loadDay(d); };
+
+// ── TIME ─────────────────────────────────────────────────────────
+window.onTimeChange = () => {
+  state.timeStart = document.getElementById('time-start').value;
+  state.timeEnd   = document.getElementById('time-end').value;
+  updateTimeBadge();
+  autoSave();
+};
+function updateTimeBadge() {
+  const s = state.timeStart, e = state.timeEnd;
+  const badge = document.getElementById('dur-badge');
+  const sbtn  = document.getElementById('dieta-suggest-btn');
+  if (!s || !e) {
+    badge.className = 'dur-badge dur-gray'; badge.textContent = '—';
+    sbtn.style.display = 'none'; updateDietaBox(); return;
+  }
+  let diff = toMin(e) - toMin(s);
+  if (diff < 0) diff += 1440;
+  const h = Math.floor(diff/60), mn = diff%60;
+  badge.textContent = h + 'h' + (mn > 0 ? ' ' + mn + 'min' : '');
+  if (diff >= 600) {
+    badge.className = 'dur-badge dur-ok';
+    sbtn.style.display = 'inline-block'; sbtn.textContent = 'Koko 54 € ✓'; sbtn.dataset.type = 'koko';
+  } else if (diff >= 360) {
+    badge.className = 'dur-badge dur-warn';
+    sbtn.style.display = 'inline-block'; sbtn.textContent = 'Osa 25 € ✓'; sbtn.dataset.type = 'osa';
+  } else {
+    badge.className = 'dur-badge dur-gray'; sbtn.style.display = 'none';
+  }
+  updateDietaBox();
+}
+function toMin(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+window.applyAutoDieta = () => {
+  const t = document.getElementById('dieta-suggest-btn').dataset.type;
+  if (t) setDieta(t);
+};
+window.setDieta = type => {
+  state.dieta = type;
+  ['ei','osa','koko','ulk'].forEach(t => document.getElementById('d-'+t).classList.toggle('active', t===type));
+  document.getElementById('ulk-field').style.display = type === 'ulk' ? 'block' : 'none';
+  updateDietaBox(); autoSave();
+};
+function getDietaEur() {
+  if (state.dieta === 'osa') return 25;
+  if (state.dieta === 'koko') return 54;
+  if (state.dieta === 'ulk') return parseFloat(document.getElementById('ulk-eur').value)||0;
   return 0;
 }
-
-function updPvrBox(){
-  const eur=getPvr(),box=document.getElementById('pvr-box');
-  const role=document.getElementById('pvr-role').value;
-  if(!eur){box.className='pvr-box';box.textContent='Ei päivärahaa';}
-  else{
-    const lbl=ST.pvr==='osa'?'Osapäiväraha':ST.pvr==='koko'?'Kokopäiväraha':'Ulkomaan pvr';
-    box.className='pvr-box '+(ST.pvr==='koko'?'koko':'osa');
-    box.innerHTML=`<strong>${lbl} ${eur} €</strong> — ${role}`;
-  }
-  rdGcalDay();
-}
-
-// ── GCAL ──────────────────────────────────────────────────────────
-function gcalUrl(title,date,s,e,desc){
-  const f=d=>d.replaceAll('-','');
-  const dates=s&&e?`${f(date)}T${s.replace(':','')}00/${f(date)}T${e.replace(':','')}00`:f(date);
-  return'https://calendar.google.com/calendar/render?'+new URLSearchParams({action:'TEMPLATE',text:title,dates,details:desc||''});
-}
-function rdGcalDay(){
-  const w=document.getElementById('gcal-day-wrap');if(!w)return;
-  const pvr=getPvr();
-  const title=`Työpäivä${pvr?' · pvr '+pvr+'€':''}`;
-  const url=gcalUrl(title,curDate,ST.ts,ST.te,'Päivyri '+curDate);
-  w.innerHTML=`<a href="${esc(url)}" target="_blank" class="gcal-a">📅 ${ST.gcalDay?'✅ Lisätty':'Lisää kalenteriin'}</a>`;
-}
-
-// ── TABS ──────────────────────────────────────────────────────────
-window.goTab=i=>{
-  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('on',j===i));
-  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',j===i));
-  document.querySelectorAll('.nbtn').forEach((b,j)=>{
-    // nbtn indices: 0=tab0,1=tab1,2=tab2,3=tab3,4=tab4,5=tab6
-    const tabMap=[0,1,2,3,4,6];
-    b.classList.toggle('on',tabMap[j]===i);
-  });
-  curTab=i;
-  if(i===4)rdReports();
-  if(i===5)rdHist();
-  if(i===6)rdApk();
+window.updateDietaBox = () => {
+  const eur = getDietaEur();
+  const box = document.getElementById('dieta-box');
+  const role = document.getElementById('dieta-role').value;
+  if (!eur) { box.className = 'dieta-box'; box.textContent = 'Ei päivärahaa'; renderGcalDay(); return; }
+  const lbl = state.dieta==='osa' ? 'Osapäiväraha' : state.dieta==='koko' ? 'Kokopäiväraha' : 'Ulkomaan pvr';
+  box.className = 'dieta-box ' + (state.dieta==='koko' ? 'full' : 'on');
+  box.innerHTML = '<strong>' + lbl + ' ' + eur + ' €</strong> — ' + role;
+  renderGcalDay();
 };
 
-// ── TASKS ──────────────────────────────────────────────────────────
-window.addTask=()=>{
-  const txt=document.getElementById('ntxt').value.trim();if(!txt)return;
-  ST.tasks.push({text:txt,role:document.getElementById('nrole').value,done:false});
-  document.getElementById('ntxt').value='';rdTasks();autoSave();
+// ── GCAL ─────────────────────────────────────────────────────────
+function gcalUrl(title, date, s, e, desc) {
+  const fmt = d => d.replaceAll('-','');
+  const dates = s && e ? fmt(date)+'T'+s.replace(':','')+'00/'+fmt(date)+'T'+e.replace(':','')+'00' : fmt(date);
+  return 'https://calendar.google.com/calendar/render?' + new URLSearchParams({action:'TEMPLATE',text:title,dates,details:desc||''});
+}
+function renderGcalDay() {
+  const wrap = document.getElementById('gcal-day-wrap');
+  if (!wrap) return;
+  const eur = getDietaEur();
+  const title = 'Työpäivä' + (eur ? ' · pvr '+eur+'€' : '');
+  const url = gcalUrl(title, currentDate, state.timeStart||null, state.timeEnd||null, '');
+  const added = state.gcalDay;
+  wrap.innerHTML = '<a href="' + esc(url) + '" target="_blank" class="gcal-btn ' + (added?'added':'') + '" onclick="markGcalDay()">📅 ' + (added ? '✅ Lisätty kalenteriin' : 'Lisää Google Kalenteriin') + '</a>';
+}
+window.markGcalDay = () => { state.gcalDay = true; autoSave(); setTimeout(renderGcalDay, 300); };
+
+// ── TABS ─────────────────────────────────────────────────────────
+window.switchTab = i => {
+  document.querySelectorAll('.panel').forEach((p,j) => p.classList.toggle('active', j===i));
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('active', j===i));
+  document.querySelectorAll('.nav-btn').forEach((b,j) => b.classList.toggle('active', j===i));
+  activeTab = i;
+  if (i===4) renderSummary();
+  if (i===5) renderHistory();
 };
-function rdTasks(){
-  const el=document.getElementById('task-list');
-  if(!ST.tasks.length){el.innerHTML='<div style="color:var(--dim);font-size:13px;padding:8px 0">Ei tehtäviä.</div>';return;}
-  el.innerHTML=ST.tasks.map((t,i)=>`
-    <div class="trow ${t.done?'done':''}" onclick="togTask(${i})">
-      <div class="chk">${t.done?'<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>':''}</div>
-      <div class="ttxt">${esc(t.text)}</div>
-      <span class="badge b-${t.role.toLowerCase()}">${t.role}</span>
-      <button style="background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:0 2px" onclick="event.stopPropagation();delItem('tasks',${i})">×</button>
-    </div>`).join('');
-}
-window.togTask=i=>{ST.tasks[i].done=!ST.tasks[i].done;rdTasks();autoSave();};
 
-// ── KM CALC ───────────────────────────────────────────────────────
-function calcKm(o){
-  if(o.odosta&&o.odoon){const k=(parseFloat(o.odoon)||0)-(parseFloat(o.odosta)||0);return k>0?Math.round(k):0;}
-  return parseFloat(o.km)||0;
+// ── TASKS ─────────────────────────────────────────────────────────
+window.addTask = () => {
+  const txt = document.getElementById('new-task-txt').value.trim();
+  if (!txt) return;
+  state.tasks.push({ text:txt, role:document.getElementById('new-task-role').value, done:false });
+  document.getElementById('new-task-txt').value = '';
+  renderTasks(); autoSave();
+};
+function renderTasks() {
+  document.getElementById('tasks-list').innerHTML = state.tasks.length
+    ? state.tasks.map((t,i) =>
+        '<div class="task-row ' + (t.done?'done':'') + '" onclick="toggleTask(' + i + ')">' +
+        '<div class="task-check"><svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.5L4 7.5L10 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+        '<div class="task-text">' + esc(t.text) + '</div>' +
+        '<span class="badge badge-' + t.role.toLowerCase() + '">' + t.role + '</span>' +
+        '<button class="rm" style="position:static;margin-left:4px" onclick="event.stopPropagation();removeFrom(\'tasks\',' + i + ')">×</button>' +
+        '</div>'
+      ).join('')
+    : '<div style="color:var(--dim);font-size:13px;padding:8px 0">Ei tehtäviä.</div>';
 }
-
-// Auto work time from all events
-function autoFillWorkTime(){
-  const times=[];
-  [...ST.trips,...ST.sails,...ST.visits].forEach(t=>{if(t.ts)times.push(t.ts);if(t.te)times.push(t.te);});
-  if(ST.apkLahto)times.push(ST.apkLahto);
-  (ST.apkStops||[]).forEach(s=>{if(s.aika)times.push(s.aika);});
-  if(!times.length)return;
-  times.sort();
-  const start=times[0],end=times[times.length-1];
-  if(start){ST.ts=start;document.getElementById('t-start').value=start;}
-  if(end){ST.te=end;document.getElementById('t-end').value=end;}
-  updTimeBanner();
-}
-window.autoFillWorkTime=autoFillWorkTime;
+window.toggleTask = i => { state.tasks[i].done = !state.tasks[i].done; renderTasks(); autoSave(); };
 
 // ── TRIPS ─────────────────────────────────────────────────────────
-window.addTrip=()=>{ST.trips.push({reitti:'',kuvaus:'',odosta:'',odoon:'',km:'',role:'Tmi',ts:'',te:''});rdTrips();};
-window.setTR=(i,r)=>{ST.trips[i].role=r;rdTrips();autoSave();};
-function rdTrips(){
-  const el=document.getElementById('trip-list');
-  el.innerHTML=ST.trips.map((t,i)=>{
-    const km=calcKm(t);const showKm=t.odosta&&t.odoon;
-    return`<div class="card">
-      <div class="rsel">
-        <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setTR(${i},'Tmi')">🟢 Tmi</button>
-        <button class="rbtn oy ${t.role==='Oy'?'on':''}" onclick="setTR(${i},'Oy')">🔵 Oy</button>
-        <button class="rbtn hlo ${t.role==='Hlö'?'on':''}" onclick="setTR(${i},'Hlö')">🟣 Oma</button>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Alkoi</label><input type="time" value="${t.ts||''}" data-i="${i}" data-f="ts" class="ti"/></div>
-        <div class="field"><label>Päättyi</label><input type="time" value="${t.te||''}" data-i="${i}" data-f="te" class="ti"/></div>
-      </div>
-      <div class="field" style="margin-bottom:7px"><label>Reitti</label><input type="text" value="${esc(t.reitti||t.from||'')}" data-i="${i}" data-f="reitti" class="ti" placeholder="Riihimäki → Hyvinkää"/></div>
-      <div class="field" style="margin-bottom:9px"><label>Kuvaus</label><input type="text" value="${esc(t.kuvaus||t.notes||'')}" data-i="${i}" data-f="kuvaus" class="ti" placeholder="asiakaskäynti, taksiajo..."/></div>
-      <div class="r3">
-        <div class="field"><label>Mittari alussa</label><input type="number" value="${t.odosta||''}" data-i="${i}" data-f="odosta" class="ti" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Mittari lopussa</label><input type="number" value="${t.odoon||''}" data-i="${i}" data-f="odoon" class="ti" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Tai suoraan km</label><input type="number" value="${t.km||''}" data-i="${i}" data-f="km" class="ti" placeholder="km" min="0" step="1"/></div>
-      </div>
-      ${showKm?`<div class="kmcalc"><span>Mittarista</span>${km} km</div>`:''}
-      <button class="del-btn" onclick="delItem('trips',${i})">🗑 Poista matka</button>
-    </div>`;
-  }).join('');
-  attachListeners('#trip-list .ti','trips');
+window.addTrip = () => { state.trips.push({from:'',to:'',km:'',role:'Tmi',tStart:'',tEnd:'',notes:''}); renderTrips(); };
+window.setTripRole = (i,role) => { state.trips[i].role = role; renderTrips(); autoSave(); };
+function renderTrips() {
+  document.getElementById('trips-list').innerHTML = state.trips.map((t,i) =>
+    '<div class="card">' +
+    '<button class="rm" onclick="removeFrom(\'trips\',' + i + ')">×</button>' +
+    '<div class="role-sel">' +
+    '<button class="role-btn r-tmi ' + (t.role==='Tmi'?'active':'') + '" onclick="setTripRole(' + i + ',\'Tmi\')">Tmi</button>' +
+    '<button class="role-btn r-oy ' + (t.role==='Oy'?'active':'') + '" onclick="setTripRole(' + i + ',\'Oy\')">Oy</button>' +
+    '<button class="role-btn r-hlo ' + (t.role==='Hlö'?'active':'') + '" onclick="setTripRole(' + i + ',\'Hlö\')">Oma</button>' +
+    '</div>' +
+    '<div class="row-time">' +
+    '<div class="field"><label>Lähtöaika</label><input type="time" value="' + (t.tStart||'') + '" oninput="state.trips[' + i + '].tStart=this.value;autoSave()"/></div>' +
+    '<div class="field"><label>Saapumisaika</label><input type="time" value="' + (t.tEnd||'') + '" oninput="state.trips[' + i + '].tEnd=this.value;autoSave()"/></div>' +
+    '</div>' +
+    '<div class="row-km" style="margin-bottom:8px">' +
+    '<div class="field"><label>Reitti</label><input type="text" value="' + esc(t.from) + '" oninput="state.trips[' + i + '].from=this.value;autoSave()" placeholder="Lähtö → Kohde"/></div>' +
+    '<div class="field"><label>km</label><input type="number" value="' + (t.km||'') + '" oninput="state.trips[' + i + '].km=this.value;autoSave()" min="0" step="1"/></div>' +
+    '</div>' +
+    '<div class="field"><label>Tarkoitus</label><input type="text" value="' + esc(t.notes) + '" oninput="state.trips[' + i + '].notes=this.value;autoSave()" placeholder="asiakas, toimisto..."/></div>' +
+    '<a href="' + esc(gcalUrl(t.notes||'Ajomatka', currentDate, t.tStart||null, t.tEnd||null, '['+t.role+'] '+esc(t.from)+' '+t.km+'km')) + '" target="_blank" class="gcal-btn" style="font-size:11px">📅 Kalenteriin</a>' +
+    '</div>'
+  ).join('');
 }
 
 // ── SAIL ──────────────────────────────────────────────────────────
-window.addSail=()=>{ST.sails.push({from:'',to:'',odosta:'',odoon:'',km:'',role:'Oy',ts:'',te:'',notes:''});rdSail();};
-window.setSR=(i,r)=>{ST.sails[i].role=r;rdSail();autoSave();};
-function rdSail(){
-  const el=document.getElementById('sail-list');
-  el.innerHTML=ST.sails.map((t,i)=>{
-    const km=calcKm(t);const showKm=t.odosta&&t.odoon;
-    return`<div class="card">
-      <div class="rsel">
-        <button class="rbtn oy ${t.role==='Oy'?'on':''}" onclick="setSR(${i},'Oy')">🔵 Oy</button>
-        <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setSR(${i},'Tmi')">🟢 Tmi</button>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Alkoi</label><input type="time" value="${t.ts||''}" data-i="${i}" data-f="ts" class="si"/></div>
-        <div class="field"><label>Päättyi</label><input type="time" value="${t.te||''}" data-i="${i}" data-f="te" class="si"/></div>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Lähtösatama</label><input type="text" value="${esc(t.from||'')}" data-i="${i}" data-f="from" class="si" placeholder="satama"/></div>
-        <div class="field"><label>Kohde</label><input type="text" value="${esc(t.to||'')}" data-i="${i}" data-f="to" class="si" placeholder="kohde"/></div>
-      </div>
-      <div class="r3">
-        <div class="field"><label>Lokki alussa</label><input type="number" value="${t.odosta||''}" data-i="${i}" data-f="odosta" class="si" placeholder="mpk" min="0" step="0.1"/></div>
-        <div class="field"><label>Lokki lopussa</label><input type="number" value="${t.odoon||''}" data-i="${i}" data-f="odoon" class="si" placeholder="mpk" min="0" step="0.1"/></div>
-        <div class="field"><label>Tai suoraan</label><input type="number" value="${t.km||''}" data-i="${i}" data-f="km" class="si" placeholder="mpk" min="0" step="0.1"/></div>
-      </div>
-      ${showKm?`<div class="kmcalc"><span>Lokista</span>${km} mpk</div>`:''}
-      <div class="field" style="margin-top:8px"><label>Tarkoitus</label><input type="text" value="${esc(t.notes||'')}" data-i="${i}" data-f="notes" class="si" placeholder="kurssi, charter..."/></div>
-      <button class="del-btn" onclick="delItem('sails',${i})">🗑 Poista purjehdus</button>
-    </div>`;
-  }).join('');
-  attachListeners('#sail-list .si','sails');
+window.addSail = () => { state.tripsSail.push({from:'',to:'',km:'',role:'Oy',tStart:'',tEnd:'',notes:''}); renderSail(); };
+window.setSailRole = (i,role) => { state.tripsSail[i].role = role; renderSail(); autoSave(); };
+function renderSail() {
+  document.getElementById('trips-sail-list').innerHTML = state.tripsSail.map((t,i) =>
+    '<div class="card">' +
+    '<button class="rm" onclick="removeFrom(\'tripsSail\',' + i + ')">×</button>' +
+    '<div class="role-sel">' +
+    '<button class="role-btn r-oy ' + (t.role==='Oy'?'active':'') + '" onclick="setSailRole(' + i + ',\'Oy\')">Oy</button>' +
+    '<button class="role-btn r-tmi ' + (t.role==='Tmi'?'active':'') + '" onclick="setSailRole(' + i + ',\'Tmi\')">Tmi</button>' +
+    '</div>' +
+    '<div class="row-time">' +
+    '<div class="field"><label>Lähtöaika</label><input type="time" value="' + (t.tStart||'') + '" oninput="state.tripsSail[' + i + '].tStart=this.value;autoSave()"/></div>' +
+    '<div class="field"><label>Saapumisaika</label><input type="time" value="' + (t.tEnd||'') + '" oninput="state.tripsSail[' + i + '].tEnd=this.value;autoSave()"/></div>' +
+    '</div>' +
+    '<div class="row-km" style="margin-bottom:8px">' +
+    '<div class="field"><label>Reitti</label><input type="text" value="' + esc(t.from) + '" oninput="state.tripsSail[' + i + '].from=this.value;autoSave()" placeholder="satama → kohde"/></div>' +
+    '<div class="field"><label>km/mpk</label><input type="number" value="' + (t.km||'') + '" oninput="state.tripsSail[' + i + '].km=this.value;autoSave()" min="0" step="1"/></div>' +
+    '</div>' +
+    '<div class="field"><label>Tarkoitus</label><input type="text" value="' + esc(t.notes) + '" oninput="state.tripsSail[' + i + '].notes=this.value;autoSave()" placeholder="kurssi, charter..."/></div>' +
+    '</div>'
+  ).join('');
 }
 
 // ── VISITS ────────────────────────────────────────────────────────
-window.addVisit=()=>{ST.visits.push({client:'',contact:'',odosta:'',odoon:'',km:'',ts:'',te:'',topic:'',notes:''});rdVisits();};
-function rdVisits(){
-  const el=document.getElementById('visit-list');
-  el.innerHTML=ST.visits.map((v,i)=>{
-    const km=calcKm(v);const showKm=v.odosta&&v.odoon;
-    return`<div class="card">
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Alkoi</label><input type="time" value="${v.ts||''}" data-i="${i}" data-f="ts" class="vi"/></div>
-        <div class="field"><label>Päättyi</label><input type="time" value="${v.te||''}" data-i="${i}" data-f="te" class="vi"/></div>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Yritys / asiakas</label><input type="text" value="${esc(v.client||'')}" data-i="${i}" data-f="client" class="vi"/></div>
-        <div class="field"><label>Yhteyshenkilö</label><input type="text" value="${esc(v.contact||'')}" data-i="${i}" data-f="contact" class="vi"/></div>
-      </div>
-      <div class="r3" style="margin-bottom:8px">
-        <div class="field"><label>Mittari alussa</label><input type="number" value="${v.odosta||''}" data-i="${i}" data-f="odosta" class="vi" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Mittari lopussa</label><input type="number" value="${v.odoon||''}" data-i="${i}" data-f="odoon" class="vi" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Tai suoraan km</label><input type="number" value="${v.km||''}" data-i="${i}" data-f="km" class="vi" placeholder="km" min="0" step="1"/></div>
-      </div>
-      ${showKm?`<div class="kmcalc"><span>Mittarista</span>${km} km</div>`:''}
-      <div class="field" style="margin-bottom:8px"><label>Aihe</label><input type="text" value="${esc(v.topic||'')}" data-i="${i}" data-f="topic" class="vi" placeholder="tarjous, sopimus..."/></div>
-      <div class="field"><label>Muistiinpanot</label><textarea data-i="${i}" data-f="notes" class="vi" style="min-height:50px">${esc(v.notes||'')}</textarea></div>
+window.addVisit = () => { state.visits.push({client:'',contact:'',km:'',tStart:'',tEnd:'',topic:'',notes:''}); renderVisits(); };
+function renderVisits() {
+  document.getElementById('visits-list').innerHTML = state.visits.map((v,i) =>
+    '<div class="card">' +
+    '<button class="rm" onclick="removeFrom(\'visits\',' + i + ')">×</button>' +
+    '<div class="row-time">' +
+    '<div class="field"><label>Saapumisaika</label><input type="time" value="' + (v.tStart||'') + '" oninput="state.visits[' + i + '].tStart=this.value;autoSave()"/></div>' +
+    '<div class="field"><label>Lähtöaika</label><input type="time" value="' + (v.tEnd||'') + '" oninput="state.visits[' + i + '].tEnd=this.value;autoSave()"/></div>' +
+    '</div>' +
+    '<div class="row-km" style="margin-bottom:8px">' +
+    '<div class="field"><label>Yritys / asiakas</label><input type="text" value="' + esc(v.client) + '" oninput="state.visits[' + i + '].client=this.value;autoSave()"/></div>' +
+    '<div class="field"><label>Matka km</label><input type="number" value="' + (v.km||'') + '" oninput="state.visits[' + i + '].km=this.value;autoSave()" min="0" step="1"/></div>' +
+    '</div>' +
+    '<div class="row2" style="margin-bottom:8px">' +
+    '<div class="field"><label>Yhteyshenkilö</label><input type="text" value="' + esc(v.contact) + '" oninput="state.visits[' + i + '].contact=this.value;autoSave()"/></div>' +
+    '<div class="field"><label>Aihe</label><input type="text" value="' + esc(v.topic) + '" oninput="state.visits[' + i + '].topic=this.value;autoSave()" placeholder="tarjous, sopimus..."/></div>' +
+    '</div>' +
+    '<div class="field"><label>Muistiinpanot</label><textarea oninput="state.visits[' + i + '].notes=this.value;autoSave()" style="min-height:52px">' + esc(v.notes) + '</textarea></div>' +
 
 ```
-  <a href="${esc(gcalUrl((v.topic||'Asiakastapaaminen')+': '+(v.client||'asiakas'),curDate,v.ts,v.te,'Asiakaskäynti · '+(v.client||'')+' / '+(v.contact||'')+'\n'+(v.topic||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Lisää kalenteriin</a>
-  <button class="del-btn" onclick="delItem('visits',${i})">🗑 Poista käynti</button>
-</div>`;
+'<a href="' + esc(gcalUrl('Asiakaskäynti: '+(v.client||'asiakas'), currentDate, v.tStart||null, v.tEnd||null, esc(v.client)+' / '+esc(v.contact)+'\n'+esc(v.topic))) + '" target="_blank" class="gcal-btn" style="font-size:11px">📅 Kalenteriin</a>' +
+'</div>'
 ```
 
-}).join(’’);
-attachListeners(’#visit-list .vi’,‘visits’);
-}
-
-// ── SHARED INPUT LISTENER ─────────────────────────────────────────
-function attachListeners(selector, arrayName){
-document.querySelectorAll(selector).forEach(inp=>{
-inp.addEventListener(‘input’,function(){
-const idx=parseInt(this.dataset.i);
-const field=this.dataset.f;
-if(ST[arrayName]&&ST[arrayName][idx]!==undefined){
-ST[arrayName][idx][field]=this.value;
-if(field===‘ts’||field===‘te’)autoFillWorkTime();
-autoSave();
-}
-});
-});
+).join(’’);
 }
 
 // ── BILLING ───────────────────────────────────────────────────────
-window.addBill=t=>{
-if(t===‘oy’)ST.bOy.push({desc:’’,eur:’’,alv:‘0’});
-else if(t===‘tmi’)ST.bTmi.push({desc:’’,eur:’’,alv:‘0’});
-else ST.bSail.push({desc:’’,eur:’’,alv:‘0’,role:‘Oy’});
-rdBills();
+window.addBill = type => {
+const arr = type===‘oy’ ? state.billOy : type===‘tmi’ ? state.billTmi : state.billSail;
+arr.push({desc:’’, eur:’’, alv:‘0’, role: type===‘sail’?‘Oy’:‘Tmi’});
+renderBills();
 };
-function rdBills(){rdBillList(‘oy’,ST.bOy,‘bOy’);rdBillList(‘tmi’,ST.bTmi,‘bTmi’);rdBillList(‘sail’,ST.bSail,‘bSail’);}
-function rdBillList(type,arr,key){
-document.getElementById(‘bill-’+type).innerHTML=arr.map((b,i)=>` <div class="card"> <div class="field"><label>Kuvaus</label><input type="text" value="${esc(b.desc||'')}" oninput="ST.${key}[${i}].desc=this.value;autoSave()"/></div> <div class="r2"> <div class="field"><label>€ (alv 0)</label><input type="number" value="${b.eur||''}" oninput="ST.${key}[${i}].eur=this.value;autoSave()" min="0" step="0.01"/></div> <div class="field"><label>ALV</label> <select onchange="ST.${key}[${i}].alv=this.value;autoSave()"> <option value="0" ${b.alv==='0'?'selected':''}>0%</option> <option value="25.5" ${b.alv==='25.5'?'selected':''}>25,5%</option> <option value="13.5" ${b.alv==='13.5'?'selected':''}>13,5%</option> </select> </div> </div> ${type==='sail'?`<div class="field"><label>Rooli</label><select onchange="ST.bSail[${i}].role=this.value;autoSave()"><option value=“Oy” ${b.role===‘Oy’?‘selected’:’’}>Oy</option><option value=“Tmi” ${b.role===‘Tmi’?‘selected’:’’}>Tmi</option></select></div>`:''} <button class="del-btn" onclick="delItem('${key}',${i})">🗑 Poista</button> </div>`).join(’’);
-}
-
-// ── DELETE ────────────────────────────────────────────────────────
-window.delItem=(arr,i)=>{if(ST[arr])ST[arr].splice(i,1);rdAll();autoFillWorkTime();autoSave();};
-
-// ── KM HELPERS ────────────────────────────────────────────────────
-function tripsKm(role){
-let km=0;
-ST.trips.filter(t=>!role||t.role===role).forEach(t=>km+=calcKm(t));
-if(!role||role===‘Tmi’)ST.visits.forEach(v=>km+=calcKm(v));
-return km;
-}
-function sailKm(role){let km=0;ST.sails.filter(t=>!role||t.role===role).forEach(t=>km+=calcKm(t));return km;}
-function sumBill(a){return(a||[]).reduce((s,b)=>s+(parseFloat(b.eur)||0),0);}
-
-// ── PVR FROM TRIPS ────────────────────────────────────────────────
-function calcPvrFromTime(){
-// Use actual work time from banner
-const s=ST.ts,e=ST.te;
-if(!s||!e)return 0;
-let d=toMin(e)-toMin(s);if(d<0)d+=1440;
-if(d>600)return 54;
-if(d>360)return 25;
-return 0;
-}
-
-// ── REPORTS ───────────────────────────────────────────────────────
-function rdReports(){
-fromDOM();
-// PVR card
-const pvr=getPvr();
-const autoPvr=calcPvrFromTime();
-const pvrEl=document.getElementById(‘pvr-rpt’);
-let dur=’—’;
-if(ST.ts&&ST.te){let d=toMin(ST.te)-toMin(ST.ts);if(d<0)d+=1440;dur=minToStr(d);}
-pvrEl.innerHTML=` <div style="display:flex;justify-content:space-between;align-items:center"> <div> <div style="font-size:18px;font-weight:700;color:var(--text)">${pvr>0?(ST.pvr==='koko'?'Kokopäiväraha':'ST.pvr'==='osa'?'Osapäiväraha':'Ulkomaan pvr'):'Ei päivärahaa'}</div> <div style="font-size:12px;color:var(--muted);margin-top:2px">Työaika: ${dur}${autoPvr!==pvr&&pvr>0?' · ⚠ eroaa kellonajasta':''}</div> </div> <div style="font-family:var(--mono);font-size:28px;font-weight:700;color:${pvr===54?'var(--tmi)':pvr>0?'var(--warn)':'var(--dim)'}">${pvr>0?pvr+' €':'—'}</div> </div> <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)"> Verottaja 2026: yli 6h → 25€ osapäiväraha · yli 10h → 54€ kokopäiväraha<br> Kohdistus: <strong>${ST.pvrRole||'Oy'}</strong> </div>`;
-
-// KM breakdown
-const oyKm=tripsKm(‘Oy’),tmiKm=tripsKm(‘Tmi’),hloKm=tripsKm(‘Hlö’);
-const sailOy=sailKm(‘Oy’),sailTmi=sailKm(‘Tmi’);
-const kmEl=document.getElementById(‘km-rpt’);
-if(!ST.trips.length&&!ST.visits.length&&!ST.sails.length){
-kmEl.innerHTML=’<div style="color:var(--dim);font-size:13px">Ei matkoja.</div>’;
-}else{
-let html=’<div class="rpt-box">’;
-ST.trips.forEach((t,i)=>{
-const km=calcKm(t);
-const c=t.role===‘Oy’?‘var(–oy)’:t.role===‘Tmi’?‘var(–tmi)’:‘var(–hlo)’;
-html+=`<div class="rpt-row"> <div> <div style="font-size:13px;font-weight:600">${esc(t.reitti||t.from||'Ajomatka')}</div> ${(t.kuvaus||t.notes)?`<div style="font-size:11px;color:var(--muted)">${esc(t.kuvaus||t.notes)}</div>`:''} <div style="font-size:11px;color:var(--muted)">${t.ts||''}${t.te?' – '+t.te:''}</div> </div> <div style="text-align:right"> <div style="font-family:var(--mono);font-weight:700;color:${c}">${km} km</div> <div style="font-size:11px;color:var(--muted)">${t.role!=='Hlö'?(km*KM).toFixed(2)+' €':'—'}</div> </div> </div> <button onclick="goTab(1)" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;border:1px solid rgba(59,111,212,.3);background:rgba(59,111,212,.07);color:var(--accent);cursor:pointer;margin-bottom:6px">✏️ Muokkaa</button>`;
+function renderBills() {
+[‘oy’,‘tmi’,‘sail’].forEach(type => {
+const arr = type===‘oy’ ? state.billOy : type===‘tmi’ ? state.billTmi : state.billSail;
+const key = type===‘oy’ ? ‘billOy’ : type===‘tmi’ ? ‘billTmi’ : ‘billSail’;
+document.getElementById(‘bill-’+type+’-list’).innerHTML = arr.map((b,i) =>
+‘<div class="card">’ +
+‘<button class="rm" onclick="removeFrom(\'' + key + '\',' + i + ')">×</button>’ +
+‘<div class="field"><label>Kuvaus / asiakas</label><input type="text" value="' + esc(b.desc) + '" oninput="state.' + key + '[' + i + '].desc=this.value;autoSave()"/></div>’ +
+‘<div class="row2">’ +
+‘<div class="field"><label>€ (alv 0)</label><input type="number" value="' + (b.eur||'') + '" oninput="state.' + key + '[' + i + '].eur=this.value;autoSave()" min="0" step="0.01"/></div>’ +
+‘<div class="field"><label>ALV</label><select onchange="state.' + key + '[' + i + '].alv=this.value;autoSave()">’ +
+‘<option value=“0” ’ + (b.alv===‘0’?‘selected’:’’) + ‘>0 %</option>’ +
+‘<option value=“25.5” ’ + (b.alv===‘25.5’?‘selected’:’’) + ‘>25,5 %</option>’ +
+‘<option value=“13.5” ’ + (b.alv===‘13.5’?‘selected’:’’) + ‘>13,5 %</option>’ +
+‘</select></div></div>’ +
+(type===‘sail’ ? ‘<div class="field"><label>Rooli</label><select onchange="state.billSail[' + i + '].role=this.value;autoSave()"><option value=“Oy” ’ + (b.role===‘Oy’?‘selected’:’’) + ‘>Oy</option><option value=“Tmi” ’ + (b.role===‘Tmi’?‘selected’:’’) + ‘>Tmi</option></select></div>’ : ‘’) +
+‘</div>’
+).join(’’);
 });
-ST.visits.forEach((v,i)=>{
-const km=calcKm(v);
-html+=`<div class="rpt-row"> <div> <div style="font-size:13px;font-weight:600">${esc(v.client||'Asiakaskäynti')}</div> ${v.topic?`<div style="font-size:11px;color:var(--muted)">${esc(v.topic)}</div>`:''} <div style="font-size:11px;color:var(--muted)">${v.ts||''}${v.te?' – '+v.te:''}</div> </div> <div style="text-align:right"> <div style="font-family:var(--mono);font-weight:700;color:var(--tmi)">${km} km</div> <div style="font-size:11px;color:var(--muted)">${(km*KM).toFixed(2)} €</div> </div> </div>`;
-});
-// Totals
-html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px;padding-top:10px;border-top:2px solid var(--border2)"> <div style="text-align:center;background:rgba(0,168,120,.07);border-radius:8px;padding:8px"> <div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase">🟢 Tmi</div> <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--tmi)">${Math.round(tmiKm+sailTmi)} km</div> <div style="font-size:11px;color:var(--muted)">${((tmiKm+sailTmi)*KM).toFixed(2)} €</div> </div> <div style="text-align:center;background:rgba(59,111,212,.07);border-radius:8px;padding:8px"> <div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase">🔵 Oy</div> <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--oy)">${Math.round(oyKm+sailOy)} km</div> <div style="font-size:11px;color:var(--muted)">${((oyKm+sailOy)*KM).toFixed(2)} €</div> </div> <div style="text-align:center;background:rgba(124,92,191,.07);border-radius:8px;padding:8px"> <div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase">🟣 Oma</div> <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--hlo)">${Math.round(hloKm)} km</div> <div style="font-size:11px;color:var(--muted)">ei korv.</div> </div> </div>`;
-html+=’</div>’;
-kmEl.innerHTML=html;
 }
 
-// Oy report
-const oyEl=document.getElementById(‘rpt-oy’);
-const oyTrips=ST.trips.filter(t=>t.role===‘Oy’);
-const oyTotal=(oyKm+sailOy)*KM+(ST.pvrRole===‘Oy’?pvr:0);
-let oyHtml=`<div class="rpt-title">🔵 AJarmo Oy — Matkalasku ${curDate}</div>`;
-if(!oyTrips.length&&!sailOy){oyHtml+=’<div style="color:var(--dim);font-size:13px">Ei Oy-matkoja.</div>’;}
-else{
-oyTrips.forEach(t=>oyHtml+=rRow(esc(t.reitti||t.from||‘Matka’),`${t.ts||''}${t.te?' – '+t.te:''}`,`${calcKm(t)} km · ${(calcKm(t)*KM).toFixed(2)} €`));
-if(sailOy>0)oyHtml+=rRow(‘⛵ Purjehdus (Oy)’,`${Math.round(sailOy)} mpk`,`${(sailOy*KM).toFixed(2)} €`);
-if(ST.pvrRole===‘Oy’&&pvr>0)oyHtml+=rRow(‘💰 Päiväraha’,ST.pvr===‘osa’?‘Osapäiväraha’:‘Kokopäiväraha’,`${pvr} €`);
+// ── SUMMARY ───────────────────────────────────────────────────────
+function sumKm(arr) { return arr.reduce((s,t) => s+(parseFloat(t.km)||0), 0); }
+function sumEur(arr) { return arr.reduce((s,b) => s+(parseFloat(b.eur)||0), 0); }
+function renderSummary() {
+const kmTmi = state.trips.filter(t=>t.role===‘Tmi’).reduce((s,t)=>s+(parseFloat(t.km)||0),0)
++ state.visits.reduce((s,v)=>s+(parseFloat(v.km)||0),0);
+const kmOy  = state.trips.filter(t=>t.role===‘Oy’).reduce((s,t)=>s+(parseFloat(t.km)||0),0);
+const kmHlo = state.trips.filter(t=>t.role===‘Hlö’).reduce((s,t)=>s+(parseFloat(t.km)||0),0);
+const kmSail = sumKm(state.tripsSail);
+const dieta = getDietaEur();
+const laskOy=sumEur(state.billOy), laskTmi=sumEur(state.billTmi), laskSail=sumEur(state.billSail);
+let durStr = ‘—’;
+if (state.timeStart && state.timeEnd) {
+let d = toMin(state.timeEnd)-toMin(state.timeStart); if(d<0)d+=1440;
+durStr = Math.floor(d/60)+‘h’+(d%60>0?’ ‘+d%60+‘min’:’’);
 }
-if(oyTotal>0)oyHtml+=`<div class="rpt-total"><div class="rpt-lbl">Korvattavaa yhteensä</div><div class="rpt-val">${oyTotal.toFixed(2)} €</div></div>`;
-oyEl.innerHTML=oyHtml;
-
-// Tmi report
-const tmiEl=document.getElementById(‘rpt-tmi’);
-const tmiTotal=(tmiKm+sailTmi)*KM+(ST.pvrRole===‘Tmi’?pvr:0);
-let tmiHtml=`<div class="rpt-title">🟢 Tmi — Verovähennys ${curDate}</div>`;
-const tmiTrips=ST.trips.filter(t=>t.role===‘Tmi’);
-if(!tmiTrips.length&&!ST.visits.length&&!sailTmi){tmiHtml+=’<div style="color:var(--dim);font-size:13px">Ei Tmi-matkoja.</div>’;}
-else{
-tmiTrips.forEach(t=>tmiHtml+=rRow(esc(t.reitti||t.from||‘Matka’),`${t.ts||''}${t.te?' – '+t.te:''}`,`${calcKm(t)} km · ${(calcKm(t)*KM).toFixed(2)} €`));
-ST.visits.forEach(v=>tmiHtml+=rRow(esc(v.client||‘Asiakaskäynti’),v.topic||’’,`${calcKm(v)} km · ${(calcKm(v)*KM).toFixed(2)} €`));
-if(sailTmi>0)tmiHtml+=rRow(‘⛵ Purjehdus (Tmi)’,`${Math.round(sailTmi)} mpk`,`${(sailTmi*KM).toFixed(2)} €`);
-if(ST.pvrRole===‘Tmi’&&pvr>0)tmiHtml+=rRow(‘💰 Päiväraha’,ST.pvr===‘osa’?‘Osapäiväraha’:‘Kokopäiväraha’,`${pvr} €`);
+document.getElementById(‘summary-grid’).innerHTML =
+‘<div class="stat-card warn"><div class="stat-label">Työaika</div><div class="stat-val">’+durStr+’</div><div class="stat-sub">’+(state.timeStart||’?’)+’ – ‘+(state.timeEnd||’?’)+’</div></div>’ +
+‘<div class="stat-card warn"><div class="stat-label">Päiväraha</div><div class="stat-val">’+dieta+’ €</div><div class="stat-sub">’+state.dietaRole+’</div></div>’ +
+‘<div class="stat-card green"><div class="stat-label">Tmi km</div><div class="stat-val">’+Math.round(kmTmi)+’ km</div><div class="stat-sub">vähennys ‘+(kmTmi*RATE_KM).toFixed(2)+’ €</div></div>’ +
+‘<div class="stat-card accent"><div class="stat-label">Oy km</div><div class="stat-val">’+Math.round(kmOy)+’ km</div><div class="stat-sub">AJarmo Oy</div></div>’ +
+‘<div class="stat-card"><div class="stat-label">Omat km</div><div class="stat-val">’+Math.round(kmHlo)+’ km</div><div class="stat-sub">henkilökohtainen</div></div>’ +
+‘<div class="stat-card"><div class="stat-label">Purjehdus</div><div class="stat-val">’+Math.round(kmSail)+’ km</div><div class="stat-sub">lask. ‘+laskSail.toFixed(0)+’ €</div></div>’ +
+‘<div class="stat-card accent"><div class="stat-label">Laskutus yht.</div><div class="stat-val">’+(laskOy+laskTmi+laskSail).toFixed(0)+’ €</div><div class="stat-sub">Oy ‘+laskOy.toFixed(0)+’ + Tmi ‘+laskTmi.toFixed(0)+’ €</div></div>’ +
+‘<div class="stat-card green"><div class="stat-label">Km-korvaus</div><div class="stat-val">’+((kmTmi+kmSail)*RATE_KM).toFixed(2)+’ €</div><div class="stat-sub">’+Math.round(kmTmi+kmSail)+’ km × 0,55 €</div></div>’;
 }
-if(tmiTotal>0)tmiHtml+=`<div class="rpt-total"><div class="rpt-lbl">Vähennyskelpoiset yhteensä</div><div class="rpt-val">${tmiTotal.toFixed(2)} €</div></div>`;
-tmiEl.innerHTML=tmiHtml;
-}
-
-function rRow(lbl,sub,val){
-return`<div class="rpt-row"><div><div class="rpt-lbl">${lbl}</div>${sub?`<div style="font-size:11px;color:var(--dim)">${sub}</div>`:''}</div><div class="rpt-val">${val}</div></div>`;
-}
-
-// ── APK ───────────────────────────────────────────────────────────
-window.addApkStop=()=>{
-if(!ST.apkStops)ST.apkStops=[];
-ST.apkStops.push({kohde:’’,osoite:’’,mittari:’’,aika:’’,role:‘Oy’});
-rdApk();
-setTimeout(()=>{const l=document.getElementById(‘apk-list’);if(l&&l.lastElementChild)l.lastElementChild.scrollIntoView({behavior:‘smooth’});},100);
-};
-window.setApkRole=(i,r)=>{ST.apkStops[i].role=r;rdApk();autoSave();};
-window.delApkStop=i=>{ST.apkStops.splice(i,1);rdApk();autoSave();};
-
-function rdApk(){
-if(!ST.apkStops)ST.apkStops=[];
-const alku=parseFloat(ST.apkAlku)||0;
-let prevKm=alku,totTmi=0,totOy=0,totOma=0;
-
-document.getElementById(‘apk-list’).innerHTML=ST.apkStops.map((s,i)=>{
-const mittari=parseFloat(s.mittari)||0;
-const etappi=mittari>0&&prevKm>0&&mittari>prevKm?Math.round(mittari-prevKm):0;
-const c=s.role===‘Oy’?‘var(–oy)’:s.role===‘Tmi’?‘var(–tmi)’:‘var(–hlo)’;
-const bl=s.role===‘Oy’?‘oy’:s.role===‘Tmi’?‘tmi’:‘oma’;
-if(s.role===‘Tmi’)totTmi+=etappi;
-else if(s.role===‘Oy’)totOy+=etappi;
-else totOma+=etappi;
-prevKm=mittari||prevKm;
-return`<div class="card apk-etappi ${bl}"> <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"> <div style="font-size:12px;font-weight:700;color:var(--muted)">Pysähdys ${i+1}</div> <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${c}">${etappi>0?etappi+' km':'— km'}</div> </div> <div class="rsel"> <button class="rbtn oy ${s.role==='Oy'?'on':''}" onclick="setApkRole(${i},'Oy')">🔵 Oy</button> <button class="rbtn tmi ${s.role==='Tmi'?'on':''}" onclick="setApkRole(${i},'Tmi')">🟢 Tmi</button> <button class="rbtn hlo ${s.role==='Oma'?'on':''}" onclick="setApkRole(${i},'Oma')">🟣 Oma</button> </div> <div class="r2" style="margin-bottom:8px"> <div class="field"><label>Saapumisaika</label><input type="time" value="${s.aika||''}" data-i="${i}" data-f="aika" class="ai"/></div> <div class="field"><label>Mittarilukema</label><input type="number" value="${s.mittari||''}" data-i="${i}" data-f="mittari" class="ai" placeholder="km" min="0" step="1" style="font-family:var(--mono);font-size:15px;font-weight:700"/></div> </div> <div class="field" style="margin-bottom:7px"><label>Kohde / asiakas</label><input type="text" value="${esc(s.kohde||'')}" data-i="${i}" data-f="kohde" class="ai" placeholder="esim. Mairuen Kone ja Pultti Oy"/></div> <div class="field"><label>Osoite</label><input type="text" value="${esc(s.osoite||'')}" data-i="${i}" data-f="osoite" class="ai" placeholder="Katuosoite, kaupunki"/></div> ${etappi>0?`<div style="margin-top:8px;padding:7px 10px;border-radius:8px;background:rgba(59,111,212,.06);border:1px solid rgba(59,111,212,.2);font-size:12px;color:${c};font-weight:600">
-${i===0?‘Lähtö’:‘Edellinen’} → pysähdys ${i+1}: <strong>${etappi} km</strong> · ${s.role} · ${(etappi*KM).toFixed(2)} €
-</div>`:''} <button class="del-btn" onclick="delApkStop(${i})">🗑 Poista pysähdys</button> </div>`;
-}).join(’’);
-
-// Attach listeners
-document.querySelectorAll(’#apk-list .ai’).forEach(inp=>{
-inp.addEventListener(‘input’,function(){
-const idx=parseInt(this.dataset.i);
-const field=this.dataset.f;
-if(ST.apkStops[idx]===undefined)return;
-ST.apkStops[idx][field]=this.value;
-rdApk();
-if(field===‘aika’)autoFillWorkTime();
-autoSave();
-});
-});
-
-// Summary
-const lastMittari=ST.apkStops.length?parseFloat(ST.apkStops[ST.apkStops.length-1].mittari)||0:0;
-const totKm=totTmi+totOy+totOma;
-const pvr=getPvr();
-
-const sum=document.getElementById(‘apk-summary’);
-if(!ST.apkStops.length){sum.innerHTML=’<div style="color:var(--dim);font-size:13px">Lisää pysähdyksiä.</div>’;return;}
-
-sum.innerHTML=`<div class="rpt-box">
-<div class="rpt-title">📋 ${curDate} — Ajopäiväkirja</div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px">
-<div style="text-align:center;background:rgba(0,168,120,.07);border-radius:8px;padding:9px">
-<div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase">🟢 Tmi</div>
-<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--tmi)">${totTmi} km</div>
-<div style="font-size:11px;color:var(--muted)">${(totTmi*KM).toFixed(2)} €</div>
-</div>
-<div style="text-align:center;background:rgba(59,111,212,.07);border-radius:8px;padding:9px">
-<div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase">🔵 Oy</div>
-<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--oy)">${totOy} km</div>
-<div style="font-size:11px;color:var(--muted)">${(totOy*KM).toFixed(2)} €</div>
-</div>
-<div style="text-align:center;background:rgba(124,92,191,.07);border-radius:8px;padding:9px">
-<div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase">🟣 Oma</div>
-<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--hlo)">${totOma} km</div>
-<div style="font-size:11px;color:var(--muted)">ei korv.</div>
-</div>
-</div>
-${rRow(‘Mittari alussa’,’’,alku>0?alku+’ km’:’—’)}
-${rRow(‘Mittari lopussa’,’’,lastMittari>0?lastMittari+’ km’:’—’)}
-<div class="rpt-total"><div class="rpt-lbl">Ajettu yhteensä</div><div class="rpt-val">${totKm} km</div></div>
-<button onclick="doApkCSV()" style="width:100%;margin-top:10px;background:var(--accent);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:10px;border-radius:10px;cursor:pointer">⬇ Ajopäiväkirja CSV</button>
-
-  </div>`;
-
-const info=document.getElementById(‘apk-alku-info’);
-if(info)info.textContent=lastMittari>0?`Päivän lopetus: ${lastMittari} km — siirtyy huomisen aloitukseksi`:’’;
-}
-
-async function fetchPrevDayEnd(date){
-try{
-const d=new Date(date);d.setDate(d.getDate()-1);
-const prev=d.toISOString().slice(0,10);
-const snap=await getDoc(doc(db,‘paivyri’,prev));
-if(!snap.exists())return null;
-const s=snap.data();
-if(!s.apkStops||!s.apkStops.length)return null;
-const last=s.apkStops[s.apkStops.length-1];
-return{km:last.mittari,date:prev};
-}catch(e){return null;}
-}
-
-window.doApkCSV=()=>{
-fromDOM();
-const alku=parseFloat(ST.apkAlku)||0;
-const rows=[[‘Pvm’,’#’,‘Kohde’,‘Osoite’,‘Aika’,‘Mittarilukema’,‘Etappi km’,‘Rooli’,‘Korvaus €’]];
-rows.push([curDate,‘Lähtö’,’’,’’,ST.apkLahto||’’,alku,’’,’’,’’]);
-let prev=alku;
-(ST.apkStops||[]).forEach((s,i)=>{
-const m=parseFloat(s.mittari)||0;
-const e=m>0&&prev>0&&m>prev?Math.round(m-prev):0;
-rows.push([curDate,i+1,s.kohde||’’,s.osoite||’’,s.aika||’’,m||’’,e,s.role,s.role!==‘Oma’?(e*KM).toFixed(2):‘0’]);
-prev=m||prev;
-});
-dlCSV(`ajopaivakirja_${curDate}.csv`,rows);
-};
-
-// ── HISTORY ───────────────────────────────────────────────────────
-async function rdHist(){
-document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--muted);font-size:13px">Ladataan…</div>’;
-try{
-const snap=await getDocs(query(collection(db,‘paivyri’),orderBy(‘at’,‘desc’)));
-if(snap.empty){document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--dim);font-size:13px">Ei tallennettuja päiviä.</div>’;return;}
-
-```
-// Month summary
-const byMonth={};
-snap.docs.forEach(d=>{
-  const s=d.data(),mo=d.id.slice(0,7);
-  if(!byMonth[mo])byMonth[mo]={km:0,pvr:0,days:0};
-  byMonth[mo].days++;
-  byMonth[mo].km+=allKmFromState(s);
-  byMonth[mo].pvr+=pvrFromState(s);
-});
-const months=Object.keys(byMonth).sort().reverse();
-document.getElementById('month-grid').innerHTML=months.map(mo=>{
-  const mx=byMonth[mo];
-  const[y,m]=mo.split('-');
-  const mn=['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'][+m-1];
-  return`<div class="stat ac" onclick="showMonthModal('${mo}')" style="cursor:pointer">
-    <div class="stat-lbl">${mn} ${y}</div>
-    <div class="stat-val">${mx.days} pv</div>
-    <div class="stat-sub">${Math.round(mx.km)} km · pvr ${mx.pvr} €</div>
-  </div>`;
-}).join('');
-
-document.getElementById('hist-list').innerHTML=snap.docs.map(d=>{
-  const s=d.data();
-  const km=allKmFromState(s);
-  const pvr=pvrFromState(s);
-  return`<div class="hrow" onclick="showDayModal('${d.id}')">
-    <div class="hdate">${fmtDate(d.id)}</div>
-    <div style="flex:1">
-      <div class="hinfo">${s.ts||''}${s.te?' – '+s.te:''} · ${(s.tasks||[]).length} teht. · ${Math.round(km)} km</div>
-      <div class="hbadges">
-        ${pvr>0?`<span class="badge" style="background:rgba(212,134,10,.1);color:var(--warn);border:1px solid rgba(212,134,10,.3)">pvr ${pvr}€</span>`:''}
-      </div>
-    </div>
-    <div style="color:var(--accent);font-size:18px">›</div>
-  </div>`;
-}).join('');
-```
-
-}catch(e){document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--danger);font-size:13px">Virhe.</div>’;}
-}
-
-function allKmFromState(s){
-let km=0;
-[…(s.trips||[]),…(s.sails||[]),…(s.visits||[])].forEach(t=>{
-if(t.odosta&&t.odoon){const k=(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0);km+=k>0?k:0;}
-else km+=parseFloat(t.km)||0;
-});
-return km;
-}
-function pvrFromState(s){if(s.pvr===‘osa’)return 25;if(s.pvr===‘koko’)return 54;if(s.pvr===‘ulk’)return parseFloat(s.ulk)||0;return 0;}
-
-window.showDayModal=async d=>{
-document.getElementById(‘modal-title’).textContent=fmtDate(d);
-document.getElementById(‘modal-date’).textContent=d;
-document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--muted);font-size:13px">Ladataan…</div>’;
-document.getElementById(‘modal’).style.display=‘flex’;
-try{
-const snap=await getDoc(doc(db,‘paivyri’,d));
-if(!snap.exists()){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--dim)">Ei tietoja.</div>’;return;}
-const s={…emptyDay(),…snap.data()};
-let html=’’;
-if(s.ts||s.te){let dd=’’;if(s.ts&&s.te){let m=toMin(s.te)-toMin(s.ts);if(m<0)m+=1440;dd=` (${minToStr(m)})`;}
-html+=`<div class="msec"><div class="msec-title">⏰ Työaika</div><div class="mitem">${s.ts||'?'} – ${s.te||'?'}${dd}</div></div>`;}
-if(s.tasks&&s.tasks.length){
-html+=`<div class="msec"><div class="msec-title">✅ Tehtävät</div>`;
-s.tasks.forEach(t=>html+=`<div class="mitem"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span> ${esc(t.text)}</div>`);
-html+=’</div>’;}
-if(s.trips&&s.trips.length){
-html+=`<div class="msec"><div class="msec-title">🚗 Matkat</div>`;
-s.trips.forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;
-html+=`<div class="mitem"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span> ${esc(t.reitti||t.from||'matka')} · <strong>${km} km</strong></div>`;});
-html+=’</div>’;}
-const pvr=pvrFromState(s);
-if(pvr)html+=`<div class="msec"><div class="msec-title">💰 Päiväraha</div><div class="mitem" style="color:var(--warn)">${s.pvr==='osa'?'Osapäiväraha':s.pvr==='koko'?'Kokopäiväraha':'Ulkomaan pvr'} <strong>${pvr} €</strong></div></div>`;
-const oyKm=(s.trips||[]).filter(t=>t.role===‘Oy’).reduce((a,t)=>{const k=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;return a+k;},0);
-const pvrOy=s.pvrRole===‘Oy’?pvr:0;
-if(oyKm||pvrOy)html+=`<div class="msec"><div class="msec-title">🔵 Oy matkalasku</div><div class="mitem"><div style="display:flex;justify-content:space-between"><span>Km-korvaus</span><strong>${(oyKm*KM).toFixed(2)} €</strong></div>${pvrOy?`<div style="display:flex;justify-content:space-between"><span>Päiväraha</span><strong>${pvrOy} €</strong></div>`:''}<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:5px;padding-top:5px"><span>Yhteensä</span><span style="color:var(--tmi)">${(oyKm*KM+pvrOy).toFixed(2)} €</span></div></div></div>`;
-if(s.notes)html+=`<div class="msec"><div class="msec-title">📝 Muistiinpanot</div><div class="mitem">${esc(s.notes)}</div></div>`;
-html+=`<button onclick="changeDate('${d}');closeModal()" style="width:100%;margin-top:6px;background:var(--accent);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>`;
-document.getElementById(‘modal-body’).innerHTML=html;
-}catch(e){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--danger)">Virhe.</div>’;}
-};
-
-window.showMonthModal=async mo=>{
-document.getElementById(‘modal-title’).textContent=‘Kuukausikoosto’;
-const[y,m]=mo.split(’-’);
-document.getElementById(‘modal-date’).textContent=[‘tammikuu’,‘helmikuu’,‘maaliskuu’,‘huhtikuu’,‘toukokuu’,‘kesäkuu’,‘heinäkuu’,‘elokuu’,‘syyskuu’,‘lokakuu’,‘marraskuu’,‘joulukuu’][+m-1]+’ ‘+y;
-document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--muted)">Lasketaan…</div>’;
-document.getElementById(‘modal’).style.display=‘flex’;
-try{
-const snap=await getDocs(query(collection(db,‘paivyri’),orderBy(‘at’,‘desc’)));
-const days=snap.docs.filter(d=>d.id.startsWith(mo));
-let totOy=0,totTmi=0,totHlo=0,totPvrOy=0,totPvrTmi=0;
-days.forEach(d=>{
-const s={…emptyDay(),…d.data()};
-const pvr=pvrFromState(s);
-(s.trips||[]).forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;if(t.role===‘Oy’)totOy+=km;else if(t.role===‘Tmi’)totTmi+=km;else totHlo+=km;});
-(s.visits||[]).forEach(v=>{totTmi+=(v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0);});
-if(s.pvrRole===‘Oy’)totPvrOy+=pvr;
-if(s.pvrRole===‘Tmi’)totPvrTmi+=pvr;
-});
-document.getElementById(‘modal-body’).innerHTML=` <div class="stat-grid" style="margin-bottom:12px"> <div class="stat wa"><div class="stat-lbl">Päiviä</div><div class="stat-val">${days.length}</div></div> <div class="stat gr"><div class="stat-lbl">Tmi km</div><div class="stat-val">${Math.round(totTmi)}</div><div class="stat-sub">${(totTmi*KM).toFixed(2)} €</div></div> <div class="stat ac"><div class="stat-lbl">Oy km</div><div class="stat-val">${Math.round(totOy)}</div><div class="stat-sub">${(totOy*KM).toFixed(2)} €</div></div> <div class="stat wa"><div class="stat-lbl">Pvr Oy</div><div class="stat-val">${totPvrOy} €</div></div> <div class="stat wa"><div class="stat-lbl">Pvr Tmi</div><div class="stat-val">${totPvrTmi} €</div></div> <div class="stat gr"><div class="stat-lbl">Oy yhteensä</div><div class="stat-val">${(totOy*KM+totPvrOy).toFixed(0)} €</div></div> </div>`;
-}catch(e){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--danger)">Virhe.</div>’;}
-};
-window.closeModal=e=>{if(!e||e.target===document.getElementById(‘modal’))document.getElementById(‘modal’).style.display=‘none’;};
 
 // ── FIRESTORE ─────────────────────────────────────────────────────
-function fromDOM(){
-ST.ckm=document.getElementById(‘ckm’).value;
-ST.ckmr=document.getElementById(‘ckmr’).value;
-ST.ts=document.getElementById(‘t-start’).value;
-ST.te=document.getElementById(‘t-end’).value;
-ST.pvrRole=document.getElementById(‘pvr-role’).value;
-ST.ulk=document.getElementById(‘ulk-eur’).value;
-ST.notes=document.getElementById(‘notes’).value;
-ST.apkAlku=document.getElementById(‘apk-alku’).value;
-ST.apkLahto=document.getElementById(‘apk-lahto’).value;
-[‘ei’,‘osa’,‘koko’,‘ulk’].forEach(t=>{const b=document.getElementById(‘d-’+t);if(b&&b.classList.contains(‘on’))ST.pvr=t;});
+function setSyncDot(st) {
+const d = document.getElementById(‘sync-dot’);
+d.className = ‘sync-dot’ + (st===‘synced’?’ synced’:st===‘syncing’?’ syncing’:’’);
 }
-function dot(s){const d=document.getElementById(‘sdot’);d.className=‘sdot’+(s===‘ok’?’ ok’:s===‘busy’?’ busy’:’’);}
-
-window.saveDay=async()=>{fromDOM();dot(‘busy’);try{await setDoc(doc(db,‘paivyri’,curDate),{…ST,at:serverTimestamp()});toast(‘Tallennettu ✓’);dot(‘ok’);}catch(e){toast(‘Virhe!’);dot(’’);}};
-window.autoSave=()=>{
-fromDOM();dot(‘busy’);
-if(curTab===4)rdReports();
-clearTimeout(saveTimer);
-saveTimer=setTimeout(async()=>{
-try{await setDoc(doc(db,‘paivyri’,curDate),{…ST,at:serverTimestamp()});dot(‘ok’);toast(‘✓’);}
-catch(e){dot(’’);}
-},1500);
+function collectFromDOM() {
+state.commKm    = document.getElementById(‘comm-km’).value;
+state.commKmR   = document.getElementById(‘comm-km-r’).value;
+state.timeStart = document.getElementById(‘time-start’).value;
+state.timeEnd   = document.getElementById(‘time-end’).value;
+state.dietaRole = document.getElementById(‘dieta-role’).value;
+state.ulkEur    = document.getElementById(‘ulk-eur’).value;
+state.notes     = document.getElementById(‘notes’).value;
+}
+window.saveDay = async () => {
+collectFromDOM();
+setSyncDot(‘syncing’);
+try {
+await setDoc(doc(db,‘paivyri’,currentDate), {…state, savedAt:serverTimestamp()});
+showToast(‘Tallennettu ✓’);
+setSyncDot(‘synced’);
+} catch(e) { showToast(‘Virhe!’); setSyncDot(’’); }
 };
-
-async function loadDay(d){
-dot(‘busy’);
-try{const snap=await getDoc(doc(db,‘paivyri’,d));ST=snap.exists()?{…emptyDay(),…snap.data()}:emptyDay();}
-catch(e){ST=emptyDay();}
-toDOM();rdAll();
-autoFillWorkTime();
-dot(‘ok’);
-if(curTab===4)rdReports();
-if(curTab===5)rdHist();
-if(curTab===6){rdApk();loadApkAlku(d);}
+window.autoSave = () => {
+collectFromDOM();
+setSyncDot(‘syncing’);
+clearTimeout(autoSaveTimer);
+autoSaveTimer = setTimeout(async () => {
+try {
+await setDoc(doc(db,‘paivyri’,currentDate), {…state, savedAt:serverTimestamp()});
+setSyncDot(‘synced’); showToast(‘✓’);
+} catch(e) { setSyncDot(’’); }
+}, 1500);
+};
+async function loadDay(d) {
+setSyncDot(‘syncing’);
+try {
+const snap = await getDoc(doc(db,‘paivyri’,d));
+state = snap.exists() ? {…defaultState(),…snap.data()} : defaultState();
+} catch(e) { state = defaultState(); }
+applyStateToDOM(); renderAll();
+setSyncDot(‘synced’);
+if (activeTab===4) renderSummary();
+if (activeTab===5) renderHistory();
 }
-
-function toDOM(){
-document.getElementById(‘ckm’).value=ST.ckm||’’;
-document.getElementById(‘ckmr’).value=ST.ckmr||’’;
-document.getElementById(‘t-start’).value=ST.ts||’’;
-document.getElementById(‘t-end’).value=ST.te||’’;
-document.getElementById(‘pvr-role’).value=ST.pvrRole||‘Oy’;
-document.getElementById(‘ulk-eur’).value=ST.ulk||’’;
-document.getElementById(‘notes’).value=ST.notes||’’;
-document.getElementById(‘apk-alku’).value=ST.apkAlku||’’;
-document.getElementById(‘apk-lahto’).value=ST.apkLahto||’’;
-setPvr(ST.pvr||‘ei’);
-updTimeBanner();
-updPvrBox();
-rdGcalDay();
+function applyStateToDOM() {
+document.getElementById(‘comm-km’).value    = state.commKm||’’;
+document.getElementById(‘comm-km-r’).value  = state.commKmR||’’;
+document.getElementById(‘time-start’).value = state.timeStart||’’;
+document.getElementById(‘time-end’).value   = state.timeEnd||’’;
+document.getElementById(‘dieta-role’).value = state.dietaRole||‘Oy’;
+document.getElementById(‘ulk-eur’).value    = state.ulkEur||’’;
+document.getElementById(‘notes’).value      = state.notes||’’;
+setDieta(state.dieta||‘ei’);
+updateTimeBadge();
+renderGcalDay();
 }
-function rdAll(){rdTasks();rdTrips();rdSail();rdVisits();rdBills();}
+function renderAll() {
+renderTasks(); renderTrips(); renderSail(); renderVisits(); renderBills();
+}
+window.removeFrom = (arr,i) => { state[arr].splice(i,1); renderAll(); autoSave(); };
 
-async function loadApkAlku(date){
-if(ST.apkAlku&&parseFloat(ST.apkAlku)>0)return;
-const day=parseInt(date.split(’-’)[2]);
-const info=document.getElementById(‘apk-alku-info’);
-if(day===1){if(info)info.textContent=‘Kuukauden 1. päivä — syötä aloituskilometrit manuaalisesti.’;return;}
-const prev=await fetchPrevDayEnd(date);
-if(prev&&prev.km&&parseFloat(prev.km)>0){
-ST.apkAlku=prev.km;
-document.getElementById(‘apk-alku’).value=prev.km;
-if(info)info.textContent=`Haettu automaattisesti: ${prev.date} lopetus ${prev.km} km`;
-rdApk();
+// ── HISTORY ───────────────────────────────────────────────────────
+async function renderHistory() {
+document.getElementById(‘history-list’).innerHTML = ‘<div style="color:var(--muted);font-size:13px;padding:8px 0">Ladataan…</div>’;
+try {
+const snap = await getDocs(query(collection(db,‘paivyri’), orderBy(‘savedAt’,‘desc’)));
+if (snap.empty) { document.getElementById(‘history-list’).innerHTML=’<div style="color:var(--dim);font-size:13px">Ei tallennettuja päiviä.</div>’; return; }
+document.getElementById(‘history-list’).innerHTML = snap.docs.map(d => {
+const s = d.data();
+const kmTmi = (s.trips||[]).filter(t=>t.role===‘Tmi’).reduce((a,t)=>a+(parseFloat(t.km)||0),0)
++ (s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
+const lask  = (s.billOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)
++ (s.billTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)
++ (s.billSail||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
+const dur   = s.timeStart&&s.timeEnd ? s.timeStart+’–’+s.timeEnd+’ · ’ : ‘’;
+const info  = dur + (s.tasks||[]).length + ’ tehtävää · ’ + Math.round(kmTmi) + ’ km · ’ + lask.toFixed(0) + ’ €’;
+return ‘<div class="hist-row" onclick="changeDate(\'' + d.id + '\')">’ +
+‘<div class="hist-date">’ + fmtDate(d.id) + ‘</div>’ +
+‘<div class="hist-info">’ + info + ‘</div>’ +
+‘<div class="hist-arr">›</div></div>’;
+}).join(’’);
+} catch(e) {
+document.getElementById(‘history-list’).innerHTML = ‘<div style="color:var(--danger);font-size:13px">Latausvirhe.</div>’;
 }
 }
 
 // ── EXPORT ────────────────────────────────────────────────────────
-window.doCSV=()=>{
-fromDOM();
-const rows=[[‘Pvm’,‘Kategoria’,‘Rooli’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alku’,‘Mittari loppu’,‘km’,‘€(alv0)’,‘ALV%’,‘Pvr €’]];
-ST.trips.forEach(t=>{const km=calcKm(t);rows.push([curDate,‘Ajomatka’,t.role,(t.reitti||t.from||’’)+(t.kuvaus?’ / ‘+(t.kuvaus||’’):’’),t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,t.role!==‘Hlö’?(km*KM).toFixed(2):’’,’’,’’]);});
-ST.visits.forEach(v=>{const km=calcKm(v);rows.push([curDate,‘Asiakaskäynti’,‘Tmi’,(v.client||’’)+(v.topic?’ / ‘+v.topic:’’),v.ts||’’,v.te||’’,v.odosta||’’,v.odoon||’’,km,(km*KM).toFixed(2),’’,’’]);});
-const pvr=getPvr();if(pvr)rows.push([curDate,‘Päiväraha’,ST.pvrRole,ST.pvr,ST.ts||’’,ST.te||’’,’’,’’,’’,’’,’’,pvr]);
-dlCSV(`paivyri_${curDate}.csv`,rows);
+window.exportCSV = () => {
+collectFromDOM(); const s = state;
+const rows = [[‘Päivämäärä’,‘Kategoria’,‘Rooli’,‘Kuvaus’,‘Alku’,‘Loppu’,‘km’,‘€(alv0)’,‘ALV%’,‘Lisätieto’]];
+s.trips.forEach(t => rows.push([currentDate,‘Ajomatka’,t.role,t.from||’’,t.tStart||’’,t.tEnd||’’,t.km||0,t.role===‘Tmi’?(parseFloat(t.km)||0)*RATE_KM:’’,’’,t.notes||’’]));
+s.tripsSail.forEach(t => rows.push([currentDate,‘Purjehdus’,t.role,(t.from||’’)+‘→’+(t.to||’’),t.tStart||’’,t.tEnd||’’,t.km||0,’’,’’,t.notes||’’]));
+s.visits.forEach(v => rows.push([currentDate,‘Asiakaskäynti’,‘Tmi’,(v.client||’’)+’ / ‘+(v.contact||’’),v.tStart||’’,v.tEnd||’’,v.km||0,(parseFloat(v.km)||0)*RATE_KM,’’,v.topic||’’]));
+s.billOy.forEach(b => rows.push([currentDate,‘Laskutus’,‘Oy’,b.desc||’’,’’,’’,’’,b.eur||0,b.alv||0,’’]));
+s.billTmi.forEach(b => rows.push([currentDate,‘Laskutus’,‘Tmi’,b.desc||’’,’’,’’,’’,b.eur||0,b.alv||0,’’]));
+s.billSail.forEach(b => rows.push([currentDate,‘Lask.purjehdus’,b.role||‘Oy’,b.desc||’’,’’,’’,’’,b.eur||0,b.alv||0,’’]));
+const dieta = getDietaEur();
+if (dieta) rows.push([currentDate,‘Päiväraha’,s.dietaRole,s.dieta,s.timeStart||’’,s.timeEnd||’’,’’,dieta,’’,’’]);
+const csv = rows.map(r => r.map(c => ‘”’ + (c+’’).replace(/”/g,’””’) + ‘”’).join(’,’)).join(’\n’);
+const blob = new Blob([’\ufeff’+csv], {type:‘text/csv;charset=utf-8’});
+const a = document.createElement(‘a’); a.href = URL.createObjectURL(blob);
+a.download = ‘jarmo_’ + currentDate + ‘.csv’; a.click();
 };
-window.doOyCSV=()=>{
-fromDOM();
-const rows=[[‘Pvm’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alku’,‘Mittari loppu’,‘km’,‘Km-korv €’,‘Pvr €’,‘Yht €’]];
-ST.trips.filter(t=>t.role===‘Oy’).forEach(t=>{const km=calcKm(t);rows.push([curDate,t.reitti||t.from||‘Matka’,t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,(km*KM).toFixed(2),’’,( km*KM).toFixed(2)]);});
-const pvr=ST.pvrRole===‘Oy’?getPvr():0;
-if(pvr)rows.push([curDate,‘Päiväraha’,ST.ts||’’,ST.te||’’,’’,’’,’’,’’,pvr,pvr]);
-const oyKm=tripsKm(‘Oy’);
-rows.push([’’,‘YHTEENSÄ’,’’,’’,’’,’’,Math.round(oyKm),(oyKm*KM).toFixed(2),pvr,(oyKm*KM+pvr).toFixed(2)]);
-dlCSV(`oy_matkalasku_${curDate}.csv`,rows);
-};
-window.doTmiCSV=()=>{
-fromDOM();
-const rows=[[‘Pvm’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alku’,‘Mittari loppu’,‘km’,‘Km-väh €’,‘Pvr €’,‘Yht €’]];
-ST.trips.filter(t=>t.role===‘Tmi’).forEach(t=>{const km=calcKm(t);rows.push([curDate,t.reitti||t.from||‘Matka’,t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,(km*KM).toFixed(2),’’,( km*KM).toFixed(2)]);});
-ST.visits.forEach(v=>{const km=calcKm(v);rows.push([curDate,(v.client||‘Käynti’)+(v.topic?’ – ‘+v.topic:’’),v.ts||’’,v.te||’’,v.odosta||’’,v.odoon||’’,km,(km*KM).toFixed(2),’’,( km*KM).toFixed(2)]);});
-const pvr=ST.pvrRole===‘Tmi’?getPvr():0;
-if(pvr)rows.push([curDate,‘Päiväraha’,ST.ts||’’,ST.te||’’,’’,’’,’’,’’,pvr,pvr]);
-const tmiKm=tripsKm(‘Tmi’);
-rows.push([’’,‘YHTEENSÄ’,’’,’’,’’,’’,Math.round(tmiKm),(tmiKm*KM).toFixed(2),pvr,(tmiKm*KM+pvr).toFixed(2)]);
-dlCSV(`tmi_verovahennys_${curDate}.csv`,rows);
-};
-window.doCopyText=()=>{
-fromDOM();
-const pvr=getPvr();
-let o=`PÄIVYRI ${curDate}\n${'─'.repeat(36)}\n`;
-if(ST.ts||ST.te)o+=`Työaika: ${ST.ts||'?'} – ${ST.te||'?'}\n\n`;
-if(ST.tasks.length){o+=‘TEHTÄVÄT:\n’;ST.tasks.forEach(t=>o+=`  [${t.done?'✓':' '}] ${t.text} (${t.role})\n`);o+=’\n’;}
-if(ST.trips.length){o+=‘MATKAT:\n’;ST.trips.forEach(t=>o+=`  [${t.role}] ${t.reitti||t.from||'matka'} ${calcKm(t)}km\n`);o+=’\n’;}
-if(pvr)o+=`PÄIVÄRAHA: ${pvr}€ (${ST.pvr}, ${ST.pvrRole})\n`;
-const oyKm=tripsKm(‘Oy’),tmiKm=tripsKm(‘Tmi’);
-o+=`\n🔵 OY: ${Math.round(oyKm)}km × 0,55 = ${(oyKm*KM).toFixed(2)}€`;
-if(ST.pvrRole===‘Oy’&&pvr)o+=` + pvr ${pvr}€ = ${(oyKm*KM+pvr).toFixed(2)}€`;
-o+=`\n🟢 TMI: ${Math.round(tmiKm)}km × 0,55 = ${(tmiKm*KM).toFixed(2)}€`;
-if(ST.pvrRole===‘Tmi’&&pvr)o+=` + pvr ${pvr}€ = ${(tmiKm*KM+pvr).toFixed(2)}€`;
-if(navigator.clipboard){navigator.clipboard.writeText(o).then(()=>toast(‘Kopioitu ✓’));}
-else{const ta=document.createElement(‘textarea’);ta.value=o;document.body.appendChild(ta);ta.select();document.execCommand(‘copy’);document.body.removeChild(ta);toast(‘Kopioitu ✓’);}
+window.copyText = () => {
+collectFromDOM(); const s = state;
+const kmTmi = s.trips.filter(t=>t.role===‘Tmi’).reduce((a,t)=>a+(parseFloat(t.km)||0),0)
++ s.visits.reduce((a,v)=>a+(parseFloat(v.km)||0),0);
+const dieta = getDietaEur();
+let out = ‘JARMO AALTONEN — PÄIVYRI ’ + currentDate + ‘\n’ + ‘─’.repeat(45) + ‘\n’;
+if (s.timeStart||s.timeEnd) out += ‘Työaika: ’ + (s.timeStart||’?’) + ’ – ’ + (s.timeEnd||’?’) + ‘\n’;
+out += ‘\n’;
+if (s.tasks.length) { out += ‘TEHTÄVÄT:\n’; s.tasks.forEach(t => out += ’  [’ + (t.done?‘✓’:’ ‘) + ‘] ’ + t.text + ’ (’ + t.role + ‘)\n’); out += ‘\n’; }
+if (s.trips.length) { out += ‘AJOMATKAT:\n’; s.trips.forEach(t => out += ’  [’ + t.role + ‘] ’ + (t.from||’?’) + ’  ’ + (t.km||0) + ’ km — ’ + (t.notes||’’) + ‘\n’); out += ‘\n’; }
+if (s.visits.length) { out += ‘ASIAKASKÄYNNIT:\n’; s.visits.forEach(v => out += ’  ’ + (v.client||’?’) + (v.contact?’ / ‘+v.contact:’’) + ’  ’ + (v.km||0) + ’ km — ’ + (v.topic||’’) + ‘\n’); out += ‘\n’; }
+if (dieta) out += ‘PÄIVÄRAHA: ’ + dieta + ’ € (’ + s.dieta + ’, ’ + s.dietaRole + ‘)\n\n’;
+out += ’KM-KORVAUS (Tmi): ’ + Math.round(kmTmi) + ’ km × 0,55 € = ’ + (kmTmi*RATE_KM).toFixed(2) + ’ €\n’;
+if (s.notes) out += ’\nMUIST.: ’ + s.notes + ‘\n’;
+if (navigator.clipboard) { navigator.clipboard.writeText(out).then(() => showToast(‘Kopioitu ✓’)); }
+else { const ta=document.createElement(‘textarea’);ta.value=out;document.body.appendChild(ta);ta.select();document.execCommand(‘copy’);document.body.removeChild(ta);showToast(‘Kopioitu ✓’); }
 };
 
-function dlCSV(name,rows){
-const csv=rows.map(r=>r.map(c=>`"${(c+'').replace(/"/g,'""')}"`).join(’,’)).join(’\n’);
-const a=document.createElement(‘a’);
-a.href=URL.createObjectURL(new Blob([’\ufeff’+csv],{type:‘text/csv;charset=utf-8’}));
-a.download=name;a.click();
-}
-
-// ── UTILS ──────────────────────────────────────────────────────────
-function toast(msg){const t=document.getElementById(‘toast’);t.textContent=msg;t.classList.add(‘show’);clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove(‘show’),2000);}
-function esc(s){return(s||’’).replace(/&/g,’&’).replace(/</g,’<’).replace(/>/g,’>’).replace(/”/g,’"’);}
-window.esc=esc;
-</script>
-
-</body>
-</html><!DOCTYPE html>
-
-<html lang="fi">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-title" content="Päivyri"/>
-<meta name="theme-color" content="#1e3f6e"/>
-<title>Päivyri</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<style>
-:root{
-  --bg:#eef2ff;--surface:#f8faff;--card:#ffffff;
-  --navy:#1e3f6e;--navy2:#2a5296;
-  --border:rgba(30,63,110,.15);--border2:rgba(30,63,110,.25);
-  --text:#1a2a4a;--muted:#4a6080;--dim:#8a9bb0;
-  --accent:#3b6fd4;--a2:#00a878;--warn:#d4860a;--danger:#cc2244;
-  --oy:#3b6fd4;--tmi:#00a878;--hlo:#7c5cbf;
-  --mono:'DM Mono',monospace;--sans:'Sora',sans-serif;
-  --r:14px;--r2:10px;
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;overscroll-behavior:none}
-body{display:flex;flex-direction:column}
-
-/* LOADING / AUTH */
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:linear-gradient(160deg,#1e3f6e,#0d2650);z-index:1000}
-.spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.screen-title{font-size:26px;font-weight:700;color:#fff}
-.screen-sub{font-size:13px;color:rgba(255,255,255,.6);text-align:center}
-.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1a2a4a;border:none;border-radius:12px;padding:14px 28px;font-family:var(–sans);font-size:15px;font-weight:700;cursor:pointer;width:100%;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-.auth-err{font-size:13px;color:#ffaaaa;text-align:center;max-width:300px}
-
-/* APP */
-#app{flex:1;display:flex;flex-direction:column;height:100%;overflow:hidden}
-
-/* TOPBAR */
-.topbar{background:var(–navy);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
-.t-brand{font-size:15px;font-weight:700;color:#fff}
-.t-date{font-family:var(–mono);font-size:12px;color:rgba(255,255,255,.8);background:rgba(255,255,255,.15);border-radius:8px;padding:5px 10px;cursor:pointer}
-.t-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.sdot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)}
-.sdot.ok{background:#00e5a0;box-shadow:0 0 6px #00e5a0}
-.sdot.busy{background:#ffb830;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.btn-save{font-family:var(–sans);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:6px 14px;cursor:pointer}
-.btn-logout{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
-
-/* TIME BANNER */
-.tbanner{background:var(–navy2);padding:8px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
-.tpill{display:flex;align-items:center;gap:6px;flex:1;background:rgba(255,255,255,.12);border-radius:10px;padding:7px 10px}
-.tpill label{font-size:10px;color:rgba(255,255,255,.6);font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.tpill input[type=time]{background:none;border:none;color:#fff;font-family:var(–mono);font-size:14px;outline:none;flex:1;min-width:0}
-.dur-badge{font-family:var(–mono);font-size:11px;font-weight:600;padding:4px 8px;border-radius:16px;white-space:nowrap;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)}
-.dur-badge.ok{background:rgba(0,229,160,.25);color:#00e5a0}
-.dur-badge.warn{background:rgba(255,184,48,.25);color:#ffb830}
-.pvr-hint{font-size:11px;font-weight:700;padding:4px 10px;border-radius:16px;background:rgba(255,184,48,.2);color:#ffb830;cursor:pointer;white-space:nowrap;display:none}
-
-/* TABS */
-.tabs{background:#fff;border-bottom:2px solid var(–border);display:flex;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
-.tabs::-webkit-scrollbar{display:none}
-.tab{font-size:12px;font-weight:700;white-space:nowrap;border:none;background:none;color:var(–muted);padding:11px 13px;cursor:pointer;border-bottom:3px solid transparent;flex-shrink:0}
-.tab.on{color:var(–accent);border-bottom-color:var(–accent)}
-
-/* CONTENT */
-.content{flex:1;overflow-y:auto;padding:14px 14px 110px;background:var(–bg)}
-.panel{display:none}.panel.on{display:block}
-.sec{margin-bottom:18px}
-.slbl{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(–accent);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:5px}
-.slbl::before{content:’’;width:3px;height:13px;background:var(–accent);border-radius:2px;display:inline-block}
-.card{background:#fff;border:1px solid var(–border);border-radius:var(–r);padding:13px;margin-bottom:10px;box-shadow:0 1px 4px rgba(30,63,110,.07)}
-
-/* FORMS */
-.field{margin-bottom:9px}
-.field:last-child{margin-bottom:0}
-.field label{font-size:10px;color:var(–muted);display:block;margin-bottom:3px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
-width:100%;background:#f4f7ff;color:var(–text);border:1.5px solid var(–border2);
-border-radius:var(–r2);padding:9px 11px;font-family:var(–sans);font-size:14px;
-outline:none;-webkit-appearance:none;transition:border-color .15s}
-input:focus,select:focus,textarea:focus{border-color:var(–accent);background:#fff}
-textarea{resize:none;min-height:64px;line-height:1.5}
-select{background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘10’ height=‘10’ fill=’%234a6080’ viewBox=‘0 0 16 16’%3E%3Cpath d=‘M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
-
-/* ROLE SELECTOR */
-.rsel{display:flex;gap:6px;margin-bottom:10px}
-.rbtn{flex:1;font-size:12px;font-weight:700;padding:7px 4px;border-radius:20px;border:1.5px solid var(–border2);background:none;color:var(–muted);cursor:pointer;text-align:center}
-.rbtn.oy.on{background:rgba(59,111,212,.12);border-color:var(–oy);color:var(–oy)}
-.rbtn.tmi.on{background:rgba(0,168,120,.1);border-color:var(–tmi);color:var(–tmi)}
-.rbtn.hlo.on{background:rgba(124,92,191,.1);border-color:var(–hlo);color:var(–hlo)}
-
-/* BADGES */
-.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px}
-.b-oy{background:rgba(59,111,212,.12);color:var(–oy);border:1px solid rgba(59,111,212,.3)}
-.b-tmi{background:rgba(0,168,120,.1);color:var(–tmi);border:1px solid rgba(0,168,120,.3)}
-.b-hlo,.b-hlö,.b-oma{background:rgba(124,92,191,.1);color:var(–hlo);border:1px solid rgba(124,92,191,.3)}
-
-/* ADD BUTTON */
-.abtn{width:100%;background:rgba(59,111,212,.06);border:1.5px dashed rgba(59,111,212,.3);border-radius:var(–r);color:var(–accent);font-family:var(–sans);font-size:13px;font-weight:600;padding:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
-.abtn:active{background:rgba(59,111,212,.14)}
-
-/* KM CALC */
-.kmcalc{background:rgba(0,168,120,.08);border:1px solid rgba(0,168,120,.25);border-radius:var(–r2);padding:8px 12px;font-family:var(–mono);font-size:13px;font-weight:700;color:var(–tmi);margin-top:6px;display:flex;align-items:center;justify-content:space-between}
-.kmcalc span{font-size:11px;color:var(–muted);font-family:var(–sans);font-weight:500}
-
-/* TASK ROW */
-.trow{display:flex;align-items:center;gap:9px;padding:11px 13px;background:#fff;border:1.5px solid var(–border);border-radius:var(–r2);margin-bottom:7px;cursor:pointer}
-.trow.done{opacity:.45}.trow.done .ttxt{text-decoration:line-through}
-.chk{width:20px;height:20px;border-radius:50%;border:2px solid var(–dim);flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.trow.done .chk{background:var(–a2);border-color:var(–a2)}
-.ttxt{flex:1;font-size:14px}
-
-/* QADD */
-.qadd{display:flex;gap:7px;margin-bottom:11px}
-.qadd input{flex:1}
-.qadd select{width:78px;flex-shrink:0}
-.qadd button{background:var(–accent);border:none;color:#fff;border-radius:var(–r2);padding:0 14px;font-size:20px;cursor:pointer;flex-shrink:0}
-
-/* DELETE BTN */
-.del-btn{width:100%;margin-top:9px;font-family:var(–sans);font-size:12px;font-weight:700;padding:8px;border-radius:8px;border:1.5px solid rgba(204,34,68,.35);background:rgba(204,34,68,.06);color:var(–danger);cursor:pointer}
-
-/* REPORT */
-.rpt-box{background:#fff;border:1px solid var(–border);border-radius:var(–r);padding:13px;margin-bottom:10px}
-.rpt-title{font-size:13px;font-weight:700;color:var(–text);margin-bottom:10px}
-.rpt-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(–border)}
-.rpt-row:last-child{border-bottom:none}
-.rpt-lbl{font-size:13px;color:var(–muted)}
-.rpt-val{font-family:var(–mono);font-size:13px;font-weight:600;color:var(–text);text-align:right}
-.rpt-total{display:flex;justify-content:space-between;padding:9px 0 0;margin-top:5px;border-top:2px solid var(–border2)}
-.rpt-total .rpt-lbl{font-weight:700;color:var(–text);font-size:14px}
-.rpt-total .rpt-val{font-size:15px;color:var(–a2)}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
-.stat{background:#fff;border:1px solid var(–border);border-radius:var(–r);padding:12px}
-.stat-lbl{font-size:10px;color:var(–muted);font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px}
-.stat-val{font-family:var(–mono);font-size:20px;font-weight:600;color:var(–text)}
-.stat-sub{font-size:11px;color:var(–dim);margin-top:2px}
-.stat.ac{border-color:rgba(59,111,212,.3);background:linear-gradient(135deg,rgba(59,111,212,.06),#fff)}.stat.ac .stat-val{color:var(–oy)}
-.stat.gr{border-color:rgba(0,168,120,.25);background:linear-gradient(135deg,rgba(0,168,120,.07),#fff)}.stat.gr .stat-val{color:var(–tmi)}
-.stat.wa{border-color:rgba(212,134,10,.3);background:linear-gradient(135deg,rgba(212,134,10,.07),#fff)}.stat.wa .stat-val{color:var(–warn)}
-.stat.pu{border-color:rgba(124,92,191,.25);background:linear-gradient(135deg,rgba(124,92,191,.07),#fff)}.stat.pu .stat-val{color:var(–hlo)}
-
-/* HIST */
-.hrow{display:flex;align-items:center;gap:10px;padding:11px 13px;background:#fff;border:1.5px solid var(–border);border-radius:var(–r2);margin-bottom:7px;cursor:pointer}
-.hdate{font-family:var(–mono);font-size:12px;color:var(–accent);font-weight:600;min-width:85px}
-.hinfo{flex:1;font-size:12px;color:var(–muted)}
-.hbadges{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
-
-/* MODAL */
-.overlay{position:fixed;inset:0;background:rgba(10,20,50,.6);z-index:400;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
-.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;padding:18px 16px 36px;position:relative}
-.modal-handle{width:36px;height:4px;background:var(–border2);border-radius:2px;margin:0 auto 16px}
-.modal-close{position:absolute;top:16px;right:16px;background:var(–bg);border:none;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;color:var(–muted)}
-.modal-title{font-size:17px;font-weight:700;color:var(–text);margin-bottom:3px}
-.modal-date{font-family:var(–mono);font-size:12px;color:var(–accent);margin-bottom:14px}
-.msec{margin-bottom:14px}
-.msec-title{font-size:10px;font-weight:700;letter-spacing:.09em;color:var(–accent);text-transform:uppercase;margin-bottom:7px}
-.mitem{padding:8px 10px;background:var(–bg);border-radius:8px;margin-bottom:5px;font-size:13px}
-
-/* APK */
-.apk-etappi{border-left:4px solid var(–oy)}
-.apk-etappi.tmi{border-left-color:var(–tmi)}
-.apk-etappi.oma{border-left-color:var(–hlo)}
-
-/* PVRRAJA */
-.pvr-box{margin-top:8px;padding:10px 12px;border-radius:var(–r2);font-size:13px;font-weight:600;background:var(–bg);border:1px solid var(–border);color:var(–muted)}
-.pvr-box.osa{background:rgba(212,134,10,.08);border-color:rgba(212,134,10,.3);color:var(–warn)}
-.pvr-box.koko{background:rgba(0,168,120,.08);border-color:rgba(0,168,120,.3);color:var(–tmi)}
-
-/* EXPORT */
-.ebtn{width:100%;background:var(–bg);border:1.5px solid var(–border2);color:var(–text);font-family:var(–sans);font-size:13px;font-weight:600;padding:11px;border-radius:var(–r2);cursor:pointer;margin-bottom:7px;text-align:left}
-.ebtn.pr{background:var(–accent);border-color:transparent;color:#fff;text-align:center}
-.ebtn:last-child{margin-bottom:0}
-
-/* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(–navy);border-top:1px solid rgba(255,255,255,.1);padding:8px 4px;padding-bottom:max(8px,env(safe-area-inset-bottom));display:flex;gap:2px}
-.nbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:rgba(255,255,255,.45);cursor:pointer;font-family:var(–sans);font-size:9px;font-weight:700;letter-spacing:.04em;padding:5px 2px;border-radius:10px}
-.nbtn.on{color:#fff;background:rgba(255,255,255,.15)}
-.nbtn svg{width:20px;height:20px}
-
-/* TOAST */
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(12px);background:#1a2a4a;color:#fff;font-size:13px;font-weight:600;padding:7px 18px;border-radius:18px;opacity:0;transition:all .25s;z-index:500;pointer-events:none;white-space:nowrap}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#date-inp{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-.gcal-a{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid rgba(59,111,212,.3);background:rgba(59,111,212,.07);color:var(–accent);text-decoration:none;margin-top:8px}
-</style>
-
-</head>
-<body>
-
-<!-- LOADING -->
-
-<div class="screen" id="s-load">
-  <div class="spinner"></div>
-  <div style="color:rgba(255,255,255,.6);font-size:14px">Ladataan...</div>
-</div>
-
-<!-- AUTH -->
-
-<div class="screen" id="s-auth" style="display:none">
-  <div style="font-size:52px">📋</div>
-  <div class="screen-title">Päivyri</div>
-  <div class="screen-sub">Jarmo Aaltosen työpäiväkirja</div>
-  <button class="btn-google" id="btn-login">
-    <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-    Kirjaudu Google-tunnuksilla
-  </button>
-  <div id="s-auth-note" style="font-size:12px;color:rgba(255,255,255,.4)"></div>
-  <div id="auth-err" class="auth-err" style="display:none"></div>
-</div>
-
-<!-- APP -->
-
-<div id="app" style="display:none">
-
-<div class="topbar">
-  <div class="t-brand">📋 Päivyri</div>
-  <div class="t-date" id="d-disp" onclick="openDP()">—</div>
-  <input type="date" id="date-inp" onchange="changeDate(this.value)"/>
-  <div class="t-right">
-    <div class="sdot" id="sdot"></div>
-    <button class="btn-save" onclick="saveDay()">Tallenna</button>
-    <button class="btn-logout" onclick="doLogout()">⏻</button>
-  </div>
-</div>
-
-<div class="tbanner">
-  <div class="tpill"><label>Alkoi</label><input type="time" id="t-start" oninput="onTime()"/></div>
-  <div class="tpill"><label>Loppui</label><input type="time" id="t-end" oninput="onTime()"/></div>
-  <div class="dur-badge" id="dur-badge">—</div>
-  <button class="pvr-hint" id="pvr-hint" onclick="applyPvrHint()">Pvr ✓</button>
-</div>
-
-<div class="tabs" id="tabs">
-  <button class="tab on" onclick="goTab(0)">✅ Tehtävät</button>
-  <button class="tab" onclick="goTab(1)">🚗 Matkat</button>
-  <button class="tab" onclick="goTab(2)">👤 Asiakkaat</button>
-  <button class="tab" onclick="goTab(3)">💶 Laskutus</button>
-  <button class="tab" onclick="goTab(4)">📊 Raportit</button>
-  <button class="tab" onclick="goTab(5)">📅 Historia</button>
-  <button class="tab" onclick="goTab(6)">🚘 Ajopvk</button>
-</div>
-
-<div class="content">
-
-<!-- 0 TEHTÄVÄT -->
-
-<div class="panel on" id="p0">
-  <div class="sec">
-    <div class="slbl">Uusi tehtävä</div>
-    <div class="qadd">
-      <input type="text" id="ntxt" placeholder="Tehtävä..."/>
-      <select id="nrole"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Hlö">Hlö</option></select>
-      <button onclick="addTask()">+</button>
-    </div>
-    <div id="task-list"></div>
-  </div>
-</div>
-
-<!-- 1 MATKAT -->
-
-<div class="panel" id="p1">
-  <div class="sec">
-    <div class="slbl">Ajomatkat</div>
-    <div id="trip-list"></div>
-    <button class="abtn" onclick="addTrip()">＋ Lisää ajomatka</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Purjehdus — Absolut 37</div>
-    <div id="sail-list"></div>
-    <button class="abtn" onclick="addSail()">＋ Lisää purjehdusmatka</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Kotimatkat (ei verovähennystä)</div>
-    <div class="card">
-      <div class="r2">
-        <div class="field"><label>Meno km</label><input type="number" id="ckm" min="0" step="1" placeholder="km" oninput="autoSave()"/></div>
-        <div class="field"><label>Paluu km</label><input type="number" id="ckmr" min="0" step="1" placeholder="km" oninput="autoSave()"/></div>
-      </div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="slbl">Päiväraha</div>
-    <div class="card">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="rbtn" id="d-ei" onclick="setPvr('ei')" style="flex:none;padding:7px 12px">Ei pvr</button>
-        <button class="rbtn" id="d-osa" onclick="setPvr('osa')" style="flex:none;padding:7px 12px">Osa 25€</button>
-        <button class="rbtn" id="d-koko" onclick="setPvr('koko')" style="flex:none;padding:7px 12px">Koko 54€</button>
-        <button class="rbtn" id="d-ulk" onclick="setPvr('ulk')" style="flex:none;padding:7px 12px">Ulkomaan</button>
-      </div>
-      <div class="r2">
-        <div class="field"><label>Kohdistus</label>
-          <select id="pvr-role" onchange="autoSave()">
-            <option value="Oy">AJarmo Oy</option>
-            <option value="Tmi">Tmi</option>
-            <option value="Hlo">Hlö</option>
-          </select>
-        </div>
-        <div class="field" id="ulk-wrap" style="display:none">
-          <label>Ulkomaan € </label>
-          <input type="number" id="ulk-eur" min="0" step="0.01" oninput="autoSave()"/>
-        </div>
-      </div>
-      <div class="pvr-box" id="pvr-box">Ei päivärahaa</div>
-      <div id="gcal-day-wrap"></div>
-    </div>
-  </div>
-</div>
-
-<!-- 2 ASIAKKAAT -->
-
-<div class="panel" id="p2">
-  <div class="sec">
-    <div class="slbl">Asiakaskäynnit</div>
-    <div id="visit-list"></div>
-    <button class="abtn" onclick="addVisit()">＋ Lisää asiakaskäynti</button>
-  </div>
-</div>
-
-<!-- 3 LASKUTUS -->
-
-<div class="panel" id="p3">
-  <div class="sec">
-    <div class="slbl">AJarmo Oy</div>
-    <div id="bill-oy"></div>
-    <button class="abtn" onclick="addBill('oy')">＋ Lisää Oy-laskutus</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Tmi — vakuutusmeklaus</div>
-    <div id="bill-tmi"></div>
-    <button class="abtn" onclick="addBill('tmi')">＋ Lisää Tmi-laskutus</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Purjehdus</div>
-    <div id="bill-sail"></div>
-    <button class="abtn" onclick="addBill('sail')">＋ Lisää purjehdus-laskutus</button>
-  </div>
-</div>
-
-<!-- 4 RAPORTIT -->
-
-<div class="panel" id="p4">
-  <div class="sec">
-    <div class="slbl">Päiväraha — verottaja 2026</div>
-    <div class="rpt-box" id="pvr-rpt"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">🚗 Kilometrierittely</div>
-    <div id="km-rpt"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">🔵 AJarmo Oy — matkalasku</div>
-    <div class="rpt-box" id="rpt-oy"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">🟢 Tmi — verovähennys</div>
-    <div class="rpt-box" id="rpt-tmi"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">Muistiinpanot</div>
-    <textarea id="notes" placeholder="Vapaat muistiinpanot..." oninput="autoSave()"></textarea>
-  </div>
-  <div class="sec">
-    <button class="ebtn pr" onclick="doCSV()">⬇ Lataa ajopäiväkirja CSV</button>
-    <button class="ebtn" onclick="doOyCSV()">🔵 Oy matkalasku CSV</button>
-    <button class="ebtn" onclick="doTmiCSV()">🟢 Tmi verovähennys CSV</button>
-    <button class="ebtn" onclick="doCopyText()">📋 Kopioi tekstinä</button>
-  </div>
-</div>
-
-<!-- 5 HISTORIA -->
-
-<div class="panel" id="p5">
-  <div class="sec">
-    <div class="slbl">Kuukausikoosto</div>
-    <div id="month-grid" class="stat-grid"></div>
-  </div>
-  <div class="sec">
-    <div class="slbl">Tallennetut päivät</div>
-    <div id="hist-list"></div>
-  </div>
-</div>
-
-<!-- 6 AJOPÄIVÄKIRJA -->
-
-<div class="panel" id="p6">
-  <div class="sec">
-    <div class="slbl">Päivän aloitus</div>
-    <div class="card">
-      <div class="r2">
-        <div class="field">
-          <label>Aloituskilometrit</label>
-          <input type="number" id="apk-alku" placeholder="km" min="0" step="1"
-            style="font-family:var(--mono);font-size:17px;font-weight:700"
-            oninput="ST.apkAlku=this.value;autoSave();rdApk()"/>
-        </div>
-        <div class="field">
-          <label>Lähtöaika</label>
-          <input type="time" id="apk-lahto" oninput="ST.apkLahto=this.value;autoSave();autoFillWorkTime()"/>
-        </div>
-      </div>
-      <div id="apk-alku-info" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="slbl">Pysähdykset</div>
-    <div id="apk-list"></div>
-    <button class="abtn" onclick="addApkStop()">＋ Lisää pysähdys</button>
-  </div>
-  <div class="sec">
-    <div class="slbl">Päivän koosto</div>
-    <div id="apk-summary"></div>
-  </div>
-</div>
-
-</div><!-- /content -->
-
-<div class="bnav">
-  <button class="nbtn on" onclick="goTab(0)" id="nb0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><span>Tehtävät</span></button>
-  <button class="nbtn" onclick="goTab(1)" id="nb1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Matkat</span></button>
-  <button class="nbtn" onclick="goTab(2)" id="nb2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Asiakkaat</span></button>
-  <button class="nbtn" onclick="goTab(3)" id="nb3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span>Laskutus</span></button>
-  <button class="nbtn" onclick="goTab(4)" id="nb4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5-5-5 5M13 4v10"/></svg><span>Raportit</span></button>
-  <button class="nbtn" onclick="goTab(6)" id="nb6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Ajopvk</span></button>
-</div>
-
-</div><!-- /app -->
-
-<!-- MODAL -->
-
-<div class="overlay" id="modal" style="display:none" onclick="closeModal(event)">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title" id="modal-title"></div>
-    <div class="modal-date" id="modal-date"></div>
-    <div id="modal-body"></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,doc,getDoc,setDoc,getDocs,collection,orderBy,query,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const FB={apiKey:"AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",authDomain:"paivuri.firebaseapp.com",projectId:"paivuri",storageBucket:"paivuri.firebasestorage.app",messagingSenderId:"602861240385",appId:"1:602861240385:web:f215c3b44388ddfe9346c0"};
-const ALLOWED="jacke.seilaa@gmail.com";
-const KM=0.55;
-
-const app=initializeApp(FB);
-const auth=getAuth(app);
-const db=getFirestore(app);
-
-let curDate=new Date().toISOString().slice(0,10);
-let curTab=0;
-let saveTimer=null;
-let ST=emptyDay();
-
-function emptyDay(){
-  return{tasks:[],trips:[],sails:[],visits:[],bOy:[],bTmi:[],bSail:[],
-    ckm:'',ckmr:'',ts:'',te:'',pvr:'ei',pvrRole:'Oy',ulk:'',gcalDay:false,notes:'',
-    apkAlku:'',apkLahto:'',apkStops:[]};
-}
-
-// ── SCREENS ──────────────────────────────────────────────────────
-function showScreen(id){
-  document.getElementById('s-load').style.display='none';
-  document.getElementById('s-auth').style.display='none';
-  document.getElementById('app').style.display='none';
-  const el=document.getElementById(id);
-  if(el)el.style.display=(id==='app')?'flex':'flex';
-  // Set email note
-  const n=document.getElementById('s-auth-note');
-  if(n)n.textContent='Vain '+ALLOWED;
-}
-
-// ── AUTH ──────────────────────────────────────────────────────────
-const authFallback=setTimeout(()=>showScreen('s-auth'),8000);
-
-onAuthStateChanged(auth,user=>{
-  clearTimeout(authFallback);
-  if(user){
-    if(user.email!==ALLOWED){signOut(auth);showScreen('s-auth');showErr('Pääsy estetty.');return;}
-    showScreen('app');
-    initApp();
-  }else{
-    showScreen('s-auth');
-  }
-});
-
-document.getElementById('btn-login').onclick=async()=>{
-  try{await signInWithPopup(auth,new GoogleAuthProvider());}
-  catch(e){showErr(e.message);}
+// ── UTILS ─────────────────────────────────────────────────────────
+window.showToast = msg => {
+const t = document.getElementById(‘toast’); t.textContent = msg;
+t.classList.add(‘show’); clearTimeout(t._timer);
+t._timer = setTimeout(() => t.classList.remove(‘show’), 2000);
 };
-window.doLogout=()=>{if(confirm('Kirjaudu ulos?'))signOut(auth);};
-function showErr(m){const e=document.getElementById('auth-err');e.textContent=m;e.style.display='block';}
-
-// ── INIT ──────────────────────────────────────────────────────────
-function initApp(){
-  setDateDisplay(curDate);
-  loadDay(curDate);
-  document.getElementById('ntxt').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});
-}
-
-// ── DATE ──────────────────────────────────────────────────────────
-function fmtDate(d){
-  const[y,m,day]=d.split('-');
-  const mo=['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'];
-  return`${parseInt(day)}. ${mo[+m-1]} ${y}`;
-}
-function setDateDisplay(d){
-  document.getElementById('d-disp').textContent=fmtDate(d);
-  document.getElementById('date-inp').value=d;
-}
-window.openDP=()=>{const i=document.getElementById('date-inp');i.focus();try{i.showPicker();}catch(e){}};
-window.changeDate=d=>{curDate=d;setDateDisplay(d);loadDay(d);};
-
-// ── TIME & PVR ────────────────────────────────────────────────────
-function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
-function minToStr(m){const h=Math.floor(m/60),min=m%60;return`${h}h${min>0?' '+min+'min':''}`;}
-
-window.onTime=()=>{
-  ST.ts=document.getElementById('t-start').value;
-  ST.te=document.getElementById('t-end').value;
-  updTimeBanner();autoSave();
-};
-
-function updTimeBanner(){
-  const badge=document.getElementById('dur-badge');
-  const hint=document.getElementById('pvr-hint');
-  const s=ST.ts,e=ST.te;
-  if(!s||!e){badge.className='dur-badge';badge.textContent='—';hint.style.display='none';return;}
-  let d=toMin(e)-toMin(s);if(d<0)d+=1440;
-  badge.textContent=minToStr(d);
-  if(d>600){badge.className='dur-badge ok';hint.style.display='inline-block';hint.textContent='Koko 54€ ✓';hint.dataset.t='koko';}
-  else if(d>360){badge.className='dur-badge warn';hint.style.display='inline-block';hint.textContent='Osa 25€ ✓';hint.dataset.t='osa';}
-  else{badge.className='dur-badge';hint.style.display='none';}
-}
-
-window.applyPvrHint=()=>setPvr(document.getElementById('pvr-hint').dataset.t);
-
-window.setPvr=type=>{
-  ST.pvr=type;
-  ['ei','osa','koko','ulk'].forEach(t=>{
-    const b=document.getElementById('d-'+t);
-    if(b)b.className='rbtn'+(t===type?' tmi on':'');
-  });
-  document.getElementById('ulk-wrap').style.display=type==='ulk'?'block':'none';
-  updPvrBox();autoSave();
-};
-
-function getPvr(){
-  if(ST.pvr==='osa')return 25;
-  if(ST.pvr==='koko')return 54;
-  if(ST.pvr==='ulk')return parseFloat(document.getElementById('ulk-eur').value)||0;
-  return 0;
-}
-
-function updPvrBox(){
-  const eur=getPvr(),box=document.getElementById('pvr-box');
-  const role=document.getElementById('pvr-role').value;
-  if(!eur){box.className='pvr-box';box.textContent='Ei päivärahaa';}
-  else{
-    const lbl=ST.pvr==='osa'?'Osapäiväraha':ST.pvr==='koko'?'Kokopäiväraha':'Ulkomaan pvr';
-    box.className='pvr-box '+(ST.pvr==='koko'?'koko':'osa');
-    box.innerHTML=`<strong>${lbl} ${eur} €</strong> — ${role}`;
-  }
-  rdGcalDay();
-}
-
-// ── GCAL ──────────────────────────────────────────────────────────
-function gcalUrl(title,date,s,e,desc){
-  const f=d=>d.replaceAll('-','');
-  const dates=s&&e?`${f(date)}T${s.replace(':','')}00/${f(date)}T${e.replace(':','')}00`:f(date);
-  return'https://calendar.google.com/calendar/render?'+new URLSearchParams({action:'TEMPLATE',text:title,dates,details:desc||''});
-}
-function rdGcalDay(){
-  const w=document.getElementById('gcal-day-wrap');if(!w)return;
-  const pvr=getPvr();
-  const title=`Työpäivä${pvr?' · pvr '+pvr+'€':''}`;
-  const url=gcalUrl(title,curDate,ST.ts,ST.te,'Päivyri '+curDate);
-  w.innerHTML=`<a href="${esc(url)}" target="_blank" class="gcal-a">📅 ${ST.gcalDay?'✅ Lisätty':'Lisää kalenteriin'}</a>`;
-}
-
-// ── TABS ──────────────────────────────────────────────────────────
-window.goTab=i=>{
-  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('on',j===i));
-  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',j===i));
-  document.querySelectorAll('.nbtn').forEach((b,j)=>{
-    // nbtn indices: 0=tab0,1=tab1,2=tab2,3=tab3,4=tab4,5=tab6
-    const tabMap=[0,1,2,3,4,6];
-    b.classList.toggle('on',tabMap[j]===i);
-  });
-  curTab=i;
-  if(i===4)rdReports();
-  if(i===5)rdHist();
-  if(i===6)rdApk();
-};
-
-// ── TASKS ──────────────────────────────────────────────────────────
-window.addTask=()=>{
-  const txt=document.getElementById('ntxt').value.trim();if(!txt)return;
-  ST.tasks.push({text:txt,role:document.getElementById('nrole').value,done:false});
-  document.getElementById('ntxt').value='';rdTasks();autoSave();
-};
-function rdTasks(){
-  const el=document.getElementById('task-list');
-  if(!ST.tasks.length){el.innerHTML='<div style="color:var(--dim);font-size:13px;padding:8px 0">Ei tehtäviä.</div>';return;}
-  el.innerHTML=ST.tasks.map((t,i)=>`
-    <div class="trow ${t.done?'done':''}" onclick="togTask(${i})">
-      <div class="chk">${t.done?'<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>':''}</div>
-      <div class="ttxt">${esc(t.text)}</div>
-      <span class="badge b-${t.role.toLowerCase()}">${t.role}</span>
-      <button style="background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:0 2px" onclick="event.stopPropagation();delItem('tasks',${i})">×</button>
-    </div>`).join('');
-}
-window.togTask=i=>{ST.tasks[i].done=!ST.tasks[i].done;rdTasks();autoSave();};
-
-// ── KM CALC ───────────────────────────────────────────────────────
-function calcKm(o){
-  if(o.odosta&&o.odoon){const k=(parseFloat(o.odoon)||0)-(parseFloat(o.odosta)||0);return k>0?Math.round(k):0;}
-  return parseFloat(o.km)||0;
-}
-
-// Auto work time from all events
-function autoFillWorkTime(){
-  const times=[];
-  [...ST.trips,...ST.sails,...ST.visits].forEach(t=>{if(t.ts)times.push(t.ts);if(t.te)times.push(t.te);});
-  if(ST.apkLahto)times.push(ST.apkLahto);
-  (ST.apkStops||[]).forEach(s=>{if(s.aika)times.push(s.aika);});
-  if(!times.length)return;
-  times.sort();
-  const start=times[0],end=times[times.length-1];
-  if(start){ST.ts=start;document.getElementById('t-start').value=start;}
-  if(end){ST.te=end;document.getElementById('t-end').value=end;}
-  updTimeBanner();
-}
-window.autoFillWorkTime=autoFillWorkTime;
-
-// ── TRIPS ─────────────────────────────────────────────────────────
-window.addTrip=()=>{ST.trips.push({reitti:'',kuvaus:'',odosta:'',odoon:'',km:'',role:'Tmi',ts:'',te:''});rdTrips();};
-window.setTR=(i,r)=>{ST.trips[i].role=r;rdTrips();autoSave();};
-function rdTrips(){
-  const el=document.getElementById('trip-list');
-  el.innerHTML=ST.trips.map((t,i)=>{
-    const km=calcKm(t);const showKm=t.odosta&&t.odoon;
-    return`<div class="card">
-      <div class="rsel">
-        <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setTR(${i},'Tmi')">🟢 Tmi</button>
-        <button class="rbtn oy ${t.role==='Oy'?'on':''}" onclick="setTR(${i},'Oy')">🔵 Oy</button>
-        <button class="rbtn hlo ${t.role==='Hlö'?'on':''}" onclick="setTR(${i},'Hlö')">🟣 Oma</button>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Alkoi</label><input type="time" value="${t.ts||''}" data-i="${i}" data-f="ts" class="ti"/></div>
-        <div class="field"><label>Päättyi</label><input type="time" value="${t.te||''}" data-i="${i}" data-f="te" class="ti"/></div>
-      </div>
-      <div class="field" style="margin-bottom:7px"><label>Reitti</label><input type="text" value="${esc(t.reitti||t.from||'')}" data-i="${i}" data-f="reitti" class="ti" placeholder="Riihimäki → Hyvinkää"/></div>
-      <div class="field" style="margin-bottom:9px"><label>Kuvaus</label><input type="text" value="${esc(t.kuvaus||t.notes||'')}" data-i="${i}" data-f="kuvaus" class="ti" placeholder="asiakaskäynti, taksiajo..."/></div>
-      <div class="r3">
-        <div class="field"><label>Mittari alussa</label><input type="number" value="${t.odosta||''}" data-i="${i}" data-f="odosta" class="ti" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Mittari lopussa</label><input type="number" value="${t.odoon||''}" data-i="${i}" data-f="odoon" class="ti" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Tai suoraan km</label><input type="number" value="${t.km||''}" data-i="${i}" data-f="km" class="ti" placeholder="km" min="0" step="1"/></div>
-      </div>
-      ${showKm?`<div class="kmcalc"><span>Mittarista</span>${km} km</div>`:''}
-      <button class="del-btn" onclick="delItem('trips',${i})">🗑 Poista matka</button>
-    </div>`;
-  }).join('');
-  attachListeners('#trip-list .ti','trips');
-}
-
-// ── SAIL ──────────────────────────────────────────────────────────
-window.addSail=()=>{ST.sails.push({from:'',to:'',odosta:'',odoon:'',km:'',role:'Oy',ts:'',te:'',notes:''});rdSail();};
-window.setSR=(i,r)=>{ST.sails[i].role=r;rdSail();autoSave();};
-function rdSail(){
-  const el=document.getElementById('sail-list');
-  el.innerHTML=ST.sails.map((t,i)=>{
-    const km=calcKm(t);const showKm=t.odosta&&t.odoon;
-    return`<div class="card">
-      <div class="rsel">
-        <button class="rbtn oy ${t.role==='Oy'?'on':''}" onclick="setSR(${i},'Oy')">🔵 Oy</button>
-        <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setSR(${i},'Tmi')">🟢 Tmi</button>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Alkoi</label><input type="time" value="${t.ts||''}" data-i="${i}" data-f="ts" class="si"/></div>
-        <div class="field"><label>Päättyi</label><input type="time" value="${t.te||''}" data-i="${i}" data-f="te" class="si"/></div>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Lähtösatama</label><input type="text" value="${esc(t.from||'')}" data-i="${i}" data-f="from" class="si" placeholder="satama"/></div>
-        <div class="field"><label>Kohde</label><input type="text" value="${esc(t.to||'')}" data-i="${i}" data-f="to" class="si" placeholder="kohde"/></div>
-      </div>
-      <div class="r3">
-        <div class="field"><label>Lokki alussa</label><input type="number" value="${t.odosta||''}" data-i="${i}" data-f="odosta" class="si" placeholder="mpk" min="0" step="0.1"/></div>
-        <div class="field"><label>Lokki lopussa</label><input type="number" value="${t.odoon||''}" data-i="${i}" data-f="odoon" class="si" placeholder="mpk" min="0" step="0.1"/></div>
-        <div class="field"><label>Tai suoraan</label><input type="number" value="${t.km||''}" data-i="${i}" data-f="km" class="si" placeholder="mpk" min="0" step="0.1"/></div>
-      </div>
-      ${showKm?`<div class="kmcalc"><span>Lokista</span>${km} mpk</div>`:''}
-      <div class="field" style="margin-top:8px"><label>Tarkoitus</label><input type="text" value="${esc(t.notes||'')}" data-i="${i}" data-f="notes" class="si" placeholder="kurssi, charter..."/></div>
-      <button class="del-btn" onclick="delItem('sails',${i})">🗑 Poista purjehdus</button>
-    </div>`;
-  }).join('');
-  attachListeners('#sail-list .si','sails');
-}
-
-// ── VISITS ────────────────────────────────────────────────────────
-window.addVisit=()=>{ST.visits.push({client:'',contact:'',odosta:'',odoon:'',km:'',ts:'',te:'',topic:'',notes:''});rdVisits();};
-function rdVisits(){
-  const el=document.getElementById('visit-list');
-  el.innerHTML=ST.visits.map((v,i)=>{
-    const km=calcKm(v);const showKm=v.odosta&&v.odoon;
-    return`<div class="card">
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Alkoi</label><input type="time" value="${v.ts||''}" data-i="${i}" data-f="ts" class="vi"/></div>
-        <div class="field"><label>Päättyi</label><input type="time" value="${v.te||''}" data-i="${i}" data-f="te" class="vi"/></div>
-      </div>
-      <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Yritys / asiakas</label><input type="text" value="${esc(v.client||'')}" data-i="${i}" data-f="client" class="vi"/></div>
-        <div class="field"><label>Yhteyshenkilö</label><input type="text" value="${esc(v.contact||'')}" data-i="${i}" data-f="contact" class="vi"/></div>
-      </div>
-      <div class="r3" style="margin-bottom:8px">
-        <div class="field"><label>Mittari alussa</label><input type="number" value="${v.odosta||''}" data-i="${i}" data-f="odosta" class="vi" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Mittari lopussa</label><input type="number" value="${v.odoon||''}" data-i="${i}" data-f="odoon" class="vi" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Tai suoraan km</label><input type="number" value="${v.km||''}" data-i="${i}" data-f="km" class="vi" placeholder="km" min="0" step="1"/></div>
-      </div>
-      ${showKm?`<div class="kmcalc"><span>Mittarista</span>${km} km</div>`:''}
-      <div class="field" style="margin-bottom:8px"><label>Aihe</label><input type="text" value="${esc(v.topic||'')}" data-i="${i}" data-f="topic" class="vi" placeholder="tarjous, sopimus..."/></div>
-      <div class="field"><label>Muistiinpanot</label><textarea data-i="${i}" data-f="notes" class="vi" style="min-height:50px">${esc(v.notes||'')}</textarea></div>
-
-```
-  <a href="${esc(gcalUrl((v.topic||'Asiakastapaaminen')+': '+(v.client||'asiakas'),curDate,v.ts,v.te,'Asiakaskäynti · '+(v.client||'')+' / '+(v.contact||'')+'\n'+(v.topic||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Lisää kalenteriin</a>
-  <button class="del-btn" onclick="delItem('visits',${i})">🗑 Poista käynti</button>
-</div>`;
-```
-
-}).join(’’);
-attachListeners(’#visit-list .vi’,‘visits’);
-}
-
-// ── SHARED INPUT LISTENER ─────────────────────────────────────────
-function attachListeners(selector, arrayName){
-document.querySelectorAll(selector).forEach(inp=>{
-inp.addEventListener(‘input’,function(){
-const idx=parseInt(this.dataset.i);
-const field=this.dataset.f;
-if(ST[arrayName]&&ST[arrayName][idx]!==undefined){
-ST[arrayName][idx][field]=this.value;
-if(field===‘ts’||field===‘te’)autoFillWorkTime();
-autoSave();
-}
-});
-});
-}
-
-// ── BILLING ───────────────────────────────────────────────────────
-window.addBill=t=>{
-if(t===‘oy’)ST.bOy.push({desc:’’,eur:’’,alv:‘0’});
-else if(t===‘tmi’)ST.bTmi.push({desc:’’,eur:’’,alv:‘0’});
-else ST.bSail.push({desc:’’,eur:’’,alv:‘0’,role:‘Oy’});
-rdBills();
-};
-function rdBills(){rdBillList(‘oy’,ST.bOy,‘bOy’);rdBillList(‘tmi’,ST.bTmi,‘bTmi’);rdBillList(‘sail’,ST.bSail,‘bSail’);}
-function rdBillList(type,arr,key){
-document.getElementById(‘bill-’+type).innerHTML=arr.map((b,i)=>` <div class="card"> <div class="field"><label>Kuvaus</label><input type="text" value="${esc(b.desc||'')}" oninput="ST.${key}[${i}].desc=this.value;autoSave()"/></div> <div class="r2"> <div class="field"><label>€ (alv 0)</label><input type="number" value="${b.eur||''}" oninput="ST.${key}[${i}].eur=this.value;autoSave()" min="0" step="0.01"/></div> <div class="field"><label>ALV</label> <select onchange="ST.${key}[${i}].alv=this.value;autoSave()"> <option value="0" ${b.alv==='0'?'selected':''}>0%</option> <option value="25.5" ${b.alv==='25.5'?'selected':''}>25,5%</option> <option value="13.5" ${b.alv==='13.5'?'selected':''}>13,5%</option> </select> </div> </div> ${type==='sail'?`<div class="field"><label>Rooli</label><select onchange="ST.bSail[${i}].role=this.value;autoSave()"><option value=“Oy” ${b.role===‘Oy’?‘selected’:’’}>Oy</option><option value=“Tmi” ${b.role===‘Tmi’?‘selected’:’’}>Tmi</option></select></div>`:''} <button class="del-btn" onclick="delItem('${key}',${i})">🗑 Poista</button> </div>`).join(’’);
-}
-
-// ── DELETE ────────────────────────────────────────────────────────
-window.delItem=(arr,i)=>{if(ST[arr])ST[arr].splice(i,1);rdAll();autoFillWorkTime();autoSave();};
-
-// ── KM HELPERS ────────────────────────────────────────────────────
-function tripsKm(role){
-let km=0;
-ST.trips.filter(t=>!role||t.role===role).forEach(t=>km+=calcKm(t));
-if(!role||role===‘Tmi’)ST.visits.forEach(v=>km+=calcKm(v));
-return km;
-}
-function sailKm(role){let km=0;ST.sails.filter(t=>!role||t.role===role).forEach(t=>km+=calcKm(t));return km;}
-function sumBill(a){return(a||[]).reduce((s,b)=>s+(parseFloat(b.eur)||0),0);}
-
-// ── PVR FROM TRIPS ────────────────────────────────────────────────
-function calcPvrFromTime(){
-// Use actual work time from banner
-const s=ST.ts,e=ST.te;
-if(!s||!e)return 0;
-let d=toMin(e)-toMin(s);if(d<0)d+=1440;
-if(d>600)return 54;
-if(d>360)return 25;
-return 0;
-}
-
-// ── REPORTS ───────────────────────────────────────────────────────
-function rdReports(){
-fromDOM();
-// PVR card
-const pvr=getPvr();
-const autoPvr=calcPvrFromTime();
-const pvrEl=document.getElementById(‘pvr-rpt’);
-let dur=’—’;
-if(ST.ts&&ST.te){let d=toMin(ST.te)-toMin(ST.ts);if(d<0)d+=1440;dur=minToStr(d);}
-pvrEl.innerHTML=` <div style="display:flex;justify-content:space-between;align-items:center"> <div> <div style="font-size:18px;font-weight:700;color:var(--text)">${pvr>0?(ST.pvr==='koko'?'Kokopäiväraha':'ST.pvr'==='osa'?'Osapäiväraha':'Ulkomaan pvr'):'Ei päivärahaa'}</div> <div style="font-size:12px;color:var(--muted);margin-top:2px">Työaika: ${dur}${autoPvr!==pvr&&pvr>0?' · ⚠ eroaa kellonajasta':''}</div> </div> <div style="font-family:var(--mono);font-size:28px;font-weight:700;color:${pvr===54?'var(--tmi)':pvr>0?'var(--warn)':'var(--dim)'}">${pvr>0?pvr+' €':'—'}</div> </div> <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)"> Verottaja 2026: yli 6h → 25€ osapäiväraha · yli 10h → 54€ kokopäiväraha<br> Kohdistus: <strong>${ST.pvrRole||'Oy'}</strong> </div>`;
-
-// KM breakdown
-const oyKm=tripsKm(‘Oy’),tmiKm=tripsKm(‘Tmi’),hloKm=tripsKm(‘Hlö’);
-const sailOy=sailKm(‘Oy’),sailTmi=sailKm(‘Tmi’);
-const kmEl=document.getElementById(‘km-rpt’);
-if(!ST.trips.length&&!ST.visits.length&&!ST.sails.length){
-kmEl.innerHTML=’<div style="color:var(--dim);font-size:13px">Ei matkoja.</div>’;
-}else{
-let html=’<div class="rpt-box">’;
-ST.trips.forEach((t,i)=>{
-const km=calcKm(t);
-const c=t.role===‘Oy’?‘var(–oy)’:t.role===‘Tmi’?‘var(–tmi)’:‘var(–hlo)’;
-html+=`<div class="rpt-row"> <div> <div style="font-size:13px;font-weight:600">${esc(t.reitti||t.from||'Ajomatka')}</div> ${(t.kuvaus||t.notes)?`<div style="font-size:11px;color:var(--muted)">${esc(t.kuvaus||t.notes)}</div>`:''} <div style="font-size:11px;color:var(--muted)">${t.ts||''}${t.te?' – '+t.te:''}</div> </div> <div style="text-align:right"> <div style="font-family:var(--mono);font-weight:700;color:${c}">${km} km</div> <div style="font-size:11px;color:var(--muted)">${t.role!=='Hlö'?(km*KM).toFixed(2)+' €':'—'}</div> </div> </div> <button onclick="goTab(1)" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;border:1px solid rgba(59,111,212,.3);background:rgba(59,111,212,.07);color:var(--accent);cursor:pointer;margin-bottom:6px">✏️ Muokkaa</button>`;
-});
-ST.visits.forEach((v,i)=>{
-const km=calcKm(v);
-html+=`<div class="rpt-row"> <div> <div style="font-size:13px;font-weight:600">${esc(v.client||'Asiakaskäynti')}</div> ${v.topic?`<div style="font-size:11px;color:var(--muted)">${esc(v.topic)}</div>`:''} <div style="font-size:11px;color:var(--muted)">${v.ts||''}${v.te?' – '+v.te:''}</div> </div> <div style="text-align:right"> <div style="font-family:var(--mono);font-weight:700;color:var(--tmi)">${km} km</div> <div style="font-size:11px;color:var(--muted)">${(km*KM).toFixed(2)} €</div> </div> </div>`;
-});
-// Totals
-html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px;padding-top:10px;border-top:2px solid var(--border2)"> <div style="text-align:center;background:rgba(0,168,120,.07);border-radius:8px;padding:8px"> <div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase">🟢 Tmi</div> <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--tmi)">${Math.round(tmiKm+sailTmi)} km</div> <div style="font-size:11px;color:var(--muted)">${((tmiKm+sailTmi)*KM).toFixed(2)} €</div> </div> <div style="text-align:center;background:rgba(59,111,212,.07);border-radius:8px;padding:8px"> <div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase">🔵 Oy</div> <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--oy)">${Math.round(oyKm+sailOy)} km</div> <div style="font-size:11px;color:var(--muted)">${((oyKm+sailOy)*KM).toFixed(2)} €</div> </div> <div style="text-align:center;background:rgba(124,92,191,.07);border-radius:8px;padding:8px"> <div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase">🟣 Oma</div> <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--hlo)">${Math.round(hloKm)} km</div> <div style="font-size:11px;color:var(--muted)">ei korv.</div> </div> </div>`;
-html+=’</div>’;
-kmEl.innerHTML=html;
-}
-
-// Oy report
-const oyEl=document.getElementById(‘rpt-oy’);
-const oyTrips=ST.trips.filter(t=>t.role===‘Oy’);
-const oyTotal=(oyKm+sailOy)*KM+(ST.pvrRole===‘Oy’?pvr:0);
-let oyHtml=`<div class="rpt-title">🔵 AJarmo Oy — Matkalasku ${curDate}</div>`;
-if(!oyTrips.length&&!sailOy){oyHtml+=’<div style="color:var(--dim);font-size:13px">Ei Oy-matkoja.</div>’;}
-else{
-oyTrips.forEach(t=>oyHtml+=rRow(esc(t.reitti||t.from||‘Matka’),`${t.ts||''}${t.te?' – '+t.te:''}`,`${calcKm(t)} km · ${(calcKm(t)*KM).toFixed(2)} €`));
-if(sailOy>0)oyHtml+=rRow(‘⛵ Purjehdus (Oy)’,`${Math.round(sailOy)} mpk`,`${(sailOy*KM).toFixed(2)} €`);
-if(ST.pvrRole===‘Oy’&&pvr>0)oyHtml+=rRow(‘💰 Päiväraha’,ST.pvr===‘osa’?‘Osapäiväraha’:‘Kokopäiväraha’,`${pvr} €`);
-}
-if(oyTotal>0)oyHtml+=`<div class="rpt-total"><div class="rpt-lbl">Korvattavaa yhteensä</div><div class="rpt-val">${oyTotal.toFixed(2)} €</div></div>`;
-oyEl.innerHTML=oyHtml;
-
-// Tmi report
-const tmiEl=document.getElementById(‘rpt-tmi’);
-const tmiTotal=(tmiKm+sailTmi)*KM+(ST.pvrRole===‘Tmi’?pvr:0);
-let tmiHtml=`<div class="rpt-title">🟢 Tmi — Verovähennys ${curDate}</div>`;
-const tmiTrips=ST.trips.filter(t=>t.role===‘Tmi’);
-if(!tmiTrips.length&&!ST.visits.length&&!sailTmi){tmiHtml+=’<div style="color:var(--dim);font-size:13px">Ei Tmi-matkoja.</div>’;}
-else{
-tmiTrips.forEach(t=>tmiHtml+=rRow(esc(t.reitti||t.from||‘Matka’),`${t.ts||''}${t.te?' – '+t.te:''}`,`${calcKm(t)} km · ${(calcKm(t)*KM).toFixed(2)} €`));
-ST.visits.forEach(v=>tmiHtml+=rRow(esc(v.client||‘Asiakaskäynti’),v.topic||’’,`${calcKm(v)} km · ${(calcKm(v)*KM).toFixed(2)} €`));
-if(sailTmi>0)tmiHtml+=rRow(‘⛵ Purjehdus (Tmi)’,`${Math.round(sailTmi)} mpk`,`${(sailTmi*KM).toFixed(2)} €`);
-if(ST.pvrRole===‘Tmi’&&pvr>0)tmiHtml+=rRow(‘💰 Päiväraha’,ST.pvr===‘osa’?‘Osapäiväraha’:‘Kokopäiväraha’,`${pvr} €`);
-}
-if(tmiTotal>0)tmiHtml+=`<div class="rpt-total"><div class="rpt-lbl">Vähennyskelpoiset yhteensä</div><div class="rpt-val">${tmiTotal.toFixed(2)} €</div></div>`;
-tmiEl.innerHTML=tmiHtml;
-}
-
-function rRow(lbl,sub,val){
-return`<div class="rpt-row"><div><div class="rpt-lbl">${lbl}</div>${sub?`<div style="font-size:11px;color:var(--dim)">${sub}</div>`:''}</div><div class="rpt-val">${val}</div></div>`;
-}
-
-// ── APK ───────────────────────────────────────────────────────────
-window.addApkStop=()=>{
-if(!ST.apkStops)ST.apkStops=[];
-ST.apkStops.push({kohde:’’,osoite:’’,mittari:’’,aika:’’,role:‘Oy’});
-rdApk();
-setTimeout(()=>{const l=document.getElementById(‘apk-list’);if(l&&l.lastElementChild)l.lastElementChild.scrollIntoView({behavior:‘smooth’});},100);
-};
-window.setApkRole=(i,r)=>{ST.apkStops[i].role=r;rdApk();autoSave();};
-window.delApkStop=i=>{ST.apkStops.splice(i,1);rdApk();autoSave();};
-
-function rdApk(){
-if(!ST.apkStops)ST.apkStops=[];
-const alku=parseFloat(ST.apkAlku)||0;
-let prevKm=alku,totTmi=0,totOy=0,totOma=0;
-
-document.getElementById(‘apk-list’).innerHTML=ST.apkStops.map((s,i)=>{
-const mittari=parseFloat(s.mittari)||0;
-const etappi=mittari>0&&prevKm>0&&mittari>prevKm?Math.round(mittari-prevKm):0;
-const c=s.role===‘Oy’?‘var(–oy)’:s.role===‘Tmi’?‘var(–tmi)’:‘var(–hlo)’;
-const bl=s.role===‘Oy’?‘oy’:s.role===‘Tmi’?‘tmi’:‘oma’;
-if(s.role===‘Tmi’)totTmi+=etappi;
-else if(s.role===‘Oy’)totOy+=etappi;
-else totOma+=etappi;
-prevKm=mittari||prevKm;
-return`<div class="card apk-etappi ${bl}"> <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"> <div style="font-size:12px;font-weight:700;color:var(--muted)">Pysähdys ${i+1}</div> <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${c}">${etappi>0?etappi+' km':'— km'}</div> </div> <div class="rsel"> <button class="rbtn oy ${s.role==='Oy'?'on':''}" onclick="setApkRole(${i},'Oy')">🔵 Oy</button> <button class="rbtn tmi ${s.role==='Tmi'?'on':''}" onclick="setApkRole(${i},'Tmi')">🟢 Tmi</button> <button class="rbtn hlo ${s.role==='Oma'?'on':''}" onclick="setApkRole(${i},'Oma')">🟣 Oma</button> </div> <div class="r2" style="margin-bottom:8px"> <div class="field"><label>Saapumisaika</label><input type="time" value="${s.aika||''}" data-i="${i}" data-f="aika" class="ai"/></div> <div class="field"><label>Mittarilukema</label><input type="number" value="${s.mittari||''}" data-i="${i}" data-f="mittari" class="ai" placeholder="km" min="0" step="1" style="font-family:var(--mono);font-size:15px;font-weight:700"/></div> </div> <div class="field" style="margin-bottom:7px"><label>Kohde / asiakas</label><input type="text" value="${esc(s.kohde||'')}" data-i="${i}" data-f="kohde" class="ai" placeholder="esim. Mairuen Kone ja Pultti Oy"/></div> <div class="field"><label>Osoite</label><input type="text" value="${esc(s.osoite||'')}" data-i="${i}" data-f="osoite" class="ai" placeholder="Katuosoite, kaupunki"/></div> ${etappi>0?`<div style="margin-top:8px;padding:7px 10px;border-radius:8px;background:rgba(59,111,212,.06);border:1px solid rgba(59,111,212,.2);font-size:12px;color:${c};font-weight:600">
-${i===0?‘Lähtö’:‘Edellinen’} → pysähdys ${i+1}: <strong>${etappi} km</strong> · ${s.role} · ${(etappi*KM).toFixed(2)} €
-</div>`:''} <button class="del-btn" onclick="delApkStop(${i})">🗑 Poista pysähdys</button> </div>`;
-}).join(’’);
-
-// Attach listeners
-document.querySelectorAll(’#apk-list .ai’).forEach(inp=>{
-inp.addEventListener(‘input’,function(){
-const idx=parseInt(this.dataset.i);
-const field=this.dataset.f;
-if(ST.apkStops[idx]===undefined)return;
-ST.apkStops[idx][field]=this.value;
-rdApk();
-if(field===‘aika’)autoFillWorkTime();
-autoSave();
-});
-});
-
-// Summary
-const lastMittari=ST.apkStops.length?parseFloat(ST.apkStops[ST.apkStops.length-1].mittari)||0:0;
-const totKm=totTmi+totOy+totOma;
-const pvr=getPvr();
-
-const sum=document.getElementById(‘apk-summary’);
-if(!ST.apkStops.length){sum.innerHTML=’<div style="color:var(--dim);font-size:13px">Lisää pysähdyksiä.</div>’;return;}
-
-sum.innerHTML=`<div class="rpt-box">
-<div class="rpt-title">📋 ${curDate} — Ajopäiväkirja</div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px">
-<div style="text-align:center;background:rgba(0,168,120,.07);border-radius:8px;padding:9px">
-<div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase">🟢 Tmi</div>
-<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--tmi)">${totTmi} km</div>
-<div style="font-size:11px;color:var(--muted)">${(totTmi*KM).toFixed(2)} €</div>
-</div>
-<div style="text-align:center;background:rgba(59,111,212,.07);border-radius:8px;padding:9px">
-<div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase">🔵 Oy</div>
-<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--oy)">${totOy} km</div>
-<div style="font-size:11px;color:var(--muted)">${(totOy*KM).toFixed(2)} €</div>
-</div>
-<div style="text-align:center;background:rgba(124,92,191,.07);border-radius:8px;padding:9px">
-<div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase">🟣 Oma</div>
-<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--hlo)">${totOma} km</div>
-<div style="font-size:11px;color:var(--muted)">ei korv.</div>
-</div>
-</div>
-${rRow(‘Mittari alussa’,’’,alku>0?alku+’ km’:’—’)}
-${rRow(‘Mittari lopussa’,’’,lastMittari>0?lastMittari+’ km’:’—’)}
-<div class="rpt-total"><div class="rpt-lbl">Ajettu yhteensä</div><div class="rpt-val">${totKm} km</div></div>
-<button onclick="doApkCSV()" style="width:100%;margin-top:10px;background:var(--accent);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:10px;border-radius:10px;cursor:pointer">⬇ Ajopäiväkirja CSV</button>
-
-  </div>`;
-
-const info=document.getElementById(‘apk-alku-info’);
-if(info)info.textContent=lastMittari>0?`Päivän lopetus: ${lastMittari} km — siirtyy huomisen aloitukseksi`:’’;
-}
-
-async function fetchPrevDayEnd(date){
-try{
-const d=new Date(date);d.setDate(d.getDate()-1);
-const prev=d.toISOString().slice(0,10);
-const snap=await getDoc(doc(db,‘paivyri’,prev));
-if(!snap.exists())return null;
-const s=snap.data();
-if(!s.apkStops||!s.apkStops.length)return null;
-const last=s.apkStops[s.apkStops.length-1];
-return{km:last.mittari,date:prev};
-}catch(e){return null;}
-}
-
-window.doApkCSV=()=>{
-fromDOM();
-const alku=parseFloat(ST.apkAlku)||0;
-const rows=[[‘Pvm’,’#’,‘Kohde’,‘Osoite’,‘Aika’,‘Mittarilukema’,‘Etappi km’,‘Rooli’,‘Korvaus €’]];
-rows.push([curDate,‘Lähtö’,’’,’’,ST.apkLahto||’’,alku,’’,’’,’’]);
-let prev=alku;
-(ST.apkStops||[]).forEach((s,i)=>{
-const m=parseFloat(s.mittari)||0;
-const e=m>0&&prev>0&&m>prev?Math.round(m-prev):0;
-rows.push([curDate,i+1,s.kohde||’’,s.osoite||’’,s.aika||’’,m||’’,e,s.role,s.role!==‘Oma’?(e*KM).toFixed(2):‘0’]);
-prev=m||prev;
-});
-dlCSV(`ajopaivakirja_${curDate}.csv`,rows);
-};
-
-// ── HISTORY ───────────────────────────────────────────────────────
-async function rdHist(){
-document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--muted);font-size:13px">Ladataan…</div>’;
-try{
-const snap=await getDocs(query(collection(db,‘paivyri’),orderBy(‘at’,‘desc’)));
-if(snap.empty){document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--dim);font-size:13px">Ei tallennettuja päiviä.</div>’;return;}
-
-```
-// Month summary
-const byMonth={};
-snap.docs.forEach(d=>{
-  const s=d.data(),mo=d.id.slice(0,7);
-  if(!byMonth[mo])byMonth[mo]={km:0,pvr:0,days:0};
-  byMonth[mo].days++;
-  byMonth[mo].km+=allKmFromState(s);
-  byMonth[mo].pvr+=pvrFromState(s);
-});
-const months=Object.keys(byMonth).sort().reverse();
-document.getElementById('month-grid').innerHTML=months.map(mo=>{
-  const mx=byMonth[mo];
-  const[y,m]=mo.split('-');
-  const mn=['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'][+m-1];
-  return`<div class="stat ac" onclick="showMonthModal('${mo}')" style="cursor:pointer">
-    <div class="stat-lbl">${mn} ${y}</div>
-    <div class="stat-val">${mx.days} pv</div>
-    <div class="stat-sub">${Math.round(mx.km)} km · pvr ${mx.pvr} €</div>
-  </div>`;
-}).join('');
-
-document.getElementById('hist-list').innerHTML=snap.docs.map(d=>{
-  const s=d.data();
-  const km=allKmFromState(s);
-  const pvr=pvrFromState(s);
-  return`<div class="hrow" onclick="showDayModal('${d.id}')">
-    <div class="hdate">${fmtDate(d.id)}</div>
-    <div style="flex:1">
-      <div class="hinfo">${s.ts||''}${s.te?' – '+s.te:''} · ${(s.tasks||[]).length} teht. · ${Math.round(km)} km</div>
-      <div class="hbadges">
-        ${pvr>0?`<span class="badge" style="background:rgba(212,134,10,.1);color:var(--warn);border:1px solid rgba(212,134,10,.3)">pvr ${pvr}€</span>`:''}
-      </div>
-    </div>
-    <div style="color:var(--accent);font-size:18px">›</div>
-  </div>`;
-}).join('');
-```
-
-}catch(e){document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--danger);font-size:13px">Virhe.</div>’;}
-}
-
-function allKmFromState(s){
-let km=0;
-[…(s.trips||[]),…(s.sails||[]),…(s.visits||[])].forEach(t=>{
-if(t.odosta&&t.odoon){const k=(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0);km+=k>0?k:0;}
-else km+=parseFloat(t.km)||0;
-});
-return km;
-}
-function pvrFromState(s){if(s.pvr===‘osa’)return 25;if(s.pvr===‘koko’)return 54;if(s.pvr===‘ulk’)return parseFloat(s.ulk)||0;return 0;}
-
-window.showDayModal=async d=>{
-document.getElementById(‘modal-title’).textContent=fmtDate(d);
-document.getElementById(‘modal-date’).textContent=d;
-document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--muted);font-size:13px">Ladataan…</div>’;
-document.getElementById(‘modal’).style.display=‘flex’;
-try{
-const snap=await getDoc(doc(db,‘paivyri’,d));
-if(!snap.exists()){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--dim)">Ei tietoja.</div>’;return;}
-const s={…emptyDay(),…snap.data()};
-let html=’’;
-if(s.ts||s.te){let dd=’’;if(s.ts&&s.te){let m=toMin(s.te)-toMin(s.ts);if(m<0)m+=1440;dd=` (${minToStr(m)})`;}
-html+=`<div class="msec"><div class="msec-title">⏰ Työaika</div><div class="mitem">${s.ts||'?'} – ${s.te||'?'}${dd}</div></div>`;}
-if(s.tasks&&s.tasks.length){
-html+=`<div class="msec"><div class="msec-title">✅ Tehtävät</div>`;
-s.tasks.forEach(t=>html+=`<div class="mitem"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span> ${esc(t.text)}</div>`);
-html+=’</div>’;}
-if(s.trips&&s.trips.length){
-html+=`<div class="msec"><div class="msec-title">🚗 Matkat</div>`;
-s.trips.forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;
-html+=`<div class="mitem"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span> ${esc(t.reitti||t.from||'matka')} · <strong>${km} km</strong></div>`;});
-html+=’</div>’;}
-const pvr=pvrFromState(s);
-if(pvr)html+=`<div class="msec"><div class="msec-title">💰 Päiväraha</div><div class="mitem" style="color:var(--warn)">${s.pvr==='osa'?'Osapäiväraha':s.pvr==='koko'?'Kokopäiväraha':'Ulkomaan pvr'} <strong>${pvr} €</strong></div></div>`;
-const oyKm=(s.trips||[]).filter(t=>t.role===‘Oy’).reduce((a,t)=>{const k=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;return a+k;},0);
-const pvrOy=s.pvrRole===‘Oy’?pvr:0;
-if(oyKm||pvrOy)html+=`<div class="msec"><div class="msec-title">🔵 Oy matkalasku</div><div class="mitem"><div style="display:flex;justify-content:space-between"><span>Km-korvaus</span><strong>${(oyKm*KM).toFixed(2)} €</strong></div>${pvrOy?`<div style="display:flex;justify-content:space-between"><span>Päiväraha</span><strong>${pvrOy} €</strong></div>`:''}<div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:5px;padding-top:5px"><span>Yhteensä</span><span style="color:var(--tmi)">${(oyKm*KM+pvrOy).toFixed(2)} €</span></div></div></div>`;
-if(s.notes)html+=`<div class="msec"><div class="msec-title">📝 Muistiinpanot</div><div class="mitem">${esc(s.notes)}</div></div>`;
-html+=`<button onclick="changeDate('${d}');closeModal()" style="width:100%;margin-top:6px;background:var(--accent);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>`;
-document.getElementById(‘modal-body’).innerHTML=html;
-}catch(e){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--danger)">Virhe.</div>’;}
-};
-
-window.showMonthModal=async mo=>{
-document.getElementById(‘modal-title’).textContent=‘Kuukausikoosto’;
-const[y,m]=mo.split(’-’);
-document.getElementById(‘modal-date’).textContent=[‘tammikuu’,‘helmikuu’,‘maaliskuu’,‘huhtikuu’,‘toukokuu’,‘kesäkuu’,‘heinäkuu’,‘elokuu’,‘syyskuu’,‘lokakuu’,‘marraskuu’,‘joulukuu’][+m-1]+’ ‘+y;
-document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--muted)">Lasketaan…</div>’;
-document.getElementById(‘modal’).style.display=‘flex’;
-try{
-const snap=await getDocs(query(collection(db,‘paivyri’),orderBy(‘at’,‘desc’)));
-const days=snap.docs.filter(d=>d.id.startsWith(mo));
-let totOy=0,totTmi=0,totHlo=0,totPvrOy=0,totPvrTmi=0;
-days.forEach(d=>{
-const s={…emptyDay(),…d.data()};
-const pvr=pvrFromState(s);
-(s.trips||[]).forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;if(t.role===‘Oy’)totOy+=km;else if(t.role===‘Tmi’)totTmi+=km;else totHlo+=km;});
-(s.visits||[]).forEach(v=>{totTmi+=(v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0);});
-if(s.pvrRole===‘Oy’)totPvrOy+=pvr;
-if(s.pvrRole===‘Tmi’)totPvrTmi+=pvr;
-});
-document.getElementById(‘modal-body’).innerHTML=` <div class="stat-grid" style="margin-bottom:12px"> <div class="stat wa"><div class="stat-lbl">Päiviä</div><div class="stat-val">${days.length}</div></div> <div class="stat gr"><div class="stat-lbl">Tmi km</div><div class="stat-val">${Math.round(totTmi)}</div><div class="stat-sub">${(totTmi*KM).toFixed(2)} €</div></div> <div class="stat ac"><div class="stat-lbl">Oy km</div><div class="stat-val">${Math.round(totOy)}</div><div class="stat-sub">${(totOy*KM).toFixed(2)} €</div></div> <div class="stat wa"><div class="stat-lbl">Pvr Oy</div><div class="stat-val">${totPvrOy} €</div></div> <div class="stat wa"><div class="stat-lbl">Pvr Tmi</div><div class="stat-val">${totPvrTmi} €</div></div> <div class="stat gr"><div class="stat-lbl">Oy yhteensä</div><div class="stat-val">${(totOy*KM+totPvrOy).toFixed(0)} €</div></div> </div>`;
-}catch(e){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--danger)">Virhe.</div>’;}
-};
-window.closeModal=e=>{if(!e||e.target===document.getElementById(‘modal’))document.getElementById(‘modal’).style.display=‘none’;};
-
-// ── FIRESTORE ─────────────────────────────────────────────────────
-function fromDOM(){
-ST.ckm=document.getElementById(‘ckm’).value;
-ST.ckmr=document.getElementById(‘ckmr’).value;
-ST.ts=document.getElementById(‘t-start’).value;
-ST.te=document.getElementById(‘t-end’).value;
-ST.pvrRole=document.getElementById(‘pvr-role’).value;
-ST.ulk=document.getElementById(‘ulk-eur’).value;
-ST.notes=document.getElementById(‘notes’).value;
-ST.apkAlku=document.getElementById(‘apk-alku’).value;
-ST.apkLahto=document.getElementById(‘apk-lahto’).value;
-[‘ei’,‘osa’,‘koko’,‘ulk’].forEach(t=>{const b=document.getElementById(‘d-’+t);if(b&&b.classList.contains(‘on’))ST.pvr=t;});
-}
-function dot(s){const d=document.getElementById(‘sdot’);d.className=‘sdot’+(s===‘ok’?’ ok’:s===‘busy’?’ busy’:’’);}
-
-window.saveDay=async()=>{fromDOM();dot(‘busy’);try{await setDoc(doc(db,‘paivyri’,curDate),{…ST,at:serverTimestamp()});toast(‘Tallennettu ✓’);dot(‘ok’);}catch(e){toast(‘Virhe!’);dot(’’);}};
-window.autoSave=()=>{
-fromDOM();dot(‘busy’);
-if(curTab===4)rdReports();
-clearTimeout(saveTimer);
-saveTimer=setTimeout(async()=>{
-try{await setDoc(doc(db,‘paivyri’,curDate),{…ST,at:serverTimestamp()});dot(‘ok’);toast(‘✓’);}
-catch(e){dot(’’);}
-},1500);
-};
-
-async function loadDay(d){
-dot(‘busy’);
-try{const snap=await getDoc(doc(db,‘paivyri’,d));ST=snap.exists()?{…emptyDay(),…snap.data()}:emptyDay();}
-catch(e){ST=emptyDay();}
-toDOM();rdAll();
-autoFillWorkTime();
-dot(‘ok’);
-if(curTab===4)rdReports();
-if(curTab===5)rdHist();
-if(curTab===6){rdApk();loadApkAlku(d);}
-}
-
-function toDOM(){
-document.getElementById(‘ckm’).value=ST.ckm||’’;
-document.getElementById(‘ckmr’).value=ST.ckmr||’’;
-document.getElementById(‘t-start’).value=ST.ts||’’;
-document.getElementById(‘t-end’).value=ST.te||’’;
-document.getElementById(‘pvr-role’).value=ST.pvrRole||‘Oy’;
-document.getElementById(‘ulk-eur’).value=ST.ulk||’’;
-document.getElementById(‘notes’).value=ST.notes||’’;
-document.getElementById(‘apk-alku’).value=ST.apkAlku||’’;
-document.getElementById(‘apk-lahto’).value=ST.apkLahto||’’;
-setPvr(ST.pvr||‘ei’);
-updTimeBanner();
-updPvrBox();
-rdGcalDay();
-}
-function rdAll(){rdTasks();rdTrips();rdSail();rdVisits();rdBills();}
-
-async function loadApkAlku(date){
-if(ST.apkAlku&&parseFloat(ST.apkAlku)>0)return;
-const day=parseInt(date.split(’-’)[2]);
-const info=document.getElementById(‘apk-alku-info’);
-if(day===1){if(info)info.textContent=‘Kuukauden 1. päivä — syötä aloituskilometrit manuaalisesti.’;return;}
-const prev=await fetchPrevDayEnd(date);
-if(prev&&prev.km&&parseFloat(prev.km)>0){
-ST.apkAlku=prev.km;
-document.getElementById(‘apk-alku’).value=prev.km;
-if(info)info.textContent=`Haettu automaattisesti: ${prev.date} lopetus ${prev.km} km`;
-rdApk();
-}
-}
-
-// ── EXPORT ────────────────────────────────────────────────────────
-window.doCSV=()=>{
-fromDOM();
-const rows=[[‘Pvm’,‘Kategoria’,‘Rooli’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alku’,‘Mittari loppu’,‘km’,‘€(alv0)’,‘ALV%’,‘Pvr €’]];
-ST.trips.forEach(t=>{const km=calcKm(t);rows.push([curDate,‘Ajomatka’,t.role,(t.reitti||t.from||’’)+(t.kuvaus?’ / ‘+(t.kuvaus||’’):’’),t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,t.role!==‘Hlö’?(km*KM).toFixed(2):’’,’’,’’]);});
-ST.visits.forEach(v=>{const km=calcKm(v);rows.push([curDate,‘Asiakaskäynti’,‘Tmi’,(v.client||’’)+(v.topic?’ / ‘+v.topic:’’),v.ts||’’,v.te||’’,v.odosta||’’,v.odoon||’’,km,(km*KM).toFixed(2),’’,’’]);});
-const pvr=getPvr();if(pvr)rows.push([curDate,‘Päiväraha’,ST.pvrRole,ST.pvr,ST.ts||’’,ST.te||’’,’’,’’,’’,’’,’’,pvr]);
-dlCSV(`paivyri_${curDate}.csv`,rows);
-};
-window.doOyCSV=()=>{
-fromDOM();
-const rows=[[‘Pvm’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alku’,‘Mittari loppu’,‘km’,‘Km-korv €’,‘Pvr €’,‘Yht €’]];
-ST.trips.filter(t=>t.role===‘Oy’).forEach(t=>{const km=calcKm(t);rows.push([curDate,t.reitti||t.from||‘Matka’,t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,(km*KM).toFixed(2),’’,( km*KM).toFixed(2)]);});
-const pvr=ST.pvrRole===‘Oy’?getPvr():0;
-if(pvr)rows.push([curDate,‘Päiväraha’,ST.ts||’’,ST.te||’’,’’,’’,’’,’’,pvr,pvr]);
-const oyKm=tripsKm(‘Oy’);
-rows.push([’’,‘YHTEENSÄ’,’’,’’,’’,’’,Math.round(oyKm),(oyKm*KM).toFixed(2),pvr,(oyKm*KM+pvr).toFixed(2)]);
-dlCSV(`oy_matkalasku_${curDate}.csv`,rows);
-};
-window.doTmiCSV=()=>{
-fromDOM();
-const rows=[[‘Pvm’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alku’,‘Mittari loppu’,‘km’,‘Km-väh €’,‘Pvr €’,‘Yht €’]];
-ST.trips.filter(t=>t.role===‘Tmi’).forEach(t=>{const km=calcKm(t);rows.push([curDate,t.reitti||t.from||‘Matka’,t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,(km*KM).toFixed(2),’’,( km*KM).toFixed(2)]);});
-ST.visits.forEach(v=>{const km=calcKm(v);rows.push([curDate,(v.client||‘Käynti’)+(v.topic?’ – ‘+v.topic:’’),v.ts||’’,v.te||’’,v.odosta||’’,v.odoon||’’,km,(km*KM).toFixed(2),’’,( km*KM).toFixed(2)]);});
-const pvr=ST.pvrRole===‘Tmi’?getPvr():0;
-if(pvr)rows.push([curDate,‘Päiväraha’,ST.ts||’’,ST.te||’’,’’,’’,’’,’’,pvr,pvr]);
-const tmiKm=tripsKm(‘Tmi’);
-rows.push([’’,‘YHTEENSÄ’,’’,’’,’’,’’,Math.round(tmiKm),(tmiKm*KM).toFixed(2),pvr,(tmiKm*KM+pvr).toFixed(2)]);
-dlCSV(`tmi_verovahennys_${curDate}.csv`,rows);
-};
-window.doCopyText=()=>{
-fromDOM();
-const pvr=getPvr();
-let o=`PÄIVYRI ${curDate}\n${'─'.repeat(36)}\n`;
-if(ST.ts||ST.te)o+=`Työaika: ${ST.ts||'?'} – ${ST.te||'?'}\n\n`;
-if(ST.tasks.length){o+=‘TEHTÄVÄT:\n’;ST.tasks.forEach(t=>o+=`  [${t.done?'✓':' '}] ${t.text} (${t.role})\n`);o+=’\n’;}
-if(ST.trips.length){o+=‘MATKAT:\n’;ST.trips.forEach(t=>o+=`  [${t.role}] ${t.reitti||t.from||'matka'} ${calcKm(t)}km\n`);o+=’\n’;}
-if(pvr)o+=`PÄIVÄRAHA: ${pvr}€ (${ST.pvr}, ${ST.pvrRole})\n`;
-const oyKm=tripsKm(‘Oy’),tmiKm=tripsKm(‘Tmi’);
-o+=`\n🔵 OY: ${Math.round(oyKm)}km × 0,55 = ${(oyKm*KM).toFixed(2)}€`;
-if(ST.pvrRole===‘Oy’&&pvr)o+=` + pvr ${pvr}€ = ${(oyKm*KM+pvr).toFixed(2)}€`;
-o+=`\n🟢 TMI: ${Math.round(tmiKm)}km × 0,55 = ${(tmiKm*KM).toFixed(2)}€`;
-if(ST.pvrRole===‘Tmi’&&pvr)o+=` + pvr ${pvr}€ = ${(tmiKm*KM+pvr).toFixed(2)}€`;
-if(navigator.clipboard){navigator.clipboard.writeText(o).then(()=>toast(‘Kopioitu ✓’));}
-else{const ta=document.createElement(‘textarea’);ta.value=o;document.body.appendChild(ta);ta.select();document.execCommand(‘copy’);document.body.removeChild(ta);toast(‘Kopioitu ✓’);}
-};
-
-function dlCSV(name,rows){
-const csv=rows.map(r=>r.map(c=>`"${(c+'').replace(/"/g,'""')}"`).join(’,’)).join(’\n’);
-const a=document.createElement(‘a’);
-a.href=URL.createObjectURL(new Blob([’\ufeff’+csv],{type:‘text/csv;charset=utf-8’}));
-a.download=name;a.click();
-}
-
-// ── UTILS ──────────────────────────────────────────────────────────
-function toast(msg){const t=document.getElementById(‘toast’);t.textContent=msg;t.classList.add(‘show’);clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove(‘show’),2000);}
-function esc(s){return(s||’’).replace(/&/g,’&’).replace(/</g,’<’).replace(/>/g,’>’).replace(/”/g,’"’);}
-window.esc=esc;
+function showToast(msg) { window.showToast(msg); }
+function esc(s) { return (s||’’).replace(/&/g,’&’).replace(/</g,’<’).replace(/>/g,’>’).replace(/”/g,’"’); }
+window.esc = esc;
 </script>
 
 </body>
