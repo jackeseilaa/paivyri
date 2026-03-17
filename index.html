@@ -899,6 +899,49 @@ function fromDOM(){
   ST.pvrRole=document.getElementById('pvr-role').value;
   ST.ulk=document.getElementById('ulk-eur').value;
   ST.notes=document.getElementById('notes').value;
+  // Lue matkakorttien kentät suoraan DOM:ista varmuuden vuoksi
+  const tripList=document.getElementById('trip-list');
+  if(tripList){
+    tripList.querySelectorAll('input[type=number]').forEach(inp=>{
+      const m=inp.getAttribute('oninput')||'';
+      const mOdosta=m.match(/ST\.trips\[(\d+)\]\.odosta=this\.value/);
+      const mOdoon=m.match(/ST\.trips\[(\d+)\]\.odoon=this\.value/);
+      const mKm=m.match(/ST\.trips\[(\d+)\]\.km=this\.value/);
+      if(mOdosta&&ST.trips[mOdosta[1]])ST.trips[mOdosta[1]].odosta=inp.value;
+      if(mOdoon&&ST.trips[mOdoon[1]])ST.trips[mOdoon[1]].odoon=inp.value;
+      if(mKm&&ST.trips[mKm[1]])ST.trips[mKm[1]].km=inp.value;
+    });
+    tripList.querySelectorAll('input[type=text],input[type=time]').forEach(inp=>{
+      const m=inp.getAttribute('oninput')||'';
+      const mFrom=m.match(/ST\.trips\[(\d+)\]\.from=this\.value/);
+      const mTs=m.match(/ST\.trips\[(\d+)\]\.ts=this\.value/);
+      const mTe=m.match(/ST\.trips\[(\d+)\]\.te=this\.value/);
+      if(mFrom&&ST.trips[mFrom[1]])ST.trips[mFrom[1]].from=inp.value;
+      if(mTs&&ST.trips[mTs[1]])ST.trips[mTs[1]].ts=inp.value;
+      if(mTe&&ST.trips[mTe[1]])ST.trips[mTe[1]].te=inp.value;
+    });
+  }
+  const visitList=document.getElementById('visit-list');
+  if(visitList){
+    visitList.querySelectorAll('input[type=number]').forEach(inp=>{
+      const m=inp.getAttribute('oninput')||'';
+      const mOdosta=m.match(/ST\.visits\[(\d+)\]\.odosta=this\.value/);
+      const mOdoon=m.match(/ST\.visits\[(\d+)\]\.odoon=this\.value/);
+      const mKm=m.match(/ST\.visits\[(\d+)\]\.km=this\.value/);
+      if(mOdosta&&ST.visits[mOdosta[1]])ST.visits[mOdosta[1]].odosta=inp.value;
+      if(mOdoon&&ST.visits[mOdoon[1]])ST.visits[mOdoon[1]].odoon=inp.value;
+      if(mKm&&ST.visits[mKm[1]])ST.visits[mKm[1]].km=inp.value;
+    });
+    visitList.querySelectorAll('input[type=text],input[type=time]').forEach(inp=>{
+      const m=inp.getAttribute('oninput')||'';
+      const mClient=m.match(/ST\.visits\[(\d+)\]\.client=this\.value/);
+      const mTs=m.match(/ST\.visits\[(\d+)\]\.ts=this\.value/);
+      const mTe=m.match(/ST\.visits\[(\d+)\]\.te=this\.value/);
+      if(mClient&&ST.visits[mClient[1]])ST.visits[mClient[1]].client=inp.value;
+      if(mTs&&ST.visits[mTs[1]])ST.visits[mTs[1]].ts=inp.value;
+      if(mTe&&ST.visits[mTe[1]])ST.visits[mTe[1]].te=inp.value;
+    });
+  }
 }
 function dot(s){const d=document.getElementById('sdot');d.className='sdot'+(s==='ok'?' ok':s==='busy'?' busy':'');}
 
