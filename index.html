@@ -437,7 +437,7 @@ let ST=def();
 function def(){
   return{
     tasks:[],
-    trips:[],   // {from, odosta, odoon, km, role, ts, te, notes} — odo = mittarilukema
+    trips:[],   // {reitti, kuvaus, odosta, odoon, km, role, ts, te} — odo = mittarilukema
     sails:[],
     visits:[],
     bOy:[],bTmi:[],bSail:[],
@@ -600,8 +600,35 @@ function calcPvrFromTrips(){
   return{pvr:0,type:'ei',label:'Ei päivärahaa',durStr,min};
 }
 
+// Laskee automaattisesti päivän aloitus- ja lopetusajan
+// kaikista tapahtumista (matkat, käynnit, purjehdukset)
+function calcAutoWorkTime(){
+  const times=[];
+  [...ST.trips,...ST.sails,...ST.visits].forEach(t=>{
+    if(t.ts)times.push(t.ts);
+    if(t.te)times.push(t.te);
+  });
+  if(!times.length)return{start:'',end:''};
+  times.sort();
+  return{start:times[0],end:times[times.length-1]};
+}
+
+// Päivittää työajan bannerin — aina päivän laajin aikaväli
+function autoFillWorkTime(){
+  const wt=calcAutoWorkTime();
+  if(wt.start){
+    ST.ts=wt.start;
+    document.getElementById('t-start').value=wt.start;
+  }
+  if(wt.end){
+    ST.te=wt.end;
+    document.getElementById('t-end').value=wt.end;
+  }
+  updTime();
+}
+
 // ── TRIPS ──────────────────────────────────────────────
-window.addTrip=()=>{ST.trips.push({from:'',odosta:'',odoon:'',km:'',role:'Tmi',ts:'',te:'',notes:''});rdTrips();};
+window.addTrip=()=>{ST.trips.push({reitti:'',kuvaus:'',odosta:'',odoon:'',km:'',role:'Tmi',ts:'',te:''});rdTrips();};
 window.setTR=(i,r)=>{ST.trips[i].role=r;rdTrips();autoSave();};
 
 function getTripKm(i){
@@ -621,10 +648,11 @@ function rdTrips(){
         <button class="rbtn hlo ${t.role==='Hlö'?'on':''}" onclick="setTR(${i},'Hlö')">🟣 Oma</button>
       </div>
       <div class="rt">
-        <div class="field"><label>Lähtöaika</label><input type="time" value="${t.ts||''}" data-idx="${i}" data-field="ts" class="trip-input"/></div>
-        <div class="field"><label>Saapumisaika</label><input type="time" value="${t.te||''}" data-idx="${i}" data-field="te" class="trip-input"/></div>
+        <div class="field"><label>Alkoi</label><input type="time" value="${t.ts||''}" data-idx="${i}" data-field="ts" class="trip-input"/></div>
+        <div class="field"><label>Päättyi</label><input type="time" value="${t.te||''}" data-idx="${i}" data-field="te" class="trip-input"/></div>
       </div>
-      <div class="field" style="margin-bottom:10px"><label>Reitti / kuvaus</label><input type="text" value="${esc(t.from)}" data-idx="${i}" data-field="from" class="trip-input" placeholder="esim. Riihimäki → Hyvinkää"/></div>
+      <div class="field" style="margin-bottom:8px"><label>Reitti</label><input type="text" value="${esc(t.reitti||t.from||'')}" data-idx="${i}" data-field="reitti" class="trip-input" placeholder="esim. Riihimäki → Hyvinkää"/></div>
+      <div class="field" style="margin-bottom:10px"><label>Kuvaus / tarkoitus</label><input type="text" value="${esc(t.kuvaus||t.notes||'')}" data-idx="${i}" data-field="kuvaus" class="trip-input" placeholder="esim. asiakaskäynti, toimistotyö, taksiajo..."/></div>
       <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Kilometrit — valitse tapa:</div>
       <div class="r3" style="margin-bottom:8px">
         <div class="field"><label>Mittari alussa</label><input type="number" value="${t.odosta||''}" data-idx="${i}" data-field="odosta" class="trip-input" placeholder="km" min="0" step="1"/></div>
@@ -644,6 +672,8 @@ function rdTrips(){
       const field=this.dataset.field;
       if(!ST.trips[idx])return;
       ST.trips[idx][field]=this.value;
+      // Auto-täytä työaika tapahtumista
+      if(field==='ts'||field==='te') autoFillWorkTime();
       // Update km display
       const km=calcTripKm(ST.trips[idx]);
       const box=document.getElementById('trip-km-show-'+idx);
@@ -698,6 +728,7 @@ function rdSail(){
       const field=this.dataset.field;
       if(!ST.sails[idx])return;
       ST.sails[idx][field]=this.value;
+      if(field==='ts'||field==='te') autoFillWorkTime();
       const km=calcTripKm(ST.sails[idx]);
       const box=document.getElementById('sail-km-show-'+idx);
       if(box){
@@ -747,6 +778,7 @@ function rdVisits(){
       const field=this.dataset.field;
       if(!ST.visits[idx])return;
       ST.visits[idx][field]=this.value;
+      if(field==='ts'||field==='te') autoFillWorkTime();
       const km=calcVisitKm(ST.visits[idx]);
       const box=document.getElementById('visit-km-show-'+idx);
       if(box){
@@ -883,21 +915,22 @@ window.editTrip=editTrip;window.editVisit=editVisit;
 function tripRow(t,i,showEdit){
   const km=calcTripKm(t);
   const korv=(km*KM_RATE).toFixed(2);
-  // Kellonajat
-  const timeStr=t.ts||t.te ? `${t.ts||'?'} – ${t.te||'?'}` : '—';
-  // Mittarilukema tai suora km
+  const reitti=t.reitti||t.from||'';
+  const kuvaus=t.kuvaus||t.notes||'';
+  const timeStr=(t.ts||t.te)?`${t.ts||'?'} – ${t.te||'?'}`:'—';
   let kmInfo='';
-  if(t.odosta&&t.odoon) kmInfo=`Mittari: ${t.odosta} → ${t.odoon} km`;
-  else if(t.km) kmInfo=`Syötetty: ${t.km} km`;
+  if(t.odosta&&t.odoon) kmInfo=`${t.odosta} → ${t.odoon} km (mittari)`;
+  else if(t.km) kmInfo=`${t.km} km`;
   else kmInfo='Ei km-tietoa';
 
   return`<div style="padding:12px 0;border-bottom:1px solid rgba(30,63,110,.1)">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600;color:#1a2a4a">${esc(t.from||'Ajomatka')}</div>
+        ${reitti?`<div style="font-size:14px;font-weight:700;color:#1a2a4a">${esc(reitti)}</div>`:''}
+        ${kuvaus?`<div style="font-size:12px;color:#4a6080;margin-top:2px">${esc(kuvaus)}</div>`:''}
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
           <span style="font-size:12px;font-weight:600;color:#2a5cc8;background:rgba(42,92,200,.1);padding:2px 7px;border-radius:6px">🕐 ${timeStr}</span>
-          <span style="font-size:12px;color:#4a6080">${kmInfo}</span>
+          <span style="font-size:11px;color:#6a80a0">${kmInfo}</span>
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
@@ -908,6 +941,7 @@ function tripRow(t,i,showEdit){
     ${showEdit?`<button onclick="editTrip(${i})" style="margin-top:8px;font-family:var(--sans);font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;border:1px solid rgba(91,140,255,.4);background:rgba(91,140,255,.1);color:#2a5cc8;cursor:pointer">✏️ Muokkaa</button>`:''}
   </div>`;
 }
+
 
 function visitRow(v,i){
   const km=calcVisitKm(v);
@@ -1020,7 +1054,9 @@ async function loadDay(d){
   dot('busy');
   try{const snap=await getDoc(doc(db,'paivyri',d));ST=snap.exists()?{...def(),...snap.data()}:def();}
   catch(e){ST=def();}
-  toDOM();rdAll();dot('ok');
+  toDOM();rdAll();
+  autoFillWorkTime();
+  dot('ok');
   if(curTab===4)rdReports();
   if(curTab===5)rdHist();
 }
@@ -1032,10 +1068,11 @@ function toDOM(){
   document.getElementById('pvr-role').value=ST.pvrRole||'Oy';
   document.getElementById('ulk-eur').value=ST.ulk||'';
   document.getElementById('notes').value=ST.notes||'';
-  setPvr(ST.pvr||'ei');updTime();rdGcalDay();
+  setPvr(ST.pvr||'ei');
+  rdGcalDay();
 }
 function rdAll(){rdTasks();rdTrips();rdSail();rdVisits();rdBills();}
-window.delFrom=(arr,i)=>{ST[arr].splice(i,1);rdAll();autoSave();};
+window.delFrom=(arr,i)=>{ST[arr].splice(i,1);rdAll();autoFillWorkTime();autoSave();};
 
 // ── HISTORY ────────────────────────────────────────────
 async function rdHist(){
