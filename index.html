@@ -376,7 +376,7 @@ function init(){
 function fmtD(d){const[y,m,day]=d.split('-');return parseInt(day)+'. '+['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'][+m-1]+' '+y;}
 function setDate(d){gi('ddsp').textContent=fmtD(d);gi('dip').value=d;}
 window.openDP=()=>{const i=gi('dip');i.focus();i.click();try{i.showPicker();}catch(e){}};
-window.changeDate=d=>{D=d;setDate(d);loadDay(d);_calEvs=[];const cl=document.getElementById('cal-date-lbl');if(cl)cl.textContent=fmtD(d);};
+window.changeDate=d=>{D=d;setDate(d);loadDay(d);_calEvs=[];const cl=document.getElementById('cal-date-lbl');if(cl)cl.textContent=fmtD(d);const m=document.getElementById('modal');if(m)m.style.display='none';};
 
 // ── TIME & PVR ────────────────────────────────────────────
 window.onTC=()=>{ST.ts=gi('tts').value;ST.te=gi('tte').value;updTB();autoSave();};
@@ -863,7 +863,7 @@ window.showDayModal=async id=>{
       h+='</div>';
     }
     if(s.notes)h+='<div class="msec"><div class="msh">📝 Muistiinpanot</div><div class="mitem">'+esc(s.notes)+'</div></div>';
-    h+='<button onclick="document.getElementById(\'modal\').style.display=\'none\';D=\''+id+'\';setDate(\''+id+'\');loadDay(\''+id+'\')" style="width:100%;margin-top:10px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
+    h+='<button onclick="changeDate(\''+id+'\')" style="width:100%;margin-top:10px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
     gi('mbody').innerHTML=h;
   }catch(e){gi('mbody').innerHTML='<div style="color:var(--da)">Virhe.</div>';}
 };
