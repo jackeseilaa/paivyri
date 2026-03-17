@@ -322,7 +322,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   <!-- PÄIVÄRAHA AUTOMAATTI -->
   <div class="sec">
-    <div class="slbl">⏰ Päiväraha — verottaja 2026</div>
+    <div class="slbl" style="justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px"></span>⏰ Päiväraha — verottaja 2026</span>
+      <button onclick="rdReports()" style="font-family:var(--sans);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid rgba(91,140,255,.4);background:rgba(91,140,255,.1);color:#2a5cc8;cursor:pointer">↻ Päivitä</button>
+    </div>
     <div class="card" id="pvr-auto-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div>
@@ -842,7 +845,9 @@ window.saveDay=async()=>{
   catch(e){toast('Virhe!');dot('');console.error(e);}
 };
 window.autoSave=()=>{
-  fromDOM();dot('busy');clearTimeout(saveTimer);
+  fromDOM();dot('busy');
+  if(curTab===4)rdReports();
+  clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
     try{await setDoc(doc(db,'paivyri',curDate),{...ST,at:serverTimestamp()});dot('ok');toast('✓');}
     catch(e){dot('');console.error(e);}
