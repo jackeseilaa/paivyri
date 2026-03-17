@@ -787,42 +787,94 @@ function rdKmBreakdown(){
 
 function rdStats(){}
 
+function editTrip(i){goTab(1);setTimeout(()=>{const el=document.getElementById('trip-list');if(el){const cards=el.querySelectorAll('.card');if(cards[i])cards[i].scrollIntoView({behavior:'smooth',block:'center'});}},100);}
+function editVisit(i){goTab(2);setTimeout(()=>{const el=document.getElementById('visit-list');if(el){const cards=el.querySelectorAll('.card');if(cards[i])cards[i].scrollIntoView({behavior:'smooth',block:'center'});}},100);}
+window.editTrip=editTrip;window.editVisit=editVisit;
+
+function tripRow(t,i,showEdit){
+  const km=calcTripKm(t);
+  const korv=(km*KM_RATE).toFixed(2);
+  const time=t.ts?(t.ts+(t.te?' – '+t.te:'')):'';
+  const odoInfo=t.odosta&&t.odoon?` · mittari ${t.odosta}→${t.odoon}`:'';
+  return`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:#1a2a4a">${esc(t.from||'Ajomatka')}</div>
+        <div style="font-size:11px;color:#4a6080;margin-top:2px">${time}${odoInfo}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:#2a5cc8">${km} km</div>
+        <div style="font-size:11px;color:#4a6080">${korv} €</div>
+      </div>
+    </div>
+    ${showEdit?`<button onclick="editTrip(${i})" style="margin-top:6px;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid rgba(91,140,255,.35);background:rgba(91,140,255,.08);color:#2a5cc8;cursor:pointer">✏️ Muokkaa</button>`:''}
+  </div>`;
+}
+
+function visitRow(v,i){
+  const km=calcVisitKm(v);
+  const time=v.ts?(v.ts+(v.te?' – '+v.te:'')):'';
+  return`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:#1a2a4a">${esc(v.client||'Asiakaskäynti')}</div>
+        <div style="font-size:11px;color:#4a6080;margin-top:2px">${time}${v.topic?' · '+esc(v.topic):''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:#00a070">${km} km</div>
+        <div style="font-size:11px;color:#4a6080">${(km*KM_RATE).toFixed(2)} €</div>
+      </div>
+    </div>
+    <button onclick="editVisit(${i})" style="margin-top:6px;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid rgba(0,160,112,.35);background:rgba(0,160,112,.08);color:#00a070;cursor:pointer">✏️ Muokkaa</button>
+  </div>`;
+}
+
 function rdOyReport(){
-  const kmOy=allTripsKm('Oy');
+  const oyTrips=ST.trips.filter(t=>t.role==='Oy');
+  const kmOy=oyTrips.reduce((s,t)=>s+calcTripKm(t),0);
   const kmSailOy=sailKm('Oy');
   const kmCorv=(kmOy+kmSailOy)*KM_RATE;
   const pvr=ST.pvrRole==='Oy'?getPvr():0;
   const lask=se(ST.bOy);
   const total=kmCorv+pvr;
-  let rows='';
-  if(kmOy>0)rows+=rptRow('Ajomatkat (Oy)',`${Math.round(kmOy)} km × 0,55 €`,`${kmCorv.toFixed(2)} €`);
-  if(kmSailOy>0)rows+=rptRow('Purjehdus (Oy)',`${Math.round(kmSailOy)} km/mpk × 0,55 €`,`${(kmSailOy*KM_RATE).toFixed(2)} €`);
-  if(pvr>0)rows+=rptRow('Päiväraha',ST.pvr==='osa'?'Osapäiväraha':ST.pvr==='koko'?'Kokopäiväraha':'Ulkomaan',`${pvr} €`);
-  if(lask>0)rows+=rptRow('Laskutus (Oy)',`${ST.bOy.length} lasku/a`,`${lask.toFixed(2)} €`);
-  ST.trips.filter(t=>t.role==='Oy').forEach(t=>rows+=rptRow('↳ '+( t.from||'Matka'),`${t.ts||''}${t.te?' – '+t.te:''}`,`${calcTripKm(t)} km`));
-  document.getElementById('rpt-oy').innerHTML=`
-    <div class="rpt-title">🔵 AJarmo Oy — Matkalasku ${curDate}</div>
-    ${rows||'<div style="color:var(--dim);font-size:13px">Ei Oy-matkoja tänään.</div>'}
-    ${total>0?`<div class="rpt-total"><div class="rpt-lbl">Korvattavaa yhteensä</div><div class="rpt-val">${total.toFixed(2)} €</div></div>`:''}`;
+
+  let html=`<div class="rpt-title">🔵 AJarmo Oy — Matkalasku ${curDate}</div>`;
+
+  if(!oyTrips.length&&!kmSailOy&&!pvr){
+    html+='<div style="color:#4a6080;font-size:13px;padding:8px 0">Ei Oy-matkoja tänään.</div>';
+  } else {
+    // Jokainen matka omana rivinä muokkausnappineen
+    const oyIdxs=ST.trips.map((t,i)=>({t,i})).filter(({t})=>t.role==='Oy');
+    oyIdxs.forEach(({t,i})=>html+=tripRow(t,i,true));
+    if(kmSailOy>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">⛵ Purjehdus (Oy)</span><span style="font-family:var(--mono);font-weight:700;color:#2a5cc8">${Math.round(kmSailOy)} mpk · ${(kmSailOy*KM_RATE).toFixed(2)} €</span></div></div>`;
+    if(pvr>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">💰 ${ST.pvr==='osa'?'Osapäiväraha':'Kokopäiväraha'}</span><span style="font-family:var(--mono);font-weight:700;color:#e08000">${pvr} €</span></div></div>`;
+  }
+
+  if(total>0)html+=`<div class="rpt-total"><div class="rpt-lbl">Korvattavaa yhteensä</div><div class="rpt-val">${total.toFixed(2)} €</div></div>`;
+  document.getElementById('rpt-oy').innerHTML=html;
 }
 
 function rdTmiReport(){
-  const kmTmi=allTripsKm('Tmi');
+  const tmiTrips=ST.trips.map((t,i)=>({t,i})).filter(({t})=>t.role==='Tmi');
+  const kmTmi=tmiTrips.reduce((s,{t})=>s+calcTripKm(t),0)+ST.visits.reduce((s,v)=>s+calcVisitKm(v),0);
   const kmSailTmi=sailKm('Tmi');
   const kmVah=(kmTmi+kmSailTmi)*KM_RATE;
   const pvr=ST.pvrRole==='Tmi'?getPvr():0;
-  const lask=se(ST.bTmi);
-  let rows='';
-  if(kmTmi>0)rows+=rptRow('Työ-/asiakasmatkat',`${Math.round(kmTmi)} km × 0,55 €`,`${(kmTmi*KM_RATE).toFixed(2)} €`);
-  if(kmSailTmi>0)rows+=rptRow('Purjehdus (Tmi)',`${Math.round(kmSailTmi)} km × 0,55 €`,`${(kmSailTmi*KM_RATE).toFixed(2)} €`);
-  if(pvr>0)rows+=rptRow('Päiväraha (Tmi)',ST.pvr==='osa'?'Osapäiväraha':ST.pvr==='koko'?'Kokopäiväraha':'Ulkomaan',`${pvr} €`);
-  if(lask>0)rows+=rptRow('Laskutus (Tmi)',`${ST.bTmi.length} lasku/a`,`${lask.toFixed(2)} €`);
-  ST.visits.forEach(v=>rows+=rptRow('↳ '+( v.client||'Asiakaskäynti'),`${v.topic||''}`,`${calcVisitKm(v)} km`));
   const totalVah=kmVah+pvr;
-  document.getElementById('rpt-tmi').innerHTML=`
-    <div class="rpt-title">🟢 Tmi — Verovähennyskoosto ${curDate}</div>
-    ${rows||'<div style="color:var(--dim);font-size:13px">Ei Tmi-matkoja tänään.</div>'}
-    ${totalVah>0?`<div class="rpt-total"><div class="rpt-lbl">Vähennyskelpoiset kulut yht.</div><div class="rpt-val">${totalVah.toFixed(2)} €</div></div>`:''}`;
+
+  let html=`<div class="rpt-title">🟢 Tmi — Verovähennyskoosto ${curDate}</div>`;
+
+  if(!tmiTrips.length&&!ST.visits.length&&!pvr){
+    html+='<div style="color:#4a6080;font-size:13px;padding:8px 0">Ei Tmi-matkoja tänään.</div>';
+  } else {
+    tmiTrips.forEach(({t,i})=>html+=tripRow(t,i,true));
+    ST.visits.forEach((v,i)=>html+=visitRow(v,i));
+    if(kmSailTmi>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">⛵ Purjehdus (Tmi)</span><span style="font-family:var(--mono);font-weight:700;color:#00a070">${Math.round(kmSailTmi)} mpk · ${(kmSailTmi*KM_RATE).toFixed(2)} €</span></div></div>`;
+    if(pvr>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">💰 ${ST.pvr==='osa'?'Osapäiväraha':'Kokopäiväraha'} (Tmi)</span><span style="font-family:var(--mono);font-weight:700;color:#e08000">${pvr} €</span></div></div>`;
+  }
+
+  if(totalVah>0)html+=`<div class="rpt-total"><div class="rpt-lbl">Vähennyskelpoiset kulut yht.</div><div class="rpt-val">${totalVah.toFixed(2)} €</div></div>`;
+  document.getElementById('rpt-tmi').innerHTML=html;
 }
 
 function rptRow(lbl,sub,val){return`<div class="rpt-row"><div><div class="rpt-lbl">${lbl}</div>${sub?`<div style="font-size:11px;color:var(--dim)">${sub}</div>`:''}</div><div class="rpt-val">${val}</div></div>`;}
