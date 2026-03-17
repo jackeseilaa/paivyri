@@ -520,7 +520,14 @@ function show(id){
 }
 
 // ── AUTH ───────────────────────────────────────────────
+// Timeout-fallback: jos Firebase ei vastaa 6s, näytetään kirjautumisruutu
+const authTimeout=setTimeout(()=>{
+  const l=document.getElementById('s-load');
+  if(l&&l.style.display!=='none') show('s-auth');
+}, 6000);
+
 onAuthStateChanged(auth,u=>{
+  clearTimeout(authTimeout);
   if(u){
     if(u.email!==ALLOWED){signOut(auth);show('s-auth');showErr('Pääsy estetty.');return;}
     show('s-app');init();
