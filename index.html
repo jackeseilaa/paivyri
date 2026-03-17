@@ -670,9 +670,15 @@ window.fetchCalendar=async()=>{
       const ts=ev.start&&ev.start.dateTime?ev.start.dateTime.slice(11,16):'';
       const te=ev.end&&ev.end.dateTime?ev.end.dateTime.slice(11,16):'';
       const loc=esc(ev.location||'');
+      const desc=esc(ev.description||'');
       return'<div class="cal-ev">'
         +'<div class="cal-ev-title">'+esc(ev.summary||'Tapahtuma')+'</div>'
-        +'<div class="cal-ev-sub">'+(ts?ts+(te?' – '+te:'')+' · ':'')+( loc||'ei sijaintia')+'</div>'
+        +'<div class="cal-ev-sub">'+(ts?ts+(te?' – '+te:'')+' · ':'')+( loc||'')+(desc?' | '+desc:'')+'</div>'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap">'
+        +'<span style="font-size:11px;color:var(--mu)">Rooli:</span>'
+        +'<select id="cal-role-'+i+'" style="width:90px;padding:4px 8px;font-size:12px;border-radius:6px;background:var(--sur);color:var(--tx);border:1px solid var(--b1)">'
+        +'<option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Hlö">Hlö</option>'
+        +'</select></div>'
         +'<div class="cal-ev-btns">'
         +'<button class="cal-btn cal-btn-t" onclick="calImportTask('+i+')">+ Tehtäväksi</button>'
         +(ts?'<button class="cal-btn cal-btn-v" onclick="calImportVisit('+i+')">+ Asiakaskäynniksi</button>':'')
@@ -693,7 +699,8 @@ window.fetchCalendar=async()=>{
 };
 window.calImportTask=i=>{
   const ev=_calEvs[i];if(!ev)return;
-  ST.tasks.push({text:esc(ev.summary||'Tapahtuma'),role:'Oy',done:false});
+  const role=(document.getElementById('cal-role-'+i)||{value:'Oy'}).value;
+  ST.tasks.push({text:ev.summary||'Tapahtuma',role,done:false});
   rdTasks();autoSave();toast('Lisätty tehtäväksi ✓');goTab(0);
 };
 window.calImportVisit=i=>{
@@ -707,7 +714,8 @@ window.calImportTrip=i=>{
   const ev=_calEvs[i];if(!ev)return;
   const ts=ev.start&&ev.start.dateTime?ev.start.dateTime.slice(11,16):'';
   const te=ev.end&&ev.end.dateTime?ev.end.dateTime.slice(11,16):'';
-  ST.trips.push({from:ev.location||ev.summary||'',km:'',role:'Tmi',ts,te,notes:ev.summary||''});
+  const role=(document.getElementById('cal-role-'+i)||{value:'Tmi'}).value;
+  ST.trips.push({from:ev.location||ev.summary||'',km:'',role,ts,te,notes:ev.summary||''});
   rdTrips();autoSave();toast('Lisätty ajomatkaksi ✓');goTab(1);
 };
 
@@ -855,7 +863,7 @@ window.showDayModal=async id=>{
       h+='</div>';
     }
     if(s.notes)h+='<div class="msec"><div class="msh">📝 Muistiinpanot</div><div class="mitem">'+esc(s.notes)+'</div></div>';
-    h+='<button onclick="document.getElementById(\'modal\').style.display=\'none\';changeDate(\''+id+'\')" style="width:100%;margin-top:10px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
+    h+='<button onclick="document.getElementById(\'modal\').style.display=\'none\';D=\''+id+'\';setDate(\''+id+'\');loadDay(\''+id+'\')" style="width:100%;margin-top:10px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
     gi('mbody').innerHTML=h;
   }catch(e){gi('mbody').innerHTML='<div style="color:var(--da)">Virhe.</div>';}
 };
