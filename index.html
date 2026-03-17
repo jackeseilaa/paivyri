@@ -572,19 +572,18 @@ function calcTripKm(t){
 // ── TRIPS ──────────────────────────────────────────────
 window.addTrip=()=>{ST.trips.push({from:'',odosta:'',odoon:'',km:'',role:'Tmi',ts:'',te:'',notes:''});rdTrips();};
 window.setTR=(i,r)=>{ST.trips[i].role=r;rdTrips();autoSave();};
-window.updTripKm=i=>{
+
+function getTripKm(i){
   const t=ST.trips[i];
-  const calc=calcTripKm(t);
-  const el=document.getElementById('trip-km-calc-'+i);
-  if(el&&t.odosta&&t.odoon)el.innerHTML=`<span>Mittarista laskettu</span>${calc} km`;
-  else if(el)el.innerHTML='';
-  autoSave();
-};
+  if(t.odosta&&t.odoon){const k=parseFloat(t.odoon)-parseFloat(t.odosta);return k>0?Math.round(k):0;}
+  return parseFloat(t.km)||0;
+}
+
 function rdTrips(){
   document.getElementById('trip-list').innerHTML=ST.trips.map((t,i)=>{
-    const calc=calcTripKm(t);
+    const km=calcTripKm(t);
     const showCalc=t.odosta&&t.odoon;
-    return`<div class="card">
+    return`<div class="card" data-trip="${i}">
       <button class="rm" onclick="delFrom('trips',${i})">×</button>
       <div class="rsel">
         <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setTR(${i},'Tmi')">🟢 Tmi</button>
@@ -592,80 +591,138 @@ function rdTrips(){
         <button class="rbtn hlo ${t.role==='Hlö'?'on':''}" onclick="setTR(${i},'Hlö')">🟣 Oma</button>
       </div>
       <div class="rt">
-        <div class="field"><label>Lähtöaika</label><input type="time" value="${t.ts||''}" oninput="ST.trips[${i}].ts=this.value;autoSave()"/></div>
-        <div class="field"><label>Saapumisaika</label><input type="time" value="${t.te||''}" oninput="ST.trips[${i}].te=this.value;autoSave()"/></div>
+        <div class="field"><label>Lähtöaika</label><input type="time" value="${t.ts||''}" data-idx="${i}" data-field="ts" class="trip-input"/></div>
+        <div class="field"><label>Saapumisaika</label><input type="time" value="${t.te||''}" data-idx="${i}" data-field="te" class="trip-input"/></div>
       </div>
-      <div class="field" style="margin-bottom:10px"><label>Reitti / kuvaus</label><input type="text" value="${esc(t.from)}" oninput="ST.trips[${i}].from=this.value;autoSave()" placeholder="esim. Riihimäki → Hyvinkää, asiakas..."/></div>
+      <div class="field" style="margin-bottom:10px"><label>Reitti / kuvaus</label><input type="text" value="${esc(t.from)}" data-idx="${i}" data-field="from" class="trip-input" placeholder="esim. Riihimäki → Hyvinkää"/></div>
       <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Kilometrit — valitse tapa:</div>
       <div class="r3" style="margin-bottom:8px">
-        <div class="field"><label>Mittari alussa</label><input type="number" value="${t.odosta||''}" oninput="ST.trips[${i}].odosta=this.value;updTripKm(${i})" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Mittari lopussa</label><input type="number" value="${t.odoon||''}" oninput="ST.trips[${i}].odoon=this.value;updTripKm(${i})" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Tai syötä suoraan</label><input type="number" value="${t.km||''}" oninput="ST.trips[${i}].km=this.value;updTripKm(${i})" placeholder="km" min="0" step="1"/></div>
+        <div class="field"><label>Mittari alussa</label><input type="number" value="${t.odosta||''}" data-idx="${i}" data-field="odosta" class="trip-input" placeholder="km" min="0" step="1"/></div>
+        <div class="field"><label>Mittari lopussa</label><input type="number" value="${t.odoon||''}" data-idx="${i}" data-field="odoon" class="trip-input" placeholder="km" min="0" step="1"/></div>
+        <div class="field"><label>Tai syötä suoraan</label><input type="number" value="${t.km||''}" data-idx="${i}" data-field="km" class="trip-input" placeholder="km" min="0" step="1"/></div>
       </div>
-      ${showCalc?`<div class="kmcalc" id="trip-km-calc-${i}"><span>Mittarista laskettu</span>${calc} km</div>`:`<div id="trip-km-calc-${i}"></div>`}
-    </div>`;}).join('');
+      <div class="kmcalc" id="trip-km-show-${i}" style="${showCalc?'':'display:none'}">
+        <span>Mittarista laskettu</span>${km} km
+      </div>
+    </div>`;
+  }).join('');
+  // Attach event listeners
+  document.querySelectorAll('#trip-list .trip-input').forEach(inp=>{
+    inp.addEventListener('input', function(){
+      const idx=parseInt(this.dataset.idx);
+      const field=this.dataset.field;
+      if(!ST.trips[idx])return;
+      ST.trips[idx][field]=this.value;
+      // Update km display
+      const km=calcTripKm(ST.trips[idx]);
+      const box=document.getElementById('trip-km-show-'+idx);
+      if(box){
+        if(ST.trips[idx].odosta&&ST.trips[idx].odoon){
+          box.style.display='flex';
+          box.innerHTML=`<span>Mittarista laskettu</span>${km} km`;
+        } else {
+          box.style.display='none';
+        }
+      }
+      autoSave();
+    });
+  });
 }
 
 // ── SAIL ───────────────────────────────────────────────
 window.addSail=()=>{ST.sails.push({from:'',to:'',odosta:'',odoon:'',km:'',role:'Oy',ts:'',te:'',notes:''});rdSail();};
 window.setSR=(i,r)=>{ST.sails[i].role=r;rdSail();autoSave();};
-window.updSailKm=i=>{const t=ST.sails[i];const el=document.getElementById('sail-km-calc-'+i);if(el&&t.odosta&&t.odoon){const c=(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0);el.innerHTML=`<span>Laskettu</span>${c>0?c:0} km/mpk`;}else if(el)el.innerHTML='';autoSave();};
 function rdSail(){
   document.getElementById('sail-list').innerHTML=ST.sails.map((t,i)=>{
     const calc=calcTripKm(t);const showCalc=t.odosta&&t.odoon;
-    return`<div class="card">
+    return`<div class="card" data-sail="${i}">
       <button class="rm" onclick="delFrom('sails',${i})">×</button>
       <div class="rsel">
         <button class="rbtn oy ${t.role==='Oy'?'on':''}" onclick="setSR(${i},'Oy')">🔵 Oy</button>
         <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setSR(${i},'Tmi')">🟢 Tmi</button>
       </div>
       <div class="rt">
-        <div class="field"><label>Lähtöaika</label><input type="time" value="${t.ts||''}" oninput="ST.sails[${i}].ts=this.value;autoSave()"/></div>
-        <div class="field"><label>Saapumisaika</label><input type="time" value="${t.te||''}" oninput="ST.sails[${i}].te=this.value;autoSave()"/></div>
+        <div class="field"><label>Lähtöaika</label><input type="time" value="${t.ts||''}" data-idx="${i}" data-field="ts" class="sail-input"/></div>
+        <div class="field"><label>Saapumisaika</label><input type="time" value="${t.te||''}" data-idx="${i}" data-field="te" class="sail-input"/></div>
       </div>
       <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Lähtösatama</label><input type="text" value="${esc(t.from)}" oninput="ST.sails[${i}].from=this.value;autoSave()" placeholder="esim. Riihimäki"/></div>
-        <div class="field"><label>Kohde</label><input type="text" value="${esc(t.to||'')}" oninput="ST.sails[${i}].to=this.value;autoSave()" placeholder="esim. Helsinki"/></div>
+        <div class="field"><label>Lähtösatama</label><input type="text" value="${esc(t.from)}" data-idx="${i}" data-field="from" class="sail-input" placeholder="satama"/></div>
+        <div class="field"><label>Kohde</label><input type="text" value="${esc(t.to||'')}" data-idx="${i}" data-field="to" class="sail-input" placeholder="kohde"/></div>
       </div>
       <div class="r3" style="margin-bottom:8px">
-        <div class="field"><label>Lokki alussa</label><input type="number" value="${t.odosta||''}" oninput="ST.sails[${i}].odosta=this.value;updSailKm(${i})" placeholder="mpk" min="0" step="0.1"/></div>
-        <div class="field"><label>Lokki lopussa</label><input type="number" value="${t.odoon||''}" oninput="ST.sails[${i}].odoon=this.value;updSailKm(${i})" placeholder="mpk" min="0" step="0.1"/></div>
-        <div class="field"><label>Tai km/mpk suoraan</label><input type="number" value="${t.km||''}" oninput="ST.sails[${i}].km=this.value;updSailKm(${i})" placeholder="km/mpk" min="0" step="0.1"/></div>
+        <div class="field"><label>Lokki alussa</label><input type="number" value="${t.odosta||''}" data-idx="${i}" data-field="odosta" class="sail-input" placeholder="mpk" min="0" step="0.1"/></div>
+        <div class="field"><label>Lokki lopussa</label><input type="number" value="${t.odoon||''}" data-idx="${i}" data-field="odoon" class="sail-input" placeholder="mpk" min="0" step="0.1"/></div>
+        <div class="field"><label>Tai km/mpk suoraan</label><input type="number" value="${t.km||''}" data-idx="${i}" data-field="km" class="sail-input" placeholder="mpk" min="0" step="0.1"/></div>
       </div>
-      ${showCalc?`<div class="kmcalc" id="sail-km-calc-${i}"><span>Lokista laskettu</span>${calc} mpk</div>`:`<div id="sail-km-calc-${i}"></div>`}
-      <div class="field"><label>Tarkoitus</label><input type="text" value="${esc(t.notes)}" oninput="ST.sails[${i}].notes=this.value;autoSave()" placeholder="kurssi, charter, siirtoajo..."/></div>
-    </div>`;}).join('');
+      <div class="kmcalc" id="sail-km-show-${i}" style="${showCalc?'':'display:none'}">
+        <span>Lokista laskettu</span>${calc} mpk
+      </div>
+      <div class="field"><label>Tarkoitus</label><input type="text" value="${esc(t.notes)}" data-idx="${i}" data-field="notes" class="sail-input" placeholder="kurssi, charter..."/></div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('#sail-list .sail-input').forEach(inp=>{
+    inp.addEventListener('input', function(){
+      const idx=parseInt(this.dataset.idx);
+      const field=this.dataset.field;
+      if(!ST.sails[idx])return;
+      ST.sails[idx][field]=this.value;
+      const km=calcTripKm(ST.sails[idx]);
+      const box=document.getElementById('sail-km-show-'+idx);
+      if(box){
+        if(ST.sails[idx].odosta&&ST.sails[idx].odoon){box.style.display='flex';box.innerHTML=`<span>Lokista laskettu</span>${km} mpk`;}
+        else box.style.display='none';
+      }
+      autoSave();
+    });
+  });
 }
 
 // ── VISITS ─────────────────────────────────────────────
 window.addVisit=()=>{ST.visits.push({client:'',contact:'',odosta:'',odoon:'',km:'',ts:'',te:'',topic:'',notes:''});rdVisits();};
-window.updVisitKm=i=>{const v=ST.visits[i];const el=document.getElementById('visit-km-calc-'+i);if(el&&v.odosta&&v.odoon){const c=(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0);el.innerHTML=`<span>Mittarista laskettu</span>${c>0?c:0} km`;}else if(el)el.innerHTML='';autoSave();};
-function calcVisitKm(v){if(v.odosta&&v.odoon){const k=(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0);return k>0?k:0;}return parseFloat(v.km)||0;}
+function calcVisitKm(v){if(v.odosta&&v.odoon){const k=parseFloat(v.odoon)-parseFloat(v.odosta);return k>0?Math.round(k):0;}return parseFloat(v.km)||0;}
 function rdVisits(){
   document.getElementById('visit-list').innerHTML=ST.visits.map((v,i)=>{
     const calc=calcVisitKm(v);const showCalc=v.odosta&&v.odoon;
-    return`<div class="card">
+    return`<div class="card" data-visit="${i}">
       <button class="rm" onclick="delFrom('visits',${i})">×</button>
       <div class="rt">
-        <div class="field"><label>Saapumisaika</label><input type="time" value="${v.ts||''}" oninput="ST.visits[${i}].ts=this.value;autoSave()"/></div>
-        <div class="field"><label>Lähtöaika</label><input type="time" value="${v.te||''}" oninput="ST.visits[${i}].te=this.value;autoSave()"/></div>
+        <div class="field"><label>Saapumisaika</label><input type="time" value="${v.ts||''}" data-idx="${i}" data-field="ts" class="visit-input"/></div>
+        <div class="field"><label>Lähtöaika</label><input type="time" value="${v.te||''}" data-idx="${i}" data-field="te" class="visit-input"/></div>
       </div>
       <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Yritys / asiakas</label><input type="text" value="${esc(v.client)}" oninput="ST.visits[${i}].client=this.value;autoSave()"/></div>
-        <div class="field"><label>Yhteyshenkilö</label><input type="text" value="${esc(v.contact)}" oninput="ST.visits[${i}].contact=this.value;autoSave()"/></div>
+        <div class="field"><label>Yritys / asiakas</label><input type="text" value="${esc(v.client)}" data-idx="${i}" data-field="client" class="visit-input"/></div>
+        <div class="field"><label>Yhteyshenkilö</label><input type="text" value="${esc(v.contact)}" data-idx="${i}" data-field="contact" class="visit-input"/></div>
       </div>
       <div class="r3" style="margin-bottom:8px">
-        <div class="field"><label>Mittari alussa</label><input type="number" value="${v.odosta||''}" oninput="ST.visits[${i}].odosta=this.value;updVisitKm(${i})" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Mittari lopussa</label><input type="number" value="${v.odoon||''}" oninput="ST.visits[${i}].odoon=this.value;updVisitKm(${i})" placeholder="km" min="0" step="1"/></div>
-        <div class="field"><label>Tai km suoraan</label><input type="number" value="${v.km||''}" oninput="ST.visits[${i}].km=this.value;updVisitKm(${i})" placeholder="km" min="0" step="1"/></div>
+        <div class="field"><label>Mittari alussa</label><input type="number" value="${v.odosta||''}" data-idx="${i}" data-field="odosta" class="visit-input" placeholder="km" min="0" step="1"/></div>
+        <div class="field"><label>Mittari lopussa</label><input type="number" value="${v.odoon||''}" data-idx="${i}" data-field="odoon" class="visit-input" placeholder="km" min="0" step="1"/></div>
+        <div class="field"><label>Tai km suoraan</label><input type="number" value="${v.km||''}" data-idx="${i}" data-field="km" class="visit-input" placeholder="km" min="0" step="1"/></div>
       </div>
-      ${showCalc?`<div class="kmcalc" id="visit-km-calc-${i}"><span>Mittarista laskettu</span>${calc} km</div>`:`<div id="visit-km-calc-${i}"></div>`}
+      <div class="kmcalc" id="visit-km-show-${i}" style="${showCalc?'':'display:none'}">
+        <span>Mittarista laskettu</span>${calc} km
+      </div>
       <div class="r2" style="margin-bottom:8px">
-        <div class="field"><label>Käynnin aihe</label><input type="text" value="${esc(v.topic)}" oninput="ST.visits[${i}].topic=this.value;autoSave()" placeholder="tarjous, sopimus..."/></div>
+        <div class="field"><label>Käynnin aihe</label><input type="text" value="${esc(v.topic)}" data-idx="${i}" data-field="topic" class="visit-input" placeholder="tarjous, sopimus..."/></div>
       </div>
-      <div class="field"><label>Muistiinpanot</label><textarea oninput="ST.visits[${i}].notes=this.value;autoSave()" style="min-height:52px">${esc(v.notes)}</textarea></div>
+      <div class="field"><label>Muistiinpanot</label><textarea data-idx="${i}" data-field="notes" class="visit-input" style="min-height:52px">${esc(v.notes)}</textarea></div>
       <a href="${esc(gcalUrl((v.topic||'Asiakastapaaminen')+': '+(v.client||'asiakas'),curDate,v.ts||null,v.te||null,'Asiakaskäynti · '+(v.client||'')+' / '+(v.contact||'')+'\n'+(v.topic||'')+'\n'+(v.notes||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Lisää kalenteriin tapahtumana</a>
-    </div>`;}).join('');
+    </div>`;
+  }).join('');
+  document.querySelectorAll('#visit-list .visit-input').forEach(inp=>{
+    inp.addEventListener('input', function(){
+      const idx=parseInt(this.dataset.idx);
+      const field=this.dataset.field;
+      if(!ST.visits[idx])return;
+      ST.visits[idx][field]=this.value;
+      const km=calcVisitKm(ST.visits[idx]);
+      const box=document.getElementById('visit-km-show-'+idx);
+      if(box){
+        if(ST.visits[idx].odosta&&ST.visits[idx].odoon){box.style.display='flex';box.innerHTML=`<span>Mittarista laskettu</span>${km} km`;}
+        else box.style.display='none';
+      }
+      autoSave();
+    });
+  });
 }
 
 // ── BILLING ────────────────────────────────────────────
@@ -899,49 +956,6 @@ function fromDOM(){
   ST.pvrRole=document.getElementById('pvr-role').value;
   ST.ulk=document.getElementById('ulk-eur').value;
   ST.notes=document.getElementById('notes').value;
-  // Lue matkakorttien kentät suoraan DOM:ista varmuuden vuoksi
-  const tripList=document.getElementById('trip-list');
-  if(tripList){
-    tripList.querySelectorAll('input[type=number]').forEach(inp=>{
-      const m=inp.getAttribute('oninput')||'';
-      const mOdosta=m.match(/ST\.trips\[(\d+)\]\.odosta=this\.value/);
-      const mOdoon=m.match(/ST\.trips\[(\d+)\]\.odoon=this\.value/);
-      const mKm=m.match(/ST\.trips\[(\d+)\]\.km=this\.value/);
-      if(mOdosta&&ST.trips[mOdosta[1]])ST.trips[mOdosta[1]].odosta=inp.value;
-      if(mOdoon&&ST.trips[mOdoon[1]])ST.trips[mOdoon[1]].odoon=inp.value;
-      if(mKm&&ST.trips[mKm[1]])ST.trips[mKm[1]].km=inp.value;
-    });
-    tripList.querySelectorAll('input[type=text],input[type=time]').forEach(inp=>{
-      const m=inp.getAttribute('oninput')||'';
-      const mFrom=m.match(/ST\.trips\[(\d+)\]\.from=this\.value/);
-      const mTs=m.match(/ST\.trips\[(\d+)\]\.ts=this\.value/);
-      const mTe=m.match(/ST\.trips\[(\d+)\]\.te=this\.value/);
-      if(mFrom&&ST.trips[mFrom[1]])ST.trips[mFrom[1]].from=inp.value;
-      if(mTs&&ST.trips[mTs[1]])ST.trips[mTs[1]].ts=inp.value;
-      if(mTe&&ST.trips[mTe[1]])ST.trips[mTe[1]].te=inp.value;
-    });
-  }
-  const visitList=document.getElementById('visit-list');
-  if(visitList){
-    visitList.querySelectorAll('input[type=number]').forEach(inp=>{
-      const m=inp.getAttribute('oninput')||'';
-      const mOdosta=m.match(/ST\.visits\[(\d+)\]\.odosta=this\.value/);
-      const mOdoon=m.match(/ST\.visits\[(\d+)\]\.odoon=this\.value/);
-      const mKm=m.match(/ST\.visits\[(\d+)\]\.km=this\.value/);
-      if(mOdosta&&ST.visits[mOdosta[1]])ST.visits[mOdosta[1]].odosta=inp.value;
-      if(mOdoon&&ST.visits[mOdoon[1]])ST.visits[mOdoon[1]].odoon=inp.value;
-      if(mKm&&ST.visits[mKm[1]])ST.visits[mKm[1]].km=inp.value;
-    });
-    visitList.querySelectorAll('input[type=text],input[type=time]').forEach(inp=>{
-      const m=inp.getAttribute('oninput')||'';
-      const mClient=m.match(/ST\.visits\[(\d+)\]\.client=this\.value/);
-      const mTs=m.match(/ST\.visits\[(\d+)\]\.ts=this\.value/);
-      const mTe=m.match(/ST\.visits\[(\d+)\]\.te=this\.value/);
-      if(mClient&&ST.visits[mClient[1]])ST.visits[mClient[1]].client=inp.value;
-      if(mTs&&ST.visits[mTs[1]])ST.visits[mTs[1]].ts=inp.value;
-      if(mTe&&ST.visits[mTe[1]])ST.visits[mTe[1]].te=inp.value;
-    });
-  }
 }
 function dot(s){const d=document.getElementById('sdot');d.className='sdot'+(s==='ok'?' ok':s==='busy'?' busy':'');}
 
