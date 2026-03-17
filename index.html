@@ -489,12 +489,17 @@ window.onTime=()=>{ST.ts=document.getElementById('t-start').value;ST.te=document
 
 function updTime(){
   const s=ST.ts,e=ST.te,badge=document.getElementById('dur-badge'),ab=document.getElementById('pvr-ab');
-  if(!s||!e){badge.className='dur dur-g';badge.textContent='—';ab.style.display='none';updPvr();return;}
-  let d=toM(e)-toM(s);if(d<0)d+=1440;
-  const h=Math.floor(d/60),m=d%60;
-  badge.textContent=`${h}h${m>0?' '+m+'min':''}`;
-  if(d>=600){badge.className='dur dur-ok';ab.style.display='inline-block';ab.dataset.t='koko';ab.textContent='Koko 54€ ✓';}
-  else if(d>=360){badge.className='dur dur-w';ab.style.display='inline-block';ab.dataset.t='osa';ab.textContent='Osa 25€ ✓';}
+  // Laske matkojen yhteisaika
+  const tripMin=calcTotalTravelMin();
+  let displayMin=tripMin;
+  // Jos ei matkoja mutta on kellonajat, käytä niitä
+  if(tripMin===0&&s&&e){let d=toM(e)-toM(s);if(d<0)d+=1440;displayMin=d;}
+  if(displayMin===0){badge.className='dur dur-g';badge.textContent='—';ab.style.display='none';updPvr();return;}
+  const h=Math.floor(displayMin/60),m=displayMin%60;
+  const label=tripMin>0?`${h}h${m>0?' '+m+'min':''} (matkat)`:`${h}h${m>0?' '+m+'min':''} (kello)`;
+  badge.textContent=label;
+  if(displayMin>600){badge.className='dur dur-ok';ab.style.display='inline-block';ab.dataset.t='koko';ab.textContent='Koko 54€ ✓';}
+  else if(displayMin>360){badge.className='dur dur-w';ab.style.display='inline-block';ab.dataset.t='osa';ab.textContent='Osa 25€ ✓';}
   else{badge.className='dur dur-g';ab.style.display='none';}
   updPvr();
 }
@@ -569,6 +574,32 @@ function calcTripKm(t){
   return parseFloat(t.km)||0;
 }
 
+// Laskee matka-ajan minuuteissa yksittäiselle matkalle
+function tripDurMin(t){
+  if(!t.ts||!t.te)return 0;
+  const sm=t.ts.split(':').map(Number),em=t.te.split(':').map(Number);
+  let d=(em[0]*60+em[1])-(sm[0]*60+sm[1]);
+  if(d<0)d+=1440;
+  return d;
+}
+
+// Laskee kaikkien matkojen yhteiskeston (verottaja 2026 päiväraha)
+function calcTotalTravelMin(){
+  let total=0;
+  [...ST.trips,...ST.sails,...ST.visits].forEach(t=>total+=tripDurMin(t));
+  return total;
+}
+
+// Päiväraha matkojen yhteisajan perusteella
+function calcPvrFromTrips(){
+  const min=calcTotalTravelMin();
+  const h=Math.floor(min/60),m=min%60;
+  const durStr=min>0?h+'h'+(m>0?' '+m+'min':''):'—';
+  if(min>600)return{pvr:54,type:'koko',label:'Kokopäiväraha 54 €',durStr,min};
+  if(min>360)return{pvr:25,type:'osa',label:'Osapäiväraha 25 €',durStr,min};
+  return{pvr:0,type:'ei',label:'Ei päivärahaa',durStr,min};
+}
+
 // ── TRIPS ──────────────────────────────────────────────
 window.addTrip=()=>{ST.trips.push({from:'',odosta:'',odoon:'',km:'',role:'Tmi',ts:'',te:'',notes:''});rdTrips();};
 window.setTR=(i,r)=>{ST.trips[i].role=r;rdTrips();autoSave();};
@@ -624,6 +655,7 @@ function rdTrips(){
           box.style.display='none';
         }
       }
+      updTime();
       autoSave();
     });
   });
@@ -672,6 +704,7 @@ function rdSail(){
         if(ST.sails[idx].odosta&&ST.sails[idx].odoon){box.style.display='flex';box.innerHTML=`<span>Lokista laskettu</span>${km} mpk`;}
         else box.style.display='none';
       }
+      updTime();
       autoSave();
     });
   });
@@ -720,6 +753,7 @@ function rdVisits(){
         if(ST.visits[idx].odosta&&ST.visits[idx].odoon){box.style.display='flex';box.innerHTML=`<span>Mittarista laskettu</span>${km} km`;}
         else box.style.display='none';
       }
+      updTime();
       autoSave();
     });
   });
@@ -779,21 +813,18 @@ function rdReports(){
 }
 
 function rdPvrAutoCard(){
-  const auto=calcAutoPvr();
-  const manual=getPvr();
+  const trip=calcPvrFromTrips();
+  const clock=calcAutoPvr();
+  // Käytetään matkojen yhteisaikaa ensisijaisesti, kellon aikaa toissijaisesti
+  const auto=trip.min>0?trip:clock;
   document.getElementById('pvr-auto-status').textContent=auto.label;
   const eurEl=document.getElementById('pvr-auto-eur');
   eurEl.textContent=auto.pvr>0?auto.pvr+' €':'0 €';
-  eurEl.style.color=auto.color==='full'?'var(--a2)':auto.pvr>0?'var(--warn)':'var(--dim)';
+  eurEl.style.color=auto.pvr===54?'var(--a2)':auto.pvr>0?'var(--warn)':'var(--dim)';
   const card=document.getElementById('pvr-auto-card');
-  if(manual>0&&manual!==auto.pvr){
-    card.style.borderColor='rgba(255,92,122,.4)';
-    document.getElementById('pvr-auto-rule').innerHTML=
-      auto.rule+' <span style="color:var(--danger);font-size:11px">(manuaalisesti: '+manual+'€)</span>';
-  } else {
-    card.style.borderColor=auto.pvr>0?'rgba(255,184,48,.35)':'rgba(255,255,255,.12)';
-    document.getElementById('pvr-auto-rule').textContent=auto.rule;
-  }
+  const src=trip.min>0?'matkojen yhteisaika: '+auto.durStr:'kellonajan mukaan: '+auto.durStr;
+  document.getElementById('pvr-auto-rule').textContent=src;
+  card.style.borderColor=auto.pvr>0?'rgba(255,184,48,.35)':'rgba(255,255,255,.12)';
 }
 
 function rdKmBreakdown(){
@@ -903,7 +934,7 @@ function rdOyReport(){
   const kmOy=oyTrips.reduce((s,t)=>s+calcTripKm(t),0);
   const kmSailOy=sailKm('Oy');
   const kmCorv=(kmOy+kmSailOy)*KM_RATE;
-  const pvr=ST.pvrRole==='Oy'?getPvr():0;
+  const pvrData=calcPvrFromTrips();const pvr=ST.pvrRole==='Oy'?pvrData.pvr:0;
   const lask=se(ST.bOy);
   const total=kmCorv+pvr;
 
@@ -928,7 +959,7 @@ function rdTmiReport(){
   const kmTmi=tmiTrips.reduce((s,{t})=>s+calcTripKm(t),0)+ST.visits.reduce((s,v)=>s+calcVisitKm(v),0);
   const kmSailTmi=sailKm('Tmi');
   const kmVah=(kmTmi+kmSailTmi)*KM_RATE;
-  const pvr=ST.pvrRole==='Tmi'?getPvr():0;
+  const pvrData=calcPvrFromTrips();const pvr=ST.pvrRole==='Tmi'?pvrData.pvr:0;
   const totalVah=kmVah+pvr;
 
   let html=`<div class="rpt-title">🟢 Tmi — Verovähennyskoosto ${curDate}</div>`;
@@ -972,7 +1003,7 @@ window.saveDay=async()=>{
 };
 window.autoSave=()=>{
   fromDOM();dot('busy');
-  // Päivitä raportit heti jos välilehti on auki
+  updTime(); // Päivitä matkojen yhteisaika ja päivärahaehdotus
   if(curTab===4) rdReports();
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
