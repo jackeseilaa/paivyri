@@ -375,7 +375,7 @@ function init(){
 function fmtD(d){const[y,m,day]=d.split('-');return parseInt(day)+'. '+['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'][+m-1]+' '+y;}
 function setDate(d){gi('ddsp').textContent=fmtD(d);gi('dip').value=d;}
 window.openDP=()=>{const i=gi('dip');i.focus();i.click();try{i.showPicker();}catch(e){}};
-window.changeDate=d=>{D=d;setDate(d);loadDay(d);};
+window.changeDate=d=>{D=d;setDate(d);loadDay(d);const el=document.getElementById('gcal-events');if(el)el.innerHTML='<div style="color:var(--di);font-size:12px">Päivä vaihdettu: '+fmtD(d)+' — paina Hae kalenteri.</div>';_calEvs=[];};
 
 // ── TIME & PVR ────────────────────────────────────────────
 window.onTC=()=>{ST.ts=gi('tts').value;ST.te=gi('tte').value;updTB();autoSave();};
@@ -652,13 +652,14 @@ window.fetchCalendar=async()=>{
     }catch(e){toast('Kalenterikirjautuminen epäonnistui');return;}
   }
   const el=gi('gcal-events');
-  el.innerHTML='<div style="color:var(--mu);font-size:13px">Haetaan...</div>';
+  el.innerHTML='<div style="color:var(--mu);font-size:13px">Haetaan kalenterista: '+D+'...</div>';
   try{
     const tzOff=(()=>{const o=-new Date().getTimezoneOffset();const h=String(Math.floor(Math.abs(o)/60)).padStart(2,'0'),m=String(Math.abs(o)%60).padStart(2,'0');return(o>=0?'+':'-')+h+':'+m;})();
     const start=D+'T00:00:00'+tzOff;
     const end=D+'T23:59:59'+tzOff;
     const url='https://www.googleapis.com/calendar/v3/calendars/primary/events?'
       +new URLSearchParams({timeMin:start,timeMax:end,singleEvents:'true',orderBy:'startTime',maxResults:'20'});
+    console.log('Calendar fetch URL:', url.toString(), 'D=', D);
     const resp=await fetch(url,{headers:{Authorization:'Bearer '+gcalToken}});
     if(resp.status===401){gcalToken=null;toast('Token vanhentunut — paina uudelleen');el.innerHTML='<div style="color:var(--wa);font-size:12px">Kirjaudu uudelleen kalenteria varten.</div>';return;}
     if(!resp.ok)throw new Error('HTTP '+resp.status);
