@@ -794,20 +794,29 @@ window.editTrip=editTrip;window.editVisit=editVisit;
 function tripRow(t,i,showEdit){
   const km=calcTripKm(t);
   const korv=(km*KM_RATE).toFixed(2);
-  const time=t.ts?(t.ts+(t.te?' – '+t.te:'')):'';
-  const odoInfo=t.odosta&&t.odoon?` · mittari ${t.odosta}→${t.odoon}`:'';
-  return`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)">
+  // Kellonajat
+  const timeStr=t.ts||t.te ? `${t.ts||'?'} – ${t.te||'?'}` : '—';
+  // Mittarilukema tai suora km
+  let kmInfo='';
+  if(t.odosta&&t.odoon) kmInfo=`Mittari: ${t.odosta} → ${t.odoon} km`;
+  else if(t.km) kmInfo=`Syötetty: ${t.km} km`;
+  else kmInfo='Ei km-tietoa';
+
+  return`<div style="padding:12px 0;border-bottom:1px solid rgba(30,63,110,.1)">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:600;color:#1a2a4a">${esc(t.from||'Ajomatka')}</div>
-        <div style="font-size:11px;color:#4a6080;margin-top:2px">${time}${odoInfo}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:#2a5cc8;background:rgba(42,92,200,.1);padding:2px 7px;border-radius:6px">🕐 ${timeStr}</span>
+          <span style="font-size:12px;color:#4a6080">${kmInfo}</span>
+        </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:#2a5cc8">${km} km</div>
-        <div style="font-size:11px;color:#4a6080">${korv} €</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:#2a5cc8">${km} km</div>
+        <div style="font-size:12px;color:#4a6080;font-weight:600">${korv} €</div>
       </div>
     </div>
-    ${showEdit?`<button onclick="editTrip(${i})" style="margin-top:6px;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid rgba(91,140,255,.35);background:rgba(91,140,255,.08);color:#2a5cc8;cursor:pointer">✏️ Muokkaa</button>`:''}
+    ${showEdit?`<button onclick="editTrip(${i})" style="margin-top:8px;font-family:var(--sans);font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;border:1px solid rgba(91,140,255,.4);background:rgba(91,140,255,.1);color:#2a5cc8;cursor:pointer">✏️ Muokkaa</button>`:''}
   </div>`;
 }
 
@@ -831,6 +840,8 @@ function visitRow(v,i){
 
 function rdOyReport(){
   const oyTrips=ST.trips.filter(t=>t.role==='Oy');
+  // DEBUG: loki konsolia varten
+  console.log('rdOyReport: ST.trips=',JSON.stringify(ST.trips));
   const kmOy=oyTrips.reduce((s,t)=>s+calcTripKm(t),0);
   const kmSailOy=sailKm('Oy');
   const kmCorv=(kmOy+kmSailOy)*KM_RATE;
@@ -898,10 +909,16 @@ window.saveDay=async()=>{
 };
 window.autoSave=()=>{
   fromDOM();dot('busy');
-  if(curTab===4)rdReports();
+  // Päivitä raportit heti jos välilehti on auki
+  if(curTab===4) rdReports();
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
-    try{await setDoc(doc(db,'paivyri',curDate),{...ST,at:serverTimestamp()});dot('ok');toast('✓');}
+    try{
+      await setDoc(doc(db,'paivyri',curDate),{...ST,at:serverTimestamp()});
+      dot('ok');toast('✓');
+      // Päivitä raportit myös tallennuksen jälkeen
+      if(curTab===4) rdReports();
+    }
     catch(e){dot('');console.error(e);}
   },1500);
 };
