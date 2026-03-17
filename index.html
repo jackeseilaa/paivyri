@@ -507,7 +507,7 @@ window.setPvr=type=>{
   document.getElementById('ulk-f').style.display=type==='ulk'?'block':'none';
   updPvr();autoSave();
 };
-function getPvr(){if(ST.pvr==='osa')return 25;if(ST.pvr==='koko')return 54;if(ST.pvr==='ulk')return parseFloat(document.getElementById('ulk-eur').value)||0;return 0;}
+function getPvr(){if(ST.pvr==='osa')return 25;if(ST.pvr==='koko')return 54;if(ST.pvr==='ulk')return parseFloat(ST.ulk)||0;return 0;}
 
 window.updPvr=()=>{
   const eur=getPvr(),box=document.getElementById('pvr-box'),role=document.getElementById('pvr-role').value;
@@ -774,6 +774,7 @@ function calcAutoPvr(){
 
 // ── REPORTS ────────────────────────────────────────────
 function rdReports(){
+  fromDOM(); // Synkronoi tila ennen raporttien piirtoa
   rdPvrAutoCard();rdKmBreakdown();rdOyReport();rdTmiReport();
 }
 
@@ -956,6 +957,11 @@ function fromDOM(){
   ST.pvrRole=document.getElementById('pvr-role').value;
   ST.ulk=document.getElementById('ulk-eur').value;
   ST.notes=document.getElementById('notes').value;
+  // Varmista ST.pvr aktiivisesta napista
+  ['ei','osa','koko','ulk'].forEach(t=>{
+    const b=document.getElementById('d-'+t);
+    if(b&&b.classList.contains('on'))ST.pvr=t;
+  });
 }
 function dot(s){const d=document.getElementById('sdot');d.className='sdot'+(s==='ok'?' ok':s==='busy'?' busy':'');}
 
