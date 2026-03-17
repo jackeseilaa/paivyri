@@ -584,7 +584,6 @@ function rdTrips(){
     const km=calcTripKm(t);
     const showCalc=t.odosta&&t.odoon;
     return`<div class="card" data-trip="${i}">
-      <button class="rm" onclick="delFrom('trips',${i})">×</button>
       <div class="rsel">
         <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setTR(${i},'Tmi')">🟢 Tmi</button>
         <button class="rbtn oy ${t.role==='Oy'?'on':''}" onclick="setTR(${i},'Oy')">🔵 Oy</button>
@@ -604,6 +603,7 @@ function rdTrips(){
       <div class="kmcalc" id="trip-km-show-${i}" style="${showCalc?'':'display:none'}">
         <span>Mittarista laskettu</span>${km} km
       </div>
+      <button onclick="delFrom('trips',${i})" style="margin-top:10px;width:100%;font-family:var(--sans);font-size:13px;font-weight:700;padding:9px;border-radius:10px;border:1.5px solid rgba(255,92,122,.4);background:rgba(255,92,122,.08);color:#cc2244;cursor:pointer">🗑 Poista matka</button>
     </div>`;
   }).join('');
   // Attach event listeners
@@ -636,7 +636,6 @@ function rdSail(){
   document.getElementById('sail-list').innerHTML=ST.sails.map((t,i)=>{
     const calc=calcTripKm(t);const showCalc=t.odosta&&t.odoon;
     return`<div class="card" data-sail="${i}">
-      <button class="rm" onclick="delFrom('sails',${i})">×</button>
       <div class="rsel">
         <button class="rbtn oy ${t.role==='Oy'?'on':''}" onclick="setSR(${i},'Oy')">🔵 Oy</button>
         <button class="rbtn tmi ${t.role==='Tmi'?'on':''}" onclick="setSR(${i},'Tmi')">🟢 Tmi</button>
@@ -658,6 +657,7 @@ function rdSail(){
         <span>Lokista laskettu</span>${calc} mpk
       </div>
       <div class="field"><label>Tarkoitus</label><input type="text" value="${esc(t.notes)}" data-idx="${i}" data-field="notes" class="sail-input" placeholder="kurssi, charter..."/></div>
+      <button onclick="delFrom('sails',${i})" style="margin-top:10px;width:100%;font-family:var(--sans);font-size:13px;font-weight:700;padding:9px;border-radius:10px;border:1.5px solid rgba(255,92,122,.4);background:rgba(255,92,122,.08);color:#cc2244;cursor:pointer">🗑 Poista purjehdusmatka</button>
     </div>`;
   }).join('');
   document.querySelectorAll('#sail-list .sail-input').forEach(inp=>{
@@ -684,7 +684,6 @@ function rdVisits(){
   document.getElementById('visit-list').innerHTML=ST.visits.map((v,i)=>{
     const calc=calcVisitKm(v);const showCalc=v.odosta&&v.odoon;
     return`<div class="card" data-visit="${i}">
-      <button class="rm" onclick="delFrom('visits',${i})">×</button>
       <div class="rt">
         <div class="field"><label>Saapumisaika</label><input type="time" value="${v.ts||''}" data-idx="${i}" data-field="ts" class="visit-input"/></div>
         <div class="field"><label>Lähtöaika</label><input type="time" value="${v.te||''}" data-idx="${i}" data-field="te" class="visit-input"/></div>
@@ -706,6 +705,7 @@ function rdVisits(){
       </div>
       <div class="field"><label>Muistiinpanot</label><textarea data-idx="${i}" data-field="notes" class="visit-input" style="min-height:52px">${esc(v.notes)}</textarea></div>
       <a href="${esc(gcalUrl((v.topic||'Asiakastapaaminen')+': '+(v.client||'asiakas'),curDate,v.ts||null,v.te||null,'Asiakaskäynti · '+(v.client||'')+' / '+(v.contact||'')+'\n'+(v.topic||'')+'\n'+(v.notes||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Lisää kalenteriin tapahtumana</a>
+      <button onclick="delFrom('visits',${i})" style="margin-top:8px;width:100%;font-family:var(--sans);font-size:13px;font-weight:700;padding:9px;border-radius:10px;border:1.5px solid rgba(255,92,122,.4);background:rgba(255,92,122,.08);color:#cc2244;cursor:pointer">🗑 Poista asiakaskäynti</button>
     </div>`;
   }).join('');
   document.querySelectorAll('#visit-list .visit-input').forEach(inp=>{
