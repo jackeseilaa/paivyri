@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="fi">
 <head>
 <meta charset="UTF-8"/>
@@ -219,11 +220,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <button class="tab" onclick="goTab(3)">💶 Laskutus</button>
   <button class="tab" onclick="goTab(4)">📊 Raportit</button>
   <button class="tab" onclick="goTab(5)">📅 Historia</button>
+  <button class="tab" onclick="goTab(6)">🚘 Ajopäiväkirja</button>
 </div>
 
 <div class="content">
 
 <!-- 0 TEHTÄVÄT -->
+
 <div class="panel on" id="p0">
   <div class="sec">
     <div class="slbl">Uusi tehtävä</div>
@@ -240,6 +243,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- 1 MATKAT -->
+
 <div class="panel" id="p1">
   <div class="sec">
     <div class="slbl">Ajomatkat — mittarilukema tai km suoraan</div>
@@ -290,6 +294,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- 2 ASIAKKAAT -->
+
 <div class="panel" id="p2">
   <div class="sec">
     <div class="slbl">Asiakaskäynnit — Tmi vakuutusmeklaus</div>
@@ -299,6 +304,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- 3 LASKUTUS -->
+
 <div class="panel" id="p3">
   <div class="sec">
     <div class="slbl">AJarmo Oy — taksi / kuljettaja</div>
@@ -318,9 +324,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- 4 RAPORTIT -->
+
 <div class="panel" id="p4">
 
   <!-- PÄIVÄRAHA AUTOMAATTI -->
+
   <div class="sec">
     <div class="slbl" style="justify-content:space-between">
       <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px"></span>⏰ Päiväraha — verottaja 2026</span>
@@ -344,30 +352,35 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 
   <!-- KM ERITTELY -->
+
   <div class="sec">
     <div class="slbl">🚗 Kilometrierittely</div>
     <div id="km-breakdown"></div>
   </div>
 
   <!-- OY MATKALASKU -->
+
   <div class="sec">
     <div class="slbl">🔵 AJarmo Oy — matkalasku</div>
     <div class="rpt-section" id="rpt-oy"></div>
   </div>
 
   <!-- TMI KOOSTO -->
+
   <div class="sec">
     <div class="slbl">🟢 Tmi — verovähennyskoosto</div>
     <div class="rpt-section" id="rpt-tmi"></div>
   </div>
 
   <!-- NOTES -->
+
   <div class="sec">
     <div class="slbl">Muistiinpanot</div>
     <textarea id="notes" placeholder="Vapaamuotoiset muistiinpanot päivästä..." oninput="autoSave()"></textarea>
   </div>
 
   <!-- EXPORT -->
+
   <div class="sec">
     <div class="ecrd">
       <div class="etitle">Vie tiedostoon</div>
@@ -381,6 +394,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- 5 HISTORIA -->
+
 <div class="panel" id="p5">
   <div class="sec">
     <div class="slbl">Kuukausikoosto</div>
@@ -392,6 +406,47 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+<!-- 6 AJOPÄIVÄKIRJA -->
+
+<div class="panel" id="p6">
+
+  <!-- PÄIVÄN ALOITUS -->
+
+  <div class="sec">
+    <div class="slbl">Päivän aloitus</div>
+    <div class="card">
+      <div class="r2">
+        <div class="field">
+          <label>Aloituskilometrit</label>
+          <input type="number" id="apk-alku" placeholder="km" min="0" step="1"
+            style="font-family:var(--mono);font-size:18px;font-weight:700"
+            oninput="ST.apkAlku=this.value;autoSave();rdApk()"/>
+        </div>
+        <div class="field">
+          <label>Lähtöaika</label>
+          <input type="time" id="apk-lahto" oninput="ST.apkLahto=this.value;autoSave();autoFillWorkTime()"/>
+        </div>
+      </div>
+      <div id="apk-alku-info" style="font-size:12px;color:#4a6080;margin-top:6px"></div>
+    </div>
+  </div>
+
+  <!-- PYSÄHDYKSET -->
+
+  <div class="sec">
+    <div class="slbl">Pysähdykset</div>
+    <div id="apk-list"></div>
+    <button class="abtn" onclick="addApkStop()">＋ Lisää pysähdys</button>
+  </div>
+
+  <!-- PÄIVÄN YHTEENVETO -->
+
+  <div class="sec">
+    <div class="slbl">Päivän koosto</div>
+    <div id="apk-summary"></div>
+  </div>
+
+</div>
 </div><!-- /content -->
 
 <div class="bnav">
@@ -400,10 +455,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <button class="nbtn" onclick="goTab(2)" id="nb2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Asiakkaat</span></button>
   <button class="nbtn" onclick="goTab(3)" id="nb3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span>Laskutus</span></button>
   <button class="nbtn" onclick="goTab(4)" id="nb4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5-5-5 5M13 4v10"/></svg><span>Raportit</span></button>
+  <button class="nbtn" onclick="goTab(6)" id="nb6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Ajopvk</span></button>
 </div>
 </div><!-- /s-app -->
 
 <!-- MODAL: päivän tiedot -->
+
 <div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
   <div class="modal" style="position:relative">
     <div class="modal-handle"></div>
@@ -416,7 +473,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <div class="toast" id="toast"></div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module">
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, getDocs, collection, orderBy, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -445,7 +502,8 @@ function def(){
     ts:'',te:'',
     pvr:'ei',pvrRole:'Oy',ulk:'',
     gcalDay:false,
-    notes:''
+    notes:'',
+    apkAlku:'',apkLahto:'',apkStops:[]
   };
 }
 
@@ -547,6 +605,7 @@ window.goTab=i=>{
   curTab=i;
   if(i===4)rdReports();
   if(i===5)rdHist();
+  if(i===6)rdApk();
 };
 
 // ── TASKS ──────────────────────────────────────────────
@@ -768,135 +827,125 @@ function rdVisits(){
         <div class="field"><label>Käynnin aihe</label><input type="text" value="${esc(v.topic)}" data-idx="${i}" data-field="topic" class="visit-input" placeholder="tarjous, sopimus..."/></div>
       </div>
       <div class="field"><label>Muistiinpanot</label><textarea data-idx="${i}" data-field="notes" class="visit-input" style="min-height:52px">${esc(v.notes)}</textarea></div>
-      <a href="${esc(gcalUrl((v.topic||'Asiakastapaaminen')+': '+(v.client||'asiakas'),curDate,v.ts||null,v.te||null,'Asiakaskäynti · '+(v.client||'')+' / '+(v.contact||'')+'\n'+(v.topic||'')+'\n'+(v.notes||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Lisää kalenteriin tapahtumana</a>
-      <button onclick="delFrom('visits',${i})" style="margin-top:8px;width:100%;font-family:var(--sans);font-size:13px;font-weight:700;padding:9px;border-radius:10px;border:1.5px solid rgba(255,92,122,.4);background:rgba(255,92,122,.08);color:#cc2244;cursor:pointer">🗑 Poista asiakaskäynti</button>
-    </div>`;
-  }).join('');
-  document.querySelectorAll('#visit-list .visit-input').forEach(inp=>{
-    inp.addEventListener('input', function(){
-      const idx=parseInt(this.dataset.idx);
-      const field=this.dataset.field;
-      if(!ST.visits[idx])return;
-      ST.visits[idx][field]=this.value;
-      if(field==='ts'||field==='te') autoFillWorkTime();
-      const km=calcVisitKm(ST.visits[idx]);
-      const box=document.getElementById('visit-km-show-'+idx);
-      if(box){
-        if(ST.visits[idx].odosta&&ST.visits[idx].odoon){box.style.display='flex';box.innerHTML=`<span>Mittarista laskettu</span>${km} km`;}
-        else box.style.display='none';
-      }
-      updTime();
-      autoSave();
-    });
-  });
+
+```
+  <a href="${esc(gcalUrl((v.topic||'Asiakastapaaminen')+': '+(v.client||'asiakas'),curDate,v.ts||null,v.te||null,'Asiakaskäynti · '+(v.client||'')+' / '+(v.contact||'')+'\n'+(v.topic||'')+'\n'+(v.notes||'')))}" target="_blank" class="gcal-a" style="font-size:11px">📅 Lisää kalenteriin tapahtumana</a>
+  <button onclick="delFrom('visits',${i})" style="margin-top:8px;width:100%;font-family:var(--sans);font-size:13px;font-weight:700;padding:9px;border-radius:10px;border:1.5px solid rgba(255,92,122,.4);background:rgba(255,92,122,.08);color:#cc2244;cursor:pointer">🗑 Poista asiakaskäynti</button>
+</div>`;
+```
+
+}).join(’’);
+document.querySelectorAll(’#visit-list .visit-input’).forEach(inp=>{
+inp.addEventListener(‘input’, function(){
+const idx=parseInt(this.dataset.idx);
+const field=this.dataset.field;
+if(!ST.visits[idx])return;
+ST.visits[idx][field]=this.value;
+if(field===‘ts’||field===‘te’) autoFillWorkTime();
+const km=calcVisitKm(ST.visits[idx]);
+const box=document.getElementById(‘visit-km-show-’+idx);
+if(box){
+if(ST.visits[idx].odosta&&ST.visits[idx].odoon){box.style.display=‘flex’;box.innerHTML=`<span>Mittarista laskettu</span>${km} km`;}
+else box.style.display=‘none’;
+}
+updTime();
+autoSave();
+});
+});
 }
 
 // ── BILLING ────────────────────────────────────────────
 window.addBill=type=>{
-  if(type==='oy')ST.bOy.push({desc:'',eur:'',alv:'0'});
-  else if(type==='tmi')ST.bTmi.push({desc:'',eur:'',alv:'0'});
-  else ST.bSail.push({desc:'',eur:'',alv:'0',role:'Oy'});
-  rdBills();
+if(type===‘oy’)ST.bOy.push({desc:’’,eur:’’,alv:‘0’});
+else if(type===‘tmi’)ST.bTmi.push({desc:’’,eur:’’,alv:‘0’});
+else ST.bSail.push({desc:’’,eur:’’,alv:‘0’,role:‘Oy’});
+rdBills();
 };
-function rdBills(){rdBillList('oy',ST.bOy,'bOy');rdBillList('tmi',ST.bTmi,'bTmi');rdBillList('sail',ST.bSail,'bSail');}
+function rdBills(){rdBillList(‘oy’,ST.bOy,‘bOy’);rdBillList(‘tmi’,ST.bTmi,‘bTmi’);rdBillList(‘sail’,ST.bSail,‘bSail’);}
 function rdBillList(type,arr,key){
-  document.getElementById('bill-'+type).innerHTML=arr.map((b,i)=>`
-    <div class="card">
-      <button class="rm" onclick="delFrom('${key}',${i})">×</button>
-      <div class="field"><label>Kuvaus / asiakas</label><input type="text" value="${esc(b.desc)}" oninput="ST.${key}[${i}].desc=this.value;autoSave()"/></div>
-      <div class="r2">
-        <div class="field"><label>€ (alv 0)</label><input type="number" value="${b.eur}" oninput="ST.${key}[${i}].eur=this.value;autoSave()" min="0" step="0.01"/></div>
-        <div class="field"><label>ALV</label>
-          <select onchange="ST.${key}[${i}].alv=this.value;autoSave()">
-            <option value="0" ${b.alv==='0'?'selected':''}>0 %</option>
-            <option value="25.5" ${b.alv==='25.5'?'selected':''}>25,5 %</option>
-            <option value="13.5" ${b.alv==='13.5'?'selected':''}>13,5 %</option>
-          </select>
-        </div>
-      </div>
-      ${type==='sail'?`<div class="field"><label>Rooli</label><select onchange="ST.bSail[${i}].role=this.value;autoSave()"><option value="Oy" ${b.role==='Oy'?'selected':''}>Oy</option><option value="Tmi" ${b.role==='Tmi'?'selected':''}>Tmi</option></select></div>`:''}
-    </div>`).join('');
+document.getElementById(‘bill-’+type).innerHTML=arr.map((b,i)=>` <div class="card"> <button class="rm" onclick="delFrom('${key}',${i})">×</button> <div class="field"><label>Kuvaus / asiakas</label><input type="text" value="${esc(b.desc)}" oninput="ST.${key}[${i}].desc=this.value;autoSave()"/></div> <div class="r2"> <div class="field"><label>€ (alv 0)</label><input type="number" value="${b.eur}" oninput="ST.${key}[${i}].eur=this.value;autoSave()" min="0" step="0.01"/></div> <div class="field"><label>ALV</label> <select onchange="ST.${key}[${i}].alv=this.value;autoSave()"> <option value="0" ${b.alv==='0'?'selected':''}>0 %</option> <option value="25.5" ${b.alv==='25.5'?'selected':''}>25,5 %</option> <option value="13.5" ${b.alv==='13.5'?'selected':''}>13,5 %</option> </select> </div> </div> ${type==='sail'?`<div class="field"><label>Rooli</label><select onchange="ST.bSail[${i}].role=this.value;autoSave()"><option value=“Oy” ${b.role===‘Oy’?‘selected’:’’}>Oy</option><option value=“Tmi” ${b.role===‘Tmi’?‘selected’:’’}>Tmi</option></select></div>`:''} </div>`).join(’’);
 }
 
 // ── KM HELPERS ─────────────────────────────────────────
 function allTripsKm(role){
-  let km=0;
-  ST.trips.filter(t=>!role||t.role===role).forEach(t=>km+=calcTripKm(t));
-  if(!role||role==='Tmi')ST.visits.forEach(v=>km+=calcVisitKm(v));
-  return km;
+let km=0;
+ST.trips.filter(t=>!role||t.role===role).forEach(t=>km+=calcTripKm(t));
+if(!role||role===‘Tmi’)ST.visits.forEach(v=>km+=calcVisitKm(v));
+return km;
 }
 function sailKm(role){let km=0;ST.sails.filter(t=>!role||t.role===role).forEach(t=>km+=calcTripKm(t));return km;}
 
 // ── AUTO PÄIVÄRAHA (verottaja 2026) ────────────────────
 function calcAutoPvr(){
-  if(!ST.ts||!ST.te) return{min:0,pvr:0,label:'Ei kellonaikoja',rule:'Kirjaa aika Matkat-välilehdellä',color:''};
-  let d=toM(ST.te)-toM(ST.ts);if(d<0)d+=1440;
-  const h=Math.floor(d/60),m=d%60;
-  const ds=`${h}h${m>0?' '+m+'min':''}`;
-  if(d>600) return{min:d,pvr:54,label:'Kokopäiväraha 54 €',rule:`${ds} — yli 10h → kokopäiväraha`,color:'full'};
-  if(d>360) return{min:d,pvr:25,label:'Osapäiväraha 25 €',rule:`${ds} — yli 6h → osapäiväraha`,color:'on'};
-  return{min:d,pvr:0,label:'Ei päivärahaa',rule:`${ds} — alle 6h (raja: 6h)`,color:''};
+if(!ST.ts||!ST.te) return{min:0,pvr:0,label:‘Ei kellonaikoja’,rule:‘Kirjaa aika Matkat-välilehdellä’,color:’’};
+let d=toM(ST.te)-toM(ST.ts);if(d<0)d+=1440;
+const h=Math.floor(d/60),m=d%60;
+const ds=`${h}h${m>0?' '+m+'min':''}`;
+if(d>600) return{min:d,pvr:54,label:‘Kokopäiväraha 54 €’,rule:`${ds} — yli 10h → kokopäiväraha`,color:‘full’};
+if(d>360) return{min:d,pvr:25,label:‘Osapäiväraha 25 €’,rule:`${ds} — yli 6h → osapäiväraha`,color:‘on’};
+return{min:d,pvr:0,label:‘Ei päivärahaa’,rule:`${ds} — alle 6h (raja: 6h)`,color:’’};
 }
 
 // ── REPORTS ────────────────────────────────────────────
 function rdReports(){
-  fromDOM(); // Synkronoi tila ennen raporttien piirtoa
-  rdPvrAutoCard();rdKmBreakdown();rdOyReport();rdTmiReport();
+fromDOM(); // Synkronoi tila ennen raporttien piirtoa
+rdPvrAutoCard();rdKmBreakdown();rdOyReport();rdTmiReport();
 }
 
 function rdPvrAutoCard(){
-  const trip=calcPvrFromTrips();
-  const clock=calcAutoPvr();
-  // Käytetään matkojen yhteisaikaa ensisijaisesti, kellon aikaa toissijaisesti
-  const auto=trip.min>0?trip:clock;
-  document.getElementById('pvr-auto-status').textContent=auto.label;
-  const eurEl=document.getElementById('pvr-auto-eur');
-  eurEl.textContent=auto.pvr>0?auto.pvr+' €':'0 €';
-  eurEl.style.color=auto.pvr===54?'var(--a2)':auto.pvr>0?'var(--warn)':'var(--dim)';
-  const card=document.getElementById('pvr-auto-card');
-  const src=trip.min>0?'matkojen yhteisaika: '+auto.durStr:'kellonajan mukaan: '+auto.durStr;
-  document.getElementById('pvr-auto-rule').textContent=src;
-  card.style.borderColor=auto.pvr>0?'rgba(255,184,48,.35)':'rgba(255,255,255,.12)';
+const trip=calcPvrFromTrips();
+const clock=calcAutoPvr();
+// Käytetään matkojen yhteisaikaa ensisijaisesti, kellon aikaa toissijaisesti
+const auto=trip.min>0?trip:clock;
+document.getElementById(‘pvr-auto-status’).textContent=auto.label;
+const eurEl=document.getElementById(‘pvr-auto-eur’);
+eurEl.textContent=auto.pvr>0?auto.pvr+’ €’:‘0 €’;
+eurEl.style.color=auto.pvr===54?‘var(–a2)’:auto.pvr>0?‘var(–warn)’:‘var(–dim)’;
+const card=document.getElementById(‘pvr-auto-card’);
+const src=trip.min>0?’matkojen yhteisaika: ’+auto.durStr:’kellonajan mukaan: ’+auto.durStr;
+document.getElementById(‘pvr-auto-rule’).textContent=src;
+card.style.borderColor=auto.pvr>0?‘rgba(255,184,48,.35)’:‘rgba(255,255,255,.12)’;
 }
 
 function rdKmBreakdown(){
-  const kmTmi=allTripsKm('Tmi'),kmOy=allTripsKm('Oy'),kmHlo=allTripsKm('Hlö');
-  const kmSailOy=sailKm('Oy'),kmSailTmi=sailKm('Tmi');
-  const kmTotal=kmTmi+kmOy+kmHlo+kmSailOy+kmSailTmi;
-  let html='<div class="rpt-section">';
-  ST.trips.forEach(t=>{
-    const km=calcTripKm(t);
-    const korv=t.role!=='Hlö'?(km*KM_RATE).toFixed(2)+' €':'—';
-    const col=t.role==='Oy'?'var(--oy)':t.role==='Tmi'?'var(--tmi)':'var(--hlo)';
-    html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span>${esc(t.from||'Ajomatka')}</div><div style="font-size:11px;color:var(--dim)">${t.ts||''}${t.te?' – '+t.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${col}">${km} km</div><div style="font-size:11px;color:var(--muted)">${korv}</div></div></div>`;
-  });
-  ST.visits.forEach(v=>{
-    const km=calcVisitKm(v);
-    html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-tmi">Tmi</span>${esc(v.client||'Asiakaskäynti')}</div><div style="font-size:11px;color:var(--dim)">${v.ts||''}${v.te?' – '+v.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--tmi)">${km} km</div><div style="font-size:11px;color:var(--muted)">${(km*KM_RATE).toFixed(2)} €</div></div></div>`;
-  });
-  ST.sails.forEach(t=>{
-    const km=calcTripKm(t);
-    const col=t.role==='Oy'?'var(--oy)':'var(--tmi)';
-    html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span>⛵ ${esc(t.from||'Purjehdus')}</div><div style="font-size:11px;color:var(--dim)">${t.ts||''}${t.te?' – '+t.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${col}">${km} mpk</div><div style="font-size:11px;color:var(--muted)">${(km*KM_RATE).toFixed(2)} €</div></div></div>`;
-  });
-  if(!ST.trips.length&&!ST.visits.length&&!ST.sails.length)
-    html+='<div style="color:var(--dim);font-size:13px;padding:8px 0">Ei matkoja — lisää Matkat-välilehdellä.</div>';
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:2px solid var(--border2)">
-    <div style="background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);border-radius:10px;padding:10px;text-align:center">
-      <div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟢 Tmi</div>
-      <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--tmi)">${Math.round(kmTmi+kmSailTmi)} km</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">= ${((kmTmi+kmSailTmi)*KM_RATE).toFixed(2)} €</div>
-    </div>
-    <div style="background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.3);border-radius:10px;padding:10px;text-align:center">
-      <div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase;margin-bottom:4px">🔵 Oy</div>
-      <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--oy)">${Math.round(kmOy+kmSailOy)} km</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">= ${((kmOy+kmSailOy)*KM_RATE).toFixed(2)} €</div>
-    </div>
-    <div style="background:rgba(180,138,255,.1);border:1px solid rgba(180,138,255,.3);border-radius:10px;padding:10px;text-align:center">
-      <div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟣 Oma</div>
-      <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--hlo)">${Math.round(kmHlo)} km</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">ei korv.</div>
-    </div>
+const kmTmi=allTripsKm(‘Tmi’),kmOy=allTripsKm(‘Oy’),kmHlo=allTripsKm(‘Hlö’);
+const kmSailOy=sailKm(‘Oy’),kmSailTmi=sailKm(‘Tmi’);
+const kmTotal=kmTmi+kmOy+kmHlo+kmSailOy+kmSailTmi;
+let html=’<div class="rpt-section">’;
+ST.trips.forEach(t=>{
+const km=calcTripKm(t);
+const korv=t.role!==‘Hlö’?(km*KM_RATE).toFixed(2)+’ €’:’—’;
+const col=t.role===‘Oy’?‘var(–oy)’:t.role===‘Tmi’?‘var(–tmi)’:‘var(–hlo)’;
+html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span>${esc(t.from||'Ajomatka')}</div><div style="font-size:11px;color:var(--dim)">${t.ts||''}${t.te?' – '+t.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${col}">${km} km</div><div style="font-size:11px;color:var(--muted)">${korv}</div></div></div>`;
+});
+ST.visits.forEach(v=>{
+const km=calcVisitKm(v);
+html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-tmi">Tmi</span>${esc(v.client||'Asiakaskäynti')}</div><div style="font-size:11px;color:var(--dim)">${v.ts||''}${v.te?' – '+v.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--tmi)">${km} km</div><div style="font-size:11px;color:var(--muted)">${(km*KM_RATE).toFixed(2)} €</div></div></div>`;
+});
+ST.sails.forEach(t=>{
+const km=calcTripKm(t);
+const col=t.role===‘Oy’?‘var(–oy)’:‘var(–tmi)’;
+html+=`<div class="rpt-row"><div><div class="rpt-lbl" style="display:flex;align-items:center;gap:5px"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span>⛵ ${esc(t.from||'Purjehdus')}</div><div style="font-size:11px;color:var(--dim)">${t.ts||''}${t.te?' – '+t.te:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${col}">${km} mpk</div><div style="font-size:11px;color:var(--muted)">${(km*KM_RATE).toFixed(2)} €</div></div></div>`;
+});
+if(!ST.trips.length&&!ST.visits.length&&!ST.sails.length)
+html+=’<div style="color:var(--dim);font-size:13px;padding:8px 0">Ei matkoja — lisää Matkat-välilehdellä.</div>’;
+html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:2px solid var(--border2)">
+<div style="background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);border-radius:10px;padding:10px;text-align:center">
+<div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟢 Tmi</div>
+<div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--tmi)">${Math.round(kmTmi+kmSailTmi)} km</div>
+<div style="font-size:11px;color:var(--muted);margin-top:2px">= ${((kmTmi+kmSailTmi)*KM_RATE).toFixed(2)} €</div>
+</div>
+<div style="background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.3);border-radius:10px;padding:10px;text-align:center">
+<div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase;margin-bottom:4px">🔵 Oy</div>
+<div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--oy)">${Math.round(kmOy+kmSailOy)} km</div>
+<div style="font-size:11px;color:var(--muted);margin-top:2px">= ${((kmOy+kmSailOy)*KM_RATE).toFixed(2)} €</div>
+</div>
+<div style="background:rgba(180,138,255,.1);border:1px solid rgba(180,138,255,.3);border-radius:10px;padding:10px;text-align:center">
+<div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟣 Oma</div>
+<div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--hlo)">${Math.round(kmHlo)} km</div>
+<div style="font-size:11px;color:var(--muted);margin-top:2px">ei korv.</div>
+</div>
+
   </div>
   <div style="display:flex;justify-content:space-between;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,.05);border-radius:10px">
     <span style="font-size:13px;font-weight:700;color:var(--text)">Kaikki km yhteensä</span>
@@ -908,426 +957,671 @@ function rdKmBreakdown(){
 
 function rdStats(){}
 
-function editTrip(i){goTab(1);setTimeout(()=>{const el=document.getElementById('trip-list');if(el){const cards=el.querySelectorAll('.card');if(cards[i])cards[i].scrollIntoView({behavior:'smooth',block:'center'});}},100);}
-function editVisit(i){goTab(2);setTimeout(()=>{const el=document.getElementById('visit-list');if(el){const cards=el.querySelectorAll('.card');if(cards[i])cards[i].scrollIntoView({behavior:'smooth',block:'center'});}},100);}
+function editTrip(i){goTab(1);setTimeout(()=>{const el=document.getElementById(‘trip-list’);if(el){const cards=el.querySelectorAll(’.card’);if(cards[i])cards[i].scrollIntoView({behavior:‘smooth’,block:‘center’});}},100);}
+function editVisit(i){goTab(2);setTimeout(()=>{const el=document.getElementById(‘visit-list’);if(el){const cards=el.querySelectorAll(’.card’);if(cards[i])cards[i].scrollIntoView({behavior:‘smooth’,block:‘center’});}},100);}
 window.editTrip=editTrip;window.editVisit=editVisit;
 
 function tripRow(t,i,showEdit){
-  const km=calcTripKm(t);
-  const korv=(km*KM_RATE).toFixed(2);
-  const reitti=t.reitti||t.from||'';
-  const kuvaus=t.kuvaus||t.notes||'';
-  const timeStr=(t.ts||t.te)?`${t.ts||'?'} – ${t.te||'?'}`:'—';
-  let kmInfo='';
-  if(t.odosta&&t.odoon) kmInfo=`${t.odosta} → ${t.odoon} km (mittari)`;
-  else if(t.km) kmInfo=`${t.km} km`;
-  else kmInfo='Ei km-tietoa';
+const km=calcTripKm(t);
+const korv=(km*KM_RATE).toFixed(2);
+const reitti=t.reitti||t.from||’’;
+const kuvaus=t.kuvaus||t.notes||’’;
+const timeStr=(t.ts||t.te)?`${t.ts||'?'} – ${t.te||'?'}`:’—’;
+let kmInfo=’’;
+if(t.odosta&&t.odoon) kmInfo=`${t.odosta} → ${t.odoon} km (mittari)`;
+else if(t.km) kmInfo=`${t.km} km`;
+else kmInfo=‘Ei km-tietoa’;
 
-  return`<div style="padding:12px 0;border-bottom:1px solid rgba(30,63,110,.1)">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-      <div style="flex:1;min-width:0">
-        ${reitti?`<div style="font-size:14px;font-weight:700;color:#1a2a4a">${esc(reitti)}</div>`:''}
-        ${kuvaus?`<div style="font-size:12px;color:#4a6080;margin-top:2px">${esc(kuvaus)}</div>`:''}
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
-          <span style="font-size:12px;font-weight:600;color:#2a5cc8;background:rgba(42,92,200,.1);padding:2px 7px;border-radius:6px">🕐 ${timeStr}</span>
-          <span style="font-size:11px;color:#6a80a0">${kmInfo}</span>
-        </div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:#2a5cc8">${km} km</div>
-        <div style="font-size:12px;color:#4a6080;font-weight:600">${korv} €</div>
-      </div>
-    </div>
-    ${showEdit?`<button onclick="editTrip(${i})" style="margin-top:8px;font-family:var(--sans);font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;border:1px solid rgba(91,140,255,.4);background:rgba(91,140,255,.1);color:#2a5cc8;cursor:pointer">✏️ Muokkaa</button>`:''}
+return`<div style="padding:12px 0;border-bottom:1px solid rgba(30,63,110,.1)"> <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"> <div style="flex:1;min-width:0"> ${reitti?`<div style="font-size:14px;font-weight:700;color:#1a2a4a">${esc(reitti)}</div>`:''} ${kuvaus?`<div style="font-size:12px;color:#4a6080;margin-top:2px">${esc(kuvaus)}</div>`:''} <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap"> <span style="font-size:12px;font-weight:600;color:#2a5cc8;background:rgba(42,92,200,.1);padding:2px 7px;border-radius:6px">🕐 ${timeStr}</span> <span style="font-size:11px;color:#6a80a0">${kmInfo}</span> </div> </div> <div style="text-align:right;flex-shrink:0"> <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:#2a5cc8">${km} km</div> <div style="font-size:12px;color:#4a6080;font-weight:600">${korv} €</div> </div> </div> ${showEdit?`<button onclick="editTrip(${i})" style="margin-top:8px;font-family:var(--sans);font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;border:1px solid rgba(91,140,255,.4);background:rgba(91,140,255,.1);color:#2a5cc8;cursor:pointer">✏️ Muokkaa</button>`:’’}
+
   </div>`;
 }
 
-
 function visitRow(v,i){
-  const km=calcVisitKm(v);
-  const time=v.ts?(v.ts+(v.te?' – '+v.te:'')):'';
-  return`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:600;color:#1a2a4a">${esc(v.client||'Asiakaskäynti')}</div>
-        <div style="font-size:11px;color:#4a6080;margin-top:2px">${time}${v.topic?' · '+esc(v.topic):''}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:#00a070">${km} km</div>
-        <div style="font-size:11px;color:#4a6080">${(km*KM_RATE).toFixed(2)} €</div>
-      </div>
-    </div>
-    <button onclick="editVisit(${i})" style="margin-top:6px;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid rgba(0,160,112,.35);background:rgba(0,160,112,.08);color:#00a070;cursor:pointer">✏️ Muokkaa</button>
+const km=calcVisitKm(v);
+const time=v.ts?(v.ts+(v.te?’ – ‘+v.te:’’)):’’;
+return`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+<div style="flex:1">
+<div style="font-size:14px;font-weight:600;color:#1a2a4a">${esc(v.client||‘Asiakaskäynti’)}</div>
+<div style="font-size:11px;color:#4a6080;margin-top:2px">${time}${v.topic?’ · ‘+esc(v.topic):’’}</div>
+</div>
+<div style="text-align:right;flex-shrink:0">
+<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:#00a070">${km} km</div>
+<div style="font-size:11px;color:#4a6080">${(km*KM_RATE).toFixed(2)} €</div>
+</div>
+</div>
+<button onclick="editVisit(${i})" style="margin-top:6px;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid rgba(0,160,112,.35);background:rgba(0,160,112,.08);color:#00a070;cursor:pointer">✏️ Muokkaa</button>
+
   </div>`;
 }
 
 function rdOyReport(){
-  const oyTrips=ST.trips.filter(t=>t.role==='Oy');
-  // DEBUG: loki konsolia varten
-  console.log('rdOyReport: ST.trips=',JSON.stringify(ST.trips));
-  const kmOy=oyTrips.reduce((s,t)=>s+calcTripKm(t),0);
-  const kmSailOy=sailKm('Oy');
-  const kmCorv=(kmOy+kmSailOy)*KM_RATE;
-  const pvrData=calcPvrFromTrips();const pvr=ST.pvrRole==='Oy'?pvrData.pvr:0;
-  const lask=se(ST.bOy);
-  const total=kmCorv+pvr;
+const oyTrips=ST.trips.filter(t=>t.role===‘Oy’);
+// DEBUG: loki konsolia varten
+console.log(‘rdOyReport: ST.trips=’,JSON.stringify(ST.trips));
+const kmOy=oyTrips.reduce((s,t)=>s+calcTripKm(t),0);
+const kmSailOy=sailKm(‘Oy’);
+const kmCorv=(kmOy+kmSailOy)*KM_RATE;
+const pvrData=calcPvrFromTrips();const pvr=ST.pvrRole===‘Oy’?pvrData.pvr:0;
+const lask=se(ST.bOy);
+const total=kmCorv+pvr;
 
-  let html=`<div class="rpt-title">🔵 AJarmo Oy — Matkalasku ${curDate}</div>`;
+let html=`<div class="rpt-title">🔵 AJarmo Oy — Matkalasku ${curDate}</div>`;
 
-  if(!oyTrips.length&&!kmSailOy&&!pvr){
-    html+='<div style="color:#4a6080;font-size:13px;padding:8px 0">Ei Oy-matkoja tänään.</div>';
-  } else {
-    // Jokainen matka omana rivinä muokkausnappineen
-    const oyIdxs=ST.trips.map((t,i)=>({t,i})).filter(({t})=>t.role==='Oy');
-    oyIdxs.forEach(({t,i})=>html+=tripRow(t,i,true));
-    if(kmSailOy>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">⛵ Purjehdus (Oy)</span><span style="font-family:var(--mono);font-weight:700;color:#2a5cc8">${Math.round(kmSailOy)} mpk · ${(kmSailOy*KM_RATE).toFixed(2)} €</span></div></div>`;
-    if(pvr>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">💰 ${ST.pvr==='osa'?'Osapäiväraha':'Kokopäiväraha'}</span><span style="font-family:var(--mono);font-weight:700;color:#e08000">${pvr} €</span></div></div>`;
-  }
+if(!oyTrips.length&&!kmSailOy&&!pvr){
+html+=’<div style="color:#4a6080;font-size:13px;padding:8px 0">Ei Oy-matkoja tänään.</div>’;
+} else {
+// Jokainen matka omana rivinä muokkausnappineen
+const oyIdxs=ST.trips.map((t,i)=>({t,i})).filter(({t})=>t.role===‘Oy’);
+oyIdxs.forEach(({t,i})=>html+=tripRow(t,i,true));
+if(kmSailOy>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">⛵ Purjehdus (Oy)</span><span style="font-family:var(--mono);font-weight:700;color:#2a5cc8">${Math.round(kmSailOy)} mpk · ${(kmSailOy*KM_RATE).toFixed(2)} €</span></div></div>`;
+if(pvr>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">💰 ${ST.pvr==='osa'?'Osapäiväraha':'Kokopäiväraha'}</span><span style="font-family:var(--mono);font-weight:700;color:#e08000">${pvr} €</span></div></div>`;
+}
 
-  if(total>0)html+=`<div class="rpt-total"><div class="rpt-lbl">Korvattavaa yhteensä</div><div class="rpt-val">${total.toFixed(2)} €</div></div>`;
-  document.getElementById('rpt-oy').innerHTML=html;
+if(total>0)html+=`<div class="rpt-total"><div class="rpt-lbl">Korvattavaa yhteensä</div><div class="rpt-val">${total.toFixed(2)} €</div></div>`;
+document.getElementById(‘rpt-oy’).innerHTML=html;
 }
 
 function rdTmiReport(){
-  const tmiTrips=ST.trips.map((t,i)=>({t,i})).filter(({t})=>t.role==='Tmi');
-  const kmTmi=tmiTrips.reduce((s,{t})=>s+calcTripKm(t),0)+ST.visits.reduce((s,v)=>s+calcVisitKm(v),0);
-  const kmSailTmi=sailKm('Tmi');
-  const kmVah=(kmTmi+kmSailTmi)*KM_RATE;
-  const pvrData=calcPvrFromTrips();const pvr=ST.pvrRole==='Tmi'?pvrData.pvr:0;
-  const totalVah=kmVah+pvr;
+const tmiTrips=ST.trips.map((t,i)=>({t,i})).filter(({t})=>t.role===‘Tmi’);
+const kmTmi=tmiTrips.reduce((s,{t})=>s+calcTripKm(t),0)+ST.visits.reduce((s,v)=>s+calcVisitKm(v),0);
+const kmSailTmi=sailKm(‘Tmi’);
+const kmVah=(kmTmi+kmSailTmi)*KM_RATE;
+const pvrData=calcPvrFromTrips();const pvr=ST.pvrRole===‘Tmi’?pvrData.pvr:0;
+const totalVah=kmVah+pvr;
 
-  let html=`<div class="rpt-title">🟢 Tmi — Verovähennyskoosto ${curDate}</div>`;
+let html=`<div class="rpt-title">🟢 Tmi — Verovähennyskoosto ${curDate}</div>`;
 
-  if(!tmiTrips.length&&!ST.visits.length&&!pvr){
-    html+='<div style="color:#4a6080;font-size:13px;padding:8px 0">Ei Tmi-matkoja tänään.</div>';
-  } else {
-    tmiTrips.forEach(({t,i})=>html+=tripRow(t,i,true));
-    ST.visits.forEach((v,i)=>html+=visitRow(v,i));
-    if(kmSailTmi>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">⛵ Purjehdus (Tmi)</span><span style="font-family:var(--mono);font-weight:700;color:#00a070">${Math.round(kmSailTmi)} mpk · ${(kmSailTmi*KM_RATE).toFixed(2)} €</span></div></div>`;
-    if(pvr>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">💰 ${ST.pvr==='osa'?'Osapäiväraha':'Kokopäiväraha'} (Tmi)</span><span style="font-family:var(--mono);font-weight:700;color:#e08000">${pvr} €</span></div></div>`;
-  }
+if(!tmiTrips.length&&!ST.visits.length&&!pvr){
+html+=’<div style="color:#4a6080;font-size:13px;padding:8px 0">Ei Tmi-matkoja tänään.</div>’;
+} else {
+tmiTrips.forEach(({t,i})=>html+=tripRow(t,i,true));
+ST.visits.forEach((v,i)=>html+=visitRow(v,i));
+if(kmSailTmi>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">⛵ Purjehdus (Tmi)</span><span style="font-family:var(--mono);font-weight:700;color:#00a070">${Math.round(kmSailTmi)} mpk · ${(kmSailTmi*KM_RATE).toFixed(2)} €</span></div></div>`;
+if(pvr>0)html+=`<div style="padding:10px 0;border-bottom:1px solid rgba(30,63,110,.1)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px;color:#1a2a4a">💰 ${ST.pvr==='osa'?'Osapäiväraha':'Kokopäiväraha'} (Tmi)</span><span style="font-family:var(--mono);font-weight:700;color:#e08000">${pvr} €</span></div></div>`;
+}
 
-  if(totalVah>0)html+=`<div class="rpt-total"><div class="rpt-lbl">Vähennyskelpoiset kulut yht.</div><div class="rpt-val">${totalVah.toFixed(2)} €</div></div>`;
-  document.getElementById('rpt-tmi').innerHTML=html;
+if(totalVah>0)html+=`<div class="rpt-total"><div class="rpt-lbl">Vähennyskelpoiset kulut yht.</div><div class="rpt-val">${totalVah.toFixed(2)} €</div></div>`;
+document.getElementById(‘rpt-tmi’).innerHTML=html;
 }
 
 function rptRow(lbl,sub,val){return`<div class="rpt-row"><div><div class="rpt-lbl">${lbl}</div>${sub?`<div style="font-size:11px;color:var(--dim)">${sub}</div>`:''}</div><div class="rpt-val">${val}</div></div>`;}
 
 // ── FIRESTORE ──────────────────────────────────────────
 function fromDOM(){
-  ST.ckm=document.getElementById('ckm').value;
-  ST.ckmr=document.getElementById('ckmr').value;
-  ST.ts=document.getElementById('t-start').value;
-  ST.te=document.getElementById('t-end').value;
-  ST.pvrRole=document.getElementById('pvr-role').value;
-  ST.ulk=document.getElementById('ulk-eur').value;
-  ST.notes=document.getElementById('notes').value;
-  // Varmista ST.pvr aktiivisesta napista
-  ['ei','osa','koko','ulk'].forEach(t=>{
-    const b=document.getElementById('d-'+t);
-    if(b&&b.classList.contains('on'))ST.pvr=t;
-  });
+ST.ckm=document.getElementById(‘ckm’).value;
+ST.ckmr=document.getElementById(‘ckmr’).value;
+ST.ts=document.getElementById(‘t-start’).value;
+ST.te=document.getElementById(‘t-end’).value;
+ST.pvrRole=document.getElementById(‘pvr-role’).value;
+ST.ulk=document.getElementById(‘ulk-eur’).value;
+ST.notes=document.getElementById(‘notes’).value;
+// APK fields
+const apkAlkuEl=document.getElementById(‘apk-alku’);
+const apkLahtoEl=document.getElementById(‘apk-lahto’);
+if(apkAlkuEl)ST.apkAlku=apkAlkuEl.value;
+if(apkLahtoEl)ST.apkLahto=apkLahtoEl.value;
+// Varmista ST.pvr aktiivisesta napista
+[‘ei’,‘osa’,‘koko’,‘ulk’].forEach(t=>{
+const b=document.getElementById(‘d-’+t);
+if(b&&b.classList.contains(‘on’))ST.pvr=t;
+});
 }
-function dot(s){const d=document.getElementById('sdot');d.className='sdot'+(s==='ok'?' ok':s==='busy'?' busy':'');}
+function dot(s){const d=document.getElementById(‘sdot’);d.className=‘sdot’+(s===‘ok’?’ ok’:s===‘busy’?’ busy’:’’);}
 
 window.saveDay=async()=>{
-  fromDOM();dot('busy');
-  try{await setDoc(doc(db,'paivyri',curDate),{...ST,at:serverTimestamp()});toast('Tallennettu ✓');dot('ok');}
-  catch(e){toast('Virhe!');dot('');console.error(e);}
+fromDOM();dot(‘busy’);
+try{await setDoc(doc(db,‘paivyri’,curDate),{…ST,at:serverTimestamp()});toast(‘Tallennettu ✓’);dot(‘ok’);}
+catch(e){toast(‘Virhe!’);dot(’’);console.error(e);}
 };
 window.autoSave=()=>{
-  fromDOM();dot('busy');
-  updTime(); // Päivitä matkojen yhteisaika ja päivärahaehdotus
-  if(curTab===4) rdReports();
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
-    try{
-      await setDoc(doc(db,'paivyri',curDate),{...ST,at:serverTimestamp()});
-      dot('ok');toast('✓');
-      // Päivitä raportit myös tallennuksen jälkeen
-      if(curTab===4) rdReports();
-    }
-    catch(e){dot('');console.error(e);}
-  },1500);
+fromDOM();dot(‘busy’);
+updTime(); // Päivitä matkojen yhteisaika ja päivärahaehdotus
+if(curTab===4) rdReports();
+clearTimeout(saveTimer);
+saveTimer=setTimeout(async()=>{
+try{
+await setDoc(doc(db,‘paivyri’,curDate),{…ST,at:serverTimestamp()});
+dot(‘ok’);toast(‘✓’);
+// Päivitä raportit myös tallennuksen jälkeen
+if(curTab===4) rdReports();
+}
+catch(e){dot(’’);console.error(e);}
+},1500);
 };
 async function loadDay(d){
-  dot('busy');
-  try{const snap=await getDoc(doc(db,'paivyri',d));ST=snap.exists()?{...def(),...snap.data()}:def();}
-  catch(e){ST=def();}
-  toDOM();rdAll();
-  autoFillWorkTime();
-  dot('ok');
-  if(curTab===4)rdReports();
-  if(curTab===5)rdHist();
+dot(‘busy’);
+try{const snap=await getDoc(doc(db,‘paivyri’,d));ST=snap.exists()?{…def(),…snap.data()}:def();}
+catch(e){ST=def();}
+toDOM();rdAll();
+autoFillWorkTime();
+loadApkAlku(d);
+dot(‘ok’);
+if(curTab===4)rdReports();
+if(curTab===5)rdHist();
 }
 function toDOM(){
-  document.getElementById('ckm').value=ST.ckm||'';
-  document.getElementById('ckmr').value=ST.ckmr||'';
-  document.getElementById('t-start').value=ST.ts||'';
-  document.getElementById('t-end').value=ST.te||'';
-  document.getElementById('pvr-role').value=ST.pvrRole||'Oy';
-  document.getElementById('ulk-eur').value=ST.ulk||'';
-  document.getElementById('notes').value=ST.notes||'';
-  setPvr(ST.pvr||'ei');
-  rdGcalDay();
+document.getElementById(‘ckm’).value=ST.ckm||’’;
+document.getElementById(‘ckmr’).value=ST.ckmr||’’;
+document.getElementById(‘t-start’).value=ST.ts||’’;
+document.getElementById(‘t-end’).value=ST.te||’’;
+document.getElementById(‘pvr-role’).value=ST.pvrRole||‘Oy’;
+document.getElementById(‘ulk-eur’).value=ST.ulk||’’;
+document.getElementById(‘notes’).value=ST.notes||’’;
+setPvr(ST.pvr||‘ei’);
+rdGcalDay();
+// APK
+const apkAlkuEl=document.getElementById(‘apk-alku’);
+const apkLahtoEl=document.getElementById(‘apk-lahto’);
+if(apkAlkuEl)apkAlkuEl.value=ST.apkAlku||’’;
+if(apkLahtoEl)apkLahtoEl.value=ST.apkLahto||’’;
 }
-function rdAll(){rdTasks();rdTrips();rdSail();rdVisits();rdBills();}
+function rdAll(){rdTasks();rdTrips();rdSail();rdVisits();rdBills();if(document.getElementById(‘apk-list’))rdApk();}
 window.delFrom=(arr,i)=>{ST[arr].splice(i,1);rdAll();autoFillWorkTime();autoSave();};
 
 // ── HISTORY ────────────────────────────────────────────
 async function rdHist(){
-  document.getElementById('hist-list').innerHTML='<div style="color:var(--muted);font-size:13px">Ladataan...</div>';
-  document.getElementById('month-grid').innerHTML='';
-  try{
-    const snap=await getDocs(query(collection(db,'paivyri'),orderBy('at','desc')));
-    if(snap.empty){document.getElementById('hist-list').innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0">Ei tallennettuja päiviä vielä.</div>';return;}
+document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--muted);font-size:13px">Ladataan…</div>’;
+document.getElementById(‘month-grid’).innerHTML=’’;
+try{
+const snap=await getDocs(query(collection(db,‘paivyri’),orderBy(‘at’,‘desc’)));
+if(snap.empty){document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--dim);font-size:13px;padding:12px 0">Ei tallennettuja päiviä vielä.</div>’;return;}
 
-    // Kuukausikoosto
-    const byMonth={};
-    snap.docs.forEach(d=>{
-      const s=d.data(),mo=d.id.slice(0,7);
-      if(!byMonth[mo])byMonth[mo]={km:0,pvr:0,lask:0,days:0};
-      byMonth[mo].days++;
-      byMonth[mo].km+=allTripsKmFromState(s);
-      byMonth[mo].pvr+=getPvrFromState(s);
-      byMonth[mo].lask+=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bSail||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
-    });
-    const months=Object.keys(byMonth).sort().reverse();
-    document.getElementById('month-grid').innerHTML=months.map(mo=>{
-      const mx=byMonth[mo];
-      const [y,m]=mo.split('-');
-      const moName=['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'][parseInt(m)-1];
-      return`<div class="stat ac" onclick="showMonthReport('${mo}')" style="cursor:pointer">
-        <div class="slb">${moName} ${y}</div>
-        <div class="svl">${mx.days} pv</div>
-        <div class="ssb">${Math.round(mx.km)} km · pvr ${mx.pvr.toFixed(0)}€ · lask ${mx.lask.toFixed(0)}€</div>
-      </div>`;
-    }).join('');
+```
+// Kuukausikoosto
+const byMonth={};
+snap.docs.forEach(d=>{
+  const s=d.data(),mo=d.id.slice(0,7);
+  if(!byMonth[mo])byMonth[mo]={km:0,pvr:0,lask:0,days:0};
+  byMonth[mo].days++;
+  byMonth[mo].km+=allTripsKmFromState(s);
+  byMonth[mo].pvr+=getPvrFromState(s);
+  byMonth[mo].lask+=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bSail||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
+});
+const months=Object.keys(byMonth).sort().reverse();
+document.getElementById('month-grid').innerHTML=months.map(mo=>{
+  const mx=byMonth[mo];
+  const [y,m]=mo.split('-');
+  const moName=['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'][parseInt(m)-1];
+  return`<div class="stat ac" onclick="showMonthReport('${mo}')" style="cursor:pointer">
+    <div class="slb">${moName} ${y}</div>
+    <div class="svl">${mx.days} pv</div>
+    <div class="ssb">${Math.round(mx.km)} km · pvr ${mx.pvr.toFixed(0)}€ · lask ${mx.lask.toFixed(0)}€</div>
+  </div>`;
+}).join('');
 
-    // Päivälistaus
-    document.getElementById('hist-list').innerHTML=snap.docs.map(d=>{
-      const s=d.data();
-      const kmT=allTripsKmFromState(s);
-      const pvr=getPvrFromState(s);
-      const lask=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bSail||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
-      const dur=s.ts&&s.te?`${s.ts}–${s.te}`:' ';
-      return`<div class="hrow" onclick="showDayModal('${d.id}')">
-        <div class="hd">${fmt(d.id)}</div>
-        <div>
-          <div class="hi">${dur} · ${(s.tasks||[]).length} tehtävää · ${Math.round(kmT)} km</div>
-          <div class="hbadges">
-            ${pvr>0?`<span class="badge" style="background:rgba(255,184,48,.15);color:var(--warn);border:1px solid rgba(255,184,48,.35)">pvr ${pvr}€</span>`:''}
-            ${lask>0?`<span class="badge" style="background:rgba(0,229,160,.12);color:var(--a2);border:1px solid rgba(0,229,160,.3)">lask ${lask.toFixed(0)}€</span>`:''}
-          </div>
-        </div>
-        <div style="color:var(--accent);font-size:20px">›</div>
-      </div>`;
-    }).join('');
-  }catch(e){document.getElementById('hist-list').innerHTML='<div style="color:var(--danger);font-size:13px">Latausvirhe.</div>';}
+// Päivälistaus
+document.getElementById('hist-list').innerHTML=snap.docs.map(d=>{
+  const s=d.data();
+  const kmT=allTripsKmFromState(s);
+  const pvr=getPvrFromState(s);
+  const lask=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0)+(s.bSail||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
+  const dur=s.ts&&s.te?`${s.ts}–${s.te}`:' ';
+  return`<div class="hrow" onclick="showDayModal('${d.id}')">
+    <div class="hd">${fmt(d.id)}</div>
+    <div>
+      <div class="hi">${dur} · ${(s.tasks||[]).length} tehtävää · ${Math.round(kmT)} km</div>
+      <div class="hbadges">
+        ${pvr>0?`<span class="badge" style="background:rgba(255,184,48,.15);color:var(--warn);border:1px solid rgba(255,184,48,.35)">pvr ${pvr}€</span>`:''}
+        ${lask>0?`<span class="badge" style="background:rgba(0,229,160,.12);color:var(--a2);border:1px solid rgba(0,229,160,.3)">lask ${lask.toFixed(0)}€</span>`:''}
+      </div>
+    </div>
+    <div style="color:var(--accent);font-size:20px">›</div>
+  </div>`;
+}).join('');
+```
+
+}catch(e){document.getElementById(‘hist-list’).innerHTML=’<div style="color:var(--danger);font-size:13px">Latausvirhe.</div>’;}
 }
 
 function allTripsKmFromState(s){
-  let km=0;
-  (s.trips||[]).forEach(t=>{if(t.odosta&&t.odoon){const k=(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0);km+=k>0?k:0;}else km+=parseFloat(t.km)||0;});
-  (s.visits||[]).forEach(v=>{if(v.odosta&&v.odoon){const k=(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0);km+=k>0?k:0;}else km+=parseFloat(v.km)||0;});
-  (s.sails||[]).forEach(t=>{if(t.odosta&&t.odoon){const k=(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0);km+=k>0?k:0;}else km+=parseFloat(t.km)||0;});
-  return km;
+let km=0;
+(s.trips||[]).forEach(t=>{if(t.odosta&&t.odoon){const k=(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0);km+=k>0?k:0;}else km+=parseFloat(t.km)||0;});
+(s.visits||[]).forEach(v=>{if(v.odosta&&v.odoon){const k=(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0);km+=k>0?k:0;}else km+=parseFloat(v.km)||0;});
+(s.sails||[]).forEach(t=>{if(t.odosta&&t.odoon){const k=(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0);km+=k>0?k:0;}else km+=parseFloat(t.km)||0;});
+return km;
 }
-function getPvrFromState(s){if(s.pvr==='osa')return 25;if(s.pvr==='koko')return 54;if(s.pvr==='ulk')return parseFloat(s.ulk)||0;return 0;}
+function getPvrFromState(s){if(s.pvr===‘osa’)return 25;if(s.pvr===‘koko’)return 54;if(s.pvr===‘ulk’)return parseFloat(s.ulk)||0;return 0;}
 
 // ── MODALS ─────────────────────────────────────────────
 window.showDayModal=async(d)=>{
-  document.getElementById('modal-title').textContent=fmt(d);
-  document.getElementById('modal-date').textContent=d;
-  document.getElementById('modal-body').innerHTML='<div style="color:var(--muted);font-size:13px">Ladataan...</div>';
-  document.getElementById('modal').style.display='flex';
-  try{
-    const snap=await getDoc(doc(db,'paivyri',d));
-    if(!snap.exists()){document.getElementById('modal-body').innerHTML='<div style="color:var(--dim);font-size:13px">Ei tietoja.</div>';return;}
-    const s={...def(),...snap.data()};
-    let html='';
-    // Kellonajat
-    if(s.ts||s.te){
-      let dur='';if(s.ts&&s.te){let dd=toM(s.te)-toM(s.ts);if(dd<0)dd+=1440;dur=` (${Math.floor(dd/60)}h${dd%60>0?' '+dd%60+'min':''})`;};
-      html+=`<div class="modal-sec"><div class="modal-sec-title">⏰ Työaika</div><div class="modal-item">${s.ts||'?'} – ${s.te||'?'}${dur}</div></div>`;
-    }
-    // Tehtävät
-    if(s.tasks&&s.tasks.length){
-      html+=`<div class="modal-sec"><div class="modal-sec-title">✅ Tehtävät</div>`;
-      s.tasks.forEach(t=>html+=`<div class="modal-item"><div class="modal-item-top"><span>${t.done?'✓':'○'}</span><span class="badge b-${t.role.toLowerCase()}">${t.role}</span></div>${esc(t.text)}</div>`);
-      html+='</div>';
-    }
-    // Matkat
-    if(s.trips&&s.trips.length){
-      html+=`<div class="modal-sec"><div class="modal-sec-title">🚗 Ajomatkat</div>`;
-      s.trips.forEach(t=>{
-        const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;
-        html+=`<div class="modal-item"><div class="modal-item-top"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span><span style="font-family:var(--mono);font-size:13px;color:var(--a2)">${km} km</span></div><div class="modal-item-sub">${esc(t.from)||'—'}${t.ts?' · '+t.ts:''}</div></div>`;
-      });
-      html+='</div>';
-    }
-    // Asiakaskäynnit
-    if(s.visits&&s.visits.length){
-      html+=`<div class="modal-sec"><div class="modal-sec-title">👤 Asiakaskäynnit</div>`;
-      s.visits.forEach(v=>{
-        const km=v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0;
-        html+=`<div class="modal-item"><div class="modal-item-top"><span style="font-weight:600">${esc(v.client)||'?'}</span><span style="font-family:var(--mono);font-size:13px;color:var(--a2)">${km} km</span></div><div class="modal-item-sub">${esc(v.contact)||''}${v.topic?' · '+esc(v.topic):''}</div></div>`;
-      });
-      html+='</div>';
-    }
-    // Purjehdus
-    if(s.sails&&s.sails.length){
-      html+=`<div class="modal-sec"><div class="modal-sec-title">⛵ Purjehdus</div>`;
-      s.sails.forEach(t=>{
-        const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;
-        html+=`<div class="modal-item"><div class="modal-item-top"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span><span style="font-family:var(--mono);font-size:13px;color:var(--a2)">${km} km/mpk</span></div><div class="modal-item-sub">${esc(t.from)||''}${t.to?' → '+esc(t.to):''}${esc(t.notes)?' · '+esc(t.notes):''}</div></div>`;
-      });
-      html+='</div>';
-    }
-    // Päiväraha & laskutus
-    const pvr=getPvrFromState(s);
-    if(pvr){html+=`<div class="modal-sec"><div class="modal-sec-title">💰 Päiväraha</div><div class="modal-item" style="color:var(--warn)">${s.pvr==='osa'?'Osapäiväraha':s.pvr==='koko'?'Kokopäiväraha':'Ulkomaan pvr'} <strong>${pvr} €</strong> — ${s.pvrRole}</div></div>`;}
-    // Oy raportti
-    const kmOy=(s.trips||[]).filter(t=>t.role==='Oy').reduce((acc,t)=>{return acc+(t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0);},0);
-    const pvrOy=s.pvrRole==='Oy'?pvr:0;
-    if(kmOy||pvrOy){
-      html+=`<div class="modal-sec"><div class="modal-sec-title">🔵 Oy matkalasku</div>
-        <div class="modal-item"><div class="modal-item-top"><span>Km-korvaus</span><span style="font-family:var(--mono);color:var(--accent)">${(kmOy*KM_RATE).toFixed(2)} €</span></div><div class="modal-item-sub">${Math.round(kmOy)} km × 0,55 €</div></div>
-        ${pvrOy?`<div class="modal-item"><div class="modal-item-top"><span>Päiväraha</span><span style="font-family:var(--mono);color:var(--accent)">${pvrOy} €</span></div></div>`:''}
-        <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--border);margin-top:6px;font-weight:700"><span>Yhteensä</span><span style="font-family:var(--mono);color:var(--a2)">${(kmOy*KM_RATE+pvrOy).toFixed(2)} €</span></div>
-      </div>`;
-    }
-    // Tmi raportti
-    const kmTmiV=(s.trips||[]).filter(t=>t.role==='Tmi').reduce((acc,t)=>acc+(t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0),0)+(s.visits||[]).reduce((acc,v)=>acc+(v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0),0);
-    const pvrTmi=s.pvrRole==='Tmi'?pvr:0;
-    if(kmTmiV||pvrTmi){
-      html+=`<div class="modal-sec"><div class="modal-sec-title">🟢 Tmi verovähennys</div>
-        <div class="modal-item"><div class="modal-item-top"><span>Km-vähennys</span><span style="font-family:var(--mono);color:var(--tmi)">${(kmTmiV*KM_RATE).toFixed(2)} €</span></div><div class="modal-item-sub">${Math.round(kmTmiV)} km × 0,55 €</div></div>
-        ${pvrTmi?`<div class="modal-item"><div class="modal-item-top"><span>Päiväraha</span><span style="font-family:var(--mono);color:var(--tmi)">${pvrTmi} €</span></div></div>`:''}
-        <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--border);margin-top:6px;font-weight:700"><span>Vähennyskelp. yht.</span><span style="font-family:var(--mono);color:var(--a2)">${(kmTmiV*KM_RATE+pvrTmi).toFixed(2)} €</span></div>
-      </div>`;
-    }
-    if(s.notes)html+=`<div class="modal-sec"><div class="modal-sec-title">📝 Muistiinpanot</div><div class="modal-item">${esc(s.notes)}</div></div>`;
-    // Hyppää päivään nappi
-    html+=`<button onclick="changeDate('${d}');closeModal()" style="width:100%;margin-top:8px;background:linear-gradient(135deg,var(--accent),#7b6bff);border:none;color:#fff;font-family:var(--sans);font-size:14px;font-weight:700;padding:12px;border-radius:14px;cursor:pointer">✏️ Muokkaa tätä päivää</button>`;
-    document.getElementById('modal-body').innerHTML=html;
-  }catch(e){document.getElementById('modal-body').innerHTML='<div style="color:var(--danger);font-size:13px">Latausvirhe.</div>';}
+document.getElementById(‘modal-title’).textContent=fmt(d);
+document.getElementById(‘modal-date’).textContent=d;
+document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--muted);font-size:13px">Ladataan…</div>’;
+document.getElementById(‘modal’).style.display=‘flex’;
+try{
+const snap=await getDoc(doc(db,‘paivyri’,d));
+if(!snap.exists()){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--dim);font-size:13px">Ei tietoja.</div>’;return;}
+const s={…def(),…snap.data()};
+let html=’’;
+// Kellonajat
+if(s.ts||s.te){
+let dur=’’;if(s.ts&&s.te){let dd=toM(s.te)-toM(s.ts);if(dd<0)dd+=1440;dur=` (${Math.floor(dd/60)}h${dd%60>0?' '+dd%60+'min':''})`;};
+html+=`<div class="modal-sec"><div class="modal-sec-title">⏰ Työaika</div><div class="modal-item">${s.ts||'?'} – ${s.te||'?'}${dur}</div></div>`;
+}
+// Tehtävät
+if(s.tasks&&s.tasks.length){
+html+=`<div class="modal-sec"><div class="modal-sec-title">✅ Tehtävät</div>`;
+s.tasks.forEach(t=>html+=`<div class="modal-item"><div class="modal-item-top"><span>${t.done?'✓':'○'}</span><span class="badge b-${t.role.toLowerCase()}">${t.role}</span></div>${esc(t.text)}</div>`);
+html+=’</div>’;
+}
+// Matkat
+if(s.trips&&s.trips.length){
+html+=`<div class="modal-sec"><div class="modal-sec-title">🚗 Ajomatkat</div>`;
+s.trips.forEach(t=>{
+const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;
+html+=`<div class="modal-item"><div class="modal-item-top"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span><span style="font-family:var(--mono);font-size:13px;color:var(--a2)">${km} km</span></div><div class="modal-item-sub">${esc(t.from)||'—'}${t.ts?' · '+t.ts:''}</div></div>`;
+});
+html+=’</div>’;
+}
+// Asiakaskäynnit
+if(s.visits&&s.visits.length){
+html+=`<div class="modal-sec"><div class="modal-sec-title">👤 Asiakaskäynnit</div>`;
+s.visits.forEach(v=>{
+const km=v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0;
+html+=`<div class="modal-item"><div class="modal-item-top"><span style="font-weight:600">${esc(v.client)||'?'}</span><span style="font-family:var(--mono);font-size:13px;color:var(--a2)">${km} km</span></div><div class="modal-item-sub">${esc(v.contact)||''}${v.topic?' · '+esc(v.topic):''}</div></div>`;
+});
+html+=’</div>’;
+}
+// Purjehdus
+if(s.sails&&s.sails.length){
+html+=`<div class="modal-sec"><div class="modal-sec-title">⛵ Purjehdus</div>`;
+s.sails.forEach(t=>{
+const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;
+html+=`<div class="modal-item"><div class="modal-item-top"><span class="badge b-${t.role.toLowerCase()}">${t.role}</span><span style="font-family:var(--mono);font-size:13px;color:var(--a2)">${km} km/mpk</span></div><div class="modal-item-sub">${esc(t.from)||''}${t.to?' → '+esc(t.to):''}${esc(t.notes)?' · '+esc(t.notes):''}</div></div>`;
+});
+html+=’</div>’;
+}
+// Päiväraha & laskutus
+const pvr=getPvrFromState(s);
+if(pvr){html+=`<div class="modal-sec"><div class="modal-sec-title">💰 Päiväraha</div><div class="modal-item" style="color:var(--warn)">${s.pvr==='osa'?'Osapäiväraha':s.pvr==='koko'?'Kokopäiväraha':'Ulkomaan pvr'} <strong>${pvr} €</strong> — ${s.pvrRole}</div></div>`;}
+// Oy raportti
+const kmOy=(s.trips||[]).filter(t=>t.role===‘Oy’).reduce((acc,t)=>{return acc+(t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0);},0);
+const pvrOy=s.pvrRole===‘Oy’?pvr:0;
+if(kmOy||pvrOy){
+html+=`<div class="modal-sec"><div class="modal-sec-title">🔵 Oy matkalasku</div> <div class="modal-item"><div class="modal-item-top"><span>Km-korvaus</span><span style="font-family:var(--mono);color:var(--accent)">${(kmOy*KM_RATE).toFixed(2)} €</span></div><div class="modal-item-sub">${Math.round(kmOy)} km × 0,55 €</div></div> ${pvrOy?`<div class="modal-item"><div class="modal-item-top"><span>Päiväraha</span><span style="font-family:var(--mono);color:var(--accent)">${pvrOy} €</span></div></div>`:''} <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--border);margin-top:6px;font-weight:700"><span>Yhteensä</span><span style="font-family:var(--mono);color:var(--a2)">${(kmOy*KM_RATE+pvrOy).toFixed(2)} €</span></div> </div>`;
+}
+// Tmi raportti
+const kmTmiV=(s.trips||[]).filter(t=>t.role===‘Tmi’).reduce((acc,t)=>acc+(t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0),0)+(s.visits||[]).reduce((acc,v)=>acc+(v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0),0);
+const pvrTmi=s.pvrRole===‘Tmi’?pvr:0;
+if(kmTmiV||pvrTmi){
+html+=`<div class="modal-sec"><div class="modal-sec-title">🟢 Tmi verovähennys</div> <div class="modal-item"><div class="modal-item-top"><span>Km-vähennys</span><span style="font-family:var(--mono);color:var(--tmi)">${(kmTmiV*KM_RATE).toFixed(2)} €</span></div><div class="modal-item-sub">${Math.round(kmTmiV)} km × 0,55 €</div></div> ${pvrTmi?`<div class="modal-item"><div class="modal-item-top"><span>Päiväraha</span><span style="font-family:var(--mono);color:var(--tmi)">${pvrTmi} €</span></div></div>`:''} <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--border);margin-top:6px;font-weight:700"><span>Vähennyskelp. yht.</span><span style="font-family:var(--mono);color:var(--a2)">${(kmTmiV*KM_RATE+pvrTmi).toFixed(2)} €</span></div> </div>`;
+}
+if(s.notes)html+=`<div class="modal-sec"><div class="modal-sec-title">📝 Muistiinpanot</div><div class="modal-item">${esc(s.notes)}</div></div>`;
+// Hyppää päivään nappi
+html+=`<button onclick="changeDate('${d}');closeModal()" style="width:100%;margin-top:8px;background:linear-gradient(135deg,var(--accent),#7b6bff);border:none;color:#fff;font-family:var(--sans);font-size:14px;font-weight:700;padding:12px;border-radius:14px;cursor:pointer">✏️ Muokkaa tätä päivää</button>`;
+document.getElementById(‘modal-body’).innerHTML=html;
+}catch(e){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--danger);font-size:13px">Latausvirhe.</div>’;}
 };
 
 window.showMonthReport=async(mo)=>{
-  document.getElementById('modal-title').textContent='Kuukausikoosto';
-  const[y,m]=mo.split('-');
-  const moName=['tammi','helmi','maalis','huhti','touko','kesä','heinä','elo','syys','loka','marras','joulu'][parseInt(m)-1];
-  document.getElementById('modal-date').textContent=`${moName}kuu ${y}`;
-  document.getElementById('modal-body').innerHTML='<div style="color:var(--muted);font-size:13px">Lasketaan...</div>';
-  document.getElementById('modal').style.display='flex';
-  try{
-    const snap=await getDocs(query(collection(db,'paivyri'),orderBy('at','desc')));
-    const days=snap.docs.filter(d=>d.id.startsWith(mo));
-    let totKmOy=0,totKmTmi=0,totKmHlo=0,totKmSail=0,totPvrOy=0,totPvrTmi=0,totLaskOy=0,totLaskTmi=0,totDays=days.length;
-    days.forEach(d=>{
-      const s={...def(),...d.data()};
-      const pvr=getPvrFromState(s);
-      (s.trips||[]).forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;if(t.role==='Oy')totKmOy+=km;else if(t.role==='Tmi')totKmTmi+=km;else totKmHlo+=km;});
-      (s.visits||[]).forEach(v=>{const km=v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0;totKmTmi+=km;});
-      (s.sails||[]).forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;totKmSail+=km;});
-      if(s.pvrRole==='Oy')totPvrOy+=pvr;
-      if(s.pvrRole==='Tmi')totPvrTmi+=pvr;
-      totLaskOy+=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
-      totLaskTmi+=(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
-    });
-    const html=`
-      <div class="sgrid" style="margin-bottom:16px">
-        <div class="stat wa"><div class="slb">Päiviä</div><div class="svl">${totDays}</div></div>
-        <div class="stat gr"><div class="slb">Tmi km yht.</div><div class="svl">${Math.round(totKmTmi)}</div><div class="ssb">vähennys ${(totKmTmi*KM_RATE).toFixed(2)} €</div></div>
-        <div class="stat ac"><div class="slb">Oy km yht.</div><div class="svl">${Math.round(totKmOy)}</div><div class="ssb">korvaus ${(totKmOy*KM_RATE).toFixed(2)} €</div></div>
-        <div class="stat pu"><div class="slb">Omat km</div><div class="svl">${Math.round(totKmHlo)}</div></div>
-        <div class="stat wa"><div class="slb">Pvr Oy yht.</div><div class="svl">${totPvrOy} €</div></div>
-        <div class="stat wa"><div class="slb">Pvr Tmi yht.</div><div class="svl">${totPvrTmi} €</div></div>
-        <div class="stat ac"><div class="slb">Laskutus Oy</div><div class="svl">${totLaskOy.toFixed(0)} €</div></div>
-        <div class="stat gr"><div class="slb">Laskutus Tmi</div><div class="svl">${totLaskTmi.toFixed(0)} €</div></div>
-      </div>
-      <div class="rpt-section">
-        <div class="rpt-title">🔵 Oy matkalasku kuukaudelle</div>
-        ${rptRow('Km-korvaus',`${Math.round(totKmOy)} km × 0,55 €`,`${(totKmOy*KM_RATE).toFixed(2)} €`)}
-        ${rptRow('Päivärahat',`${totDays} pv`,`${totPvrOy} €`)}
-        <div class="rpt-total"><div class="rpt-lbl">Oy yhteensä</div><div class="rpt-val">${(totKmOy*KM_RATE+totPvrOy).toFixed(2)} €</div></div>
-      </div>
-      <div class="rpt-section">
-        <div class="rpt-title">🟢 Tmi verovähennykset kuukaudelle</div>
-        ${rptRow('Km-vähennys',`${Math.round(totKmTmi)} km × 0,55 €`,`${(totKmTmi*KM_RATE).toFixed(2)} €`)}
-        ${rptRow('Päivärahat','',`${totPvrTmi} €`)}
-        <div class="rpt-total"><div class="rpt-lbl">Tmi vähennykset yht.</div><div class="rpt-val">${(totKmTmi*KM_RATE+totPvrTmi).toFixed(2)} €</div></div>
-      </div>`;
-    document.getElementById('modal-body').innerHTML=html;
-  }catch(e){document.getElementById('modal-body').innerHTML='<div style="color:var(--danger);font-size:13px">Latausvirhe.</div>';}
+document.getElementById(‘modal-title’).textContent=‘Kuukausikoosto’;
+const[y,m]=mo.split(’-’);
+const moName=[‘tammi’,‘helmi’,‘maalis’,‘huhti’,‘touko’,‘kesä’,‘heinä’,‘elo’,‘syys’,‘loka’,‘marras’,‘joulu’][parseInt(m)-1];
+document.getElementById(‘modal-date’).textContent=`${moName}kuu ${y}`;
+document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--muted);font-size:13px">Lasketaan…</div>’;
+document.getElementById(‘modal’).style.display=‘flex’;
+try{
+const snap=await getDocs(query(collection(db,‘paivyri’),orderBy(‘at’,‘desc’)));
+const days=snap.docs.filter(d=>d.id.startsWith(mo));
+let totKmOy=0,totKmTmi=0,totKmHlo=0,totKmSail=0,totPvrOy=0,totPvrTmi=0,totLaskOy=0,totLaskTmi=0,totDays=days.length;
+days.forEach(d=>{
+const s={…def(),…d.data()};
+const pvr=getPvrFromState(s);
+(s.trips||[]).forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;if(t.role===‘Oy’)totKmOy+=km;else if(t.role===‘Tmi’)totKmTmi+=km;else totKmHlo+=km;});
+(s.visits||[]).forEach(v=>{const km=v.odosta&&v.odoon?Math.max(0,(parseFloat(v.odoon)||0)-(parseFloat(v.odosta)||0)):parseFloat(v.km)||0;totKmTmi+=km;});
+(s.sails||[]).forEach(t=>{const km=t.odosta&&t.odoon?Math.max(0,(parseFloat(t.odoon)||0)-(parseFloat(t.odosta)||0)):parseFloat(t.km)||0;totKmSail+=km;});
+if(s.pvrRole===‘Oy’)totPvrOy+=pvr;
+if(s.pvrRole===‘Tmi’)totPvrTmi+=pvr;
+totLaskOy+=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
+totLaskTmi+=(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
+});
+const html=` <div class="sgrid" style="margin-bottom:16px"> <div class="stat wa"><div class="slb">Päiviä</div><div class="svl">${totDays}</div></div> <div class="stat gr"><div class="slb">Tmi km yht.</div><div class="svl">${Math.round(totKmTmi)}</div><div class="ssb">vähennys ${(totKmTmi*KM_RATE).toFixed(2)} €</div></div> <div class="stat ac"><div class="slb">Oy km yht.</div><div class="svl">${Math.round(totKmOy)}</div><div class="ssb">korvaus ${(totKmOy*KM_RATE).toFixed(2)} €</div></div> <div class="stat pu"><div class="slb">Omat km</div><div class="svl">${Math.round(totKmHlo)}</div></div> <div class="stat wa"><div class="slb">Pvr Oy yht.</div><div class="svl">${totPvrOy} €</div></div> <div class="stat wa"><div class="slb">Pvr Tmi yht.</div><div class="svl">${totPvrTmi} €</div></div> <div class="stat ac"><div class="slb">Laskutus Oy</div><div class="svl">${totLaskOy.toFixed(0)} €</div></div> <div class="stat gr"><div class="slb">Laskutus Tmi</div><div class="svl">${totLaskTmi.toFixed(0)} €</div></div> </div> <div class="rpt-section"> <div class="rpt-title">🔵 Oy matkalasku kuukaudelle</div> ${rptRow('Km-korvaus',`${Math.round(totKmOy)} km × 0,55 €`,`${(totKmOy*KM_RATE).toFixed(2)} €`)} ${rptRow('Päivärahat',`${totDays} pv`,`${totPvrOy} €`)} <div class="rpt-total"><div class="rpt-lbl">Oy yhteensä</div><div class="rpt-val">${(totKmOy*KM_RATE+totPvrOy).toFixed(2)} €</div></div> </div> <div class="rpt-section"> <div class="rpt-title">🟢 Tmi verovähennykset kuukaudelle</div> ${rptRow('Km-vähennys',`${Math.round(totKmTmi)} km × 0,55 €`,`${(totKmTmi*KM_RATE).toFixed(2)} €`)} ${rptRow('Päivärahat','',`${totPvrTmi} €`)} <div class="rpt-total"><div class="rpt-lbl">Tmi vähennykset yht.</div><div class="rpt-val">${(totKmTmi*KM_RATE+totPvrTmi).toFixed(2)} €</div></div> </div>`;
+document.getElementById(‘modal-body’).innerHTML=html;
+}catch(e){document.getElementById(‘modal-body’).innerHTML=’<div style="color:var(--danger);font-size:13px">Latausvirhe.</div>’;}
 };
 
-window.closeModal=(e)=>{if(!e||e.target===document.getElementById('modal'))document.getElementById('modal').style.display='none';};
+window.closeModal=(e)=>{if(!e||e.target===document.getElementById(‘modal’))document.getElementById(‘modal’).style.display=‘none’;};
 
 // ── EXPORT ─────────────────────────────────────────────
 function buildCSVRows(){
-  fromDOM();const s=ST;
-  const rows=[['Pvm','Kategoria','Rooli','Kuvaus','Alku','Loppu','Mittari alussa','Mittari lopussa','km','€(alv0)','ALV%','Pvr €']];
-  s.trips.forEach(t=>{const km=calcTripKm(t);rows.push([curDate,'Ajomatka',t.role,t.from||'',t.ts||'',t.te||'',t.odosta||'',t.odoon||'',km,t.role==='Tmi'?(km*KM_RATE).toFixed(2):'','','']);});
-  s.sails.forEach(t=>{const km=calcTripKm(t);rows.push([curDate,'Purjehdus',t.role,(t.from||'')+'→'+(t.to||''),t.ts||'',t.te||'',t.odosta||'',t.odoon||'',km,'','','']);});
-  s.visits.forEach(v=>{const km=calcVisitKm(v);rows.push([curDate,'Asiakaskäynti','Tmi',(v.client||'')+'/'+(v.contact||''),v.ts||'',v.te||'',v.odosta||'',v.odoon||'',km,(km*KM_RATE).toFixed(2),'','']);});
-  s.bOy.forEach(b=>rows.push([curDate,'Laskutus','Oy',b.desc||'','','','','','',b.eur||0,b.alv||0,'']));
-  s.bTmi.forEach(b=>rows.push([curDate,'Laskutus','Tmi',b.desc||'','','','','','',b.eur||0,b.alv||0,'']));
-  s.bSail.forEach(b=>rows.push([curDate,'Lask.purjehdus',b.role||'Oy',b.desc||'','','','','','',b.eur||0,b.alv||0,'']));
-  const pvr=getPvr();if(pvr)rows.push([curDate,'Päiväraha',s.pvrRole,s.pvr,s.ts||'',s.te||'','','','','','',pvr]);
-  return rows;
+fromDOM();const s=ST;
+const rows=[[‘Pvm’,‘Kategoria’,‘Rooli’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alussa’,‘Mittari lopussa’,‘km’,‘€(alv0)’,‘ALV%’,‘Pvr €’]];
+s.trips.forEach(t=>{const km=calcTripKm(t);rows.push([curDate,‘Ajomatka’,t.role,t.from||’’,t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,t.role===‘Tmi’?(km*KM_RATE).toFixed(2):’’,’’,’’]);});
+s.sails.forEach(t=>{const km=calcTripKm(t);rows.push([curDate,‘Purjehdus’,t.role,(t.from||’’)+‘→’+(t.to||’’),t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,’’,’’,’’]);});
+s.visits.forEach(v=>{const km=calcVisitKm(v);rows.push([curDate,‘Asiakaskäynti’,‘Tmi’,(v.client||’’)+’/’+(v.contact||’’),v.ts||’’,v.te||’’,v.odosta||’’,v.odoon||’’,km,(km*KM_RATE).toFixed(2),’’,’’]);});
+s.bOy.forEach(b=>rows.push([curDate,‘Laskutus’,‘Oy’,b.desc||’’,’’,’’,’’,’’,’’,b.eur||0,b.alv||0,’’]));
+s.bTmi.forEach(b=>rows.push([curDate,‘Laskutus’,‘Tmi’,b.desc||’’,’’,’’,’’,’’,’’,b.eur||0,b.alv||0,’’]));
+s.bSail.forEach(b=>rows.push([curDate,‘Lask.purjehdus’,b.role||‘Oy’,b.desc||’’,’’,’’,’’,’’,’’,b.eur||0,b.alv||0,’’]));
+const pvr=getPvr();if(pvr)rows.push([curDate,‘Päiväraha’,s.pvrRole,s.pvr,s.ts||’’,s.te||’’,’’,’’,’’,’’,’’,pvr]);
+return rows;
 }
-function toCSV(rows){return rows.map(r=>r.map(c=>`"${(c+'').replace(/"/g,'""')}"`).join(',')).join('\n');}
-function dlCSV(filename,rows){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+toCSV(rows)],{type:'text/csv;charset=utf-8'}));a.download=filename;a.click();}
+function toCSV(rows){return rows.map(r=>r.map(c=>`"${(c+'').replace(/"/g,'""')}"`).join(’,’)).join(’\n’);}
+function dlCSV(filename,rows){const a=document.createElement(‘a’);a.href=URL.createObjectURL(new Blob([’\ufeff’+toCSV(rows)],{type:‘text/csv;charset=utf-8’}));a.download=filename;a.click();}
 
 window.doCSV=()=>dlCSV(`jarmo_paivyri_${curDate}.csv`,buildCSVRows());
 
 window.doOyCSV=()=>{
-  fromDOM();const s=ST;
-  const rows=[['Pvm','Kuvaus','Lähtöaika','Päätösaika','Mittari alussa','Mittari lopussa','km','Km-korvaus €','Päiväraha €','Yhteensä €']];
-  s.trips.filter(t=>t.role==='Oy').forEach(t=>{const km=calcTripKm(t);const korv=(km*KM_RATE).toFixed(2);rows.push([curDate,t.from||'Ajomatka',t.ts||'',t.te||'',t.odosta||'',t.odoon||'',km,korv,'',korv]);});
-  const pvr=s.pvrRole==='Oy'?getPvr():0;
-  if(pvr)rows.push([curDate,'Päiväraha',s.ts||'',s.te||'','','','','',pvr,pvr]);
-  const kmOy=allTripsKm('Oy');
-  rows.push(['','YHTEENSÄ','','','','',Math.round(kmOy),(kmOy*KM_RATE).toFixed(2),pvr,(kmOy*KM_RATE+pvr).toFixed(2)]);
-  dlCSV(`oy_matkalasku_${curDate}.csv`,rows);
+fromDOM();const s=ST;
+const rows=[[‘Pvm’,‘Kuvaus’,‘Lähtöaika’,‘Päätösaika’,‘Mittari alussa’,‘Mittari lopussa’,‘km’,‘Km-korvaus €’,‘Päiväraha €’,‘Yhteensä €’]];
+s.trips.filter(t=>t.role===‘Oy’).forEach(t=>{const km=calcTripKm(t);const korv=(km*KM_RATE).toFixed(2);rows.push([curDate,t.from||‘Ajomatka’,t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,korv,’’,korv]);});
+const pvr=s.pvrRole===‘Oy’?getPvr():0;
+if(pvr)rows.push([curDate,‘Päiväraha’,s.ts||’’,s.te||’’,’’,’’,’’,’’,pvr,pvr]);
+const kmOy=allTripsKm(‘Oy’);
+rows.push([’’,‘YHTEENSÄ’,’’,’’,’’,’’,Math.round(kmOy),(kmOy*KM_RATE).toFixed(2),pvr,(kmOy*KM_RATE+pvr).toFixed(2)]);
+dlCSV(`oy_matkalasku_${curDate}.csv`,rows);
 };
 
 window.doTmiCSV=()=>{
-  fromDOM();const s=ST;
-  const rows=[['Pvm','Kuvaus','Alku','Loppu','Mittari alussa','Mittari lopussa','km','Km-vähennys €','Päiväraha €','Yht. väh. €']];
-  s.trips.filter(t=>t.role==='Tmi').forEach(t=>{const km=calcTripKm(t);const v=(km*KM_RATE).toFixed(2);rows.push([curDate,t.from||'Työ-/asiakasmatka',t.ts||'',t.te||'',t.odosta||'',t.odoon||'',km,v,'',v]);});
-  s.visits.forEach(v=>{const km=calcVisitKm(v);const vh=(km*KM_RATE).toFixed(2);rows.push([curDate,(v.client||'Asiakaskäynti')+(v.topic?' – '+v.topic:''),v.ts||'',v.te||'',v.odosta||'',v.odoon||'',km,vh,'',vh]);});
-  const pvr=s.pvrRole==='Tmi'?getPvr():0;
-  if(pvr)rows.push([curDate,'Päiväraha',s.ts||'',s.te||'','','','','',pvr,pvr]);
-  const kmTmi=allTripsKm('Tmi');
-  rows.push(['','YHTEENSÄ','','','','',Math.round(kmTmi),(kmTmi*KM_RATE).toFixed(2),pvr,(kmTmi*KM_RATE+pvr).toFixed(2)]);
-  dlCSV(`tmi_verovahennys_${curDate}.csv`,rows);
+fromDOM();const s=ST;
+const rows=[[‘Pvm’,‘Kuvaus’,‘Alku’,‘Loppu’,‘Mittari alussa’,‘Mittari lopussa’,‘km’,‘Km-vähennys €’,‘Päiväraha €’,‘Yht. väh. €’]];
+s.trips.filter(t=>t.role===‘Tmi’).forEach(t=>{const km=calcTripKm(t);const v=(km*KM_RATE).toFixed(2);rows.push([curDate,t.from||‘Työ-/asiakasmatka’,t.ts||’’,t.te||’’,t.odosta||’’,t.odoon||’’,km,v,’’,v]);});
+s.visits.forEach(v=>{const km=calcVisitKm(v);const vh=(km*KM_RATE).toFixed(2);rows.push([curDate,(v.client||‘Asiakaskäynti’)+(v.topic?’ – ‘+v.topic:’’),v.ts||’’,v.te||’’,v.odosta||’’,v.odoon||’’,km,vh,’’,vh]);});
+const pvr=s.pvrRole===‘Tmi’?getPvr():0;
+if(pvr)rows.push([curDate,‘Päiväraha’,s.ts||’’,s.te||’’,’’,’’,’’,’’,pvr,pvr]);
+const kmTmi=allTripsKm(‘Tmi’);
+rows.push([’’,‘YHTEENSÄ’,’’,’’,’’,’’,Math.round(kmTmi),(kmTmi*KM_RATE).toFixed(2),pvr,(kmTmi*KM_RATE+pvr).toFixed(2)]);
+dlCSV(`tmi_verovahennys_${curDate}.csv`,rows);
 };
 
 window.doCopy=()=>{
-  fromDOM();const s=ST;
-  const kmTmi=allTripsKm('Tmi'),kmOy=allTripsKm('Oy'),pvr=getPvr();
-  let o=`JARMO AALTONEN — PÄIVYRI ${curDate}\n${'═'.repeat(42)}\n`;
-  if(s.ts||s.te)o+=`Työaika: ${s.ts||'?'} – ${s.te||'?'}\n\n`;
-  if(s.tasks.length){o+='TEHTÄVÄT:\n';s.tasks.forEach(t=>o+=`  [${t.done?'✓':' '}] ${t.text} (${t.role})\n`);o+='\n';}
-  if(s.trips.length){o+='AJOMATKAT:\n';s.trips.forEach(t=>{const km=calcTripKm(t);o+=`  [${t.role}] ${t.from||'?'} ${km}km${t.ts?' '+t.ts:''}${t.te?'–'+t.te:''}\n`;});o+='\n';}
-  if(s.visits.length){o+='ASIAKASKÄYNNIT (Tmi):\n';s.visits.forEach(v=>{const km=calcVisitKm(v);o+=`  ${v.client||'?'} ${km}km — ${v.topic||''}\n`;});o+='\n';}
-  if(pvr)o+=`PÄIVÄRAHA: ${pvr}€ (${s.pvr}, ${s.pvrRole})\n`;
-  o+=`\n🔵 OY MATKALASKU: ${Math.round(kmOy)}km × 0,55€ = ${(kmOy*KM_RATE).toFixed(2)}€`;
-  if(s.pvrRole==='Oy'&&pvr)o+=` + pvr ${pvr}€ = ${(kmOy*KM_RATE+pvr).toFixed(2)}€ yhteensä`;
-  o+=`\n🟢 TMI VEROVÄHENNYS: ${Math.round(kmTmi)}km × 0,55€ = ${(kmTmi*KM_RATE).toFixed(2)}€`;
-  if(s.pvrRole==='Tmi'&&pvr)o+=` + pvr ${pvr}€ = ${(kmTmi*KM_RATE+pvr).toFixed(2)}€ yhteensä`;
-  if(navigator.clipboard){navigator.clipboard.writeText(o).then(()=>toast('Kopioitu ✓'));}
-  else{const ta=document.createElement('textarea');ta.value=o;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Kopioitu ✓');}
+fromDOM();const s=ST;
+const kmTmi=allTripsKm(‘Tmi’),kmOy=allTripsKm(‘Oy’),pvr=getPvr();
+let o=`JARMO AALTONEN — PÄIVYRI ${curDate}\n${'═'.repeat(42)}\n`;
+if(s.ts||s.te)o+=`Työaika: ${s.ts||'?'} – ${s.te||'?'}\n\n`;
+if(s.tasks.length){o+=‘TEHTÄVÄT:\n’;s.tasks.forEach(t=>o+=`  [${t.done?'✓':' '}] ${t.text} (${t.role})\n`);o+=’\n’;}
+if(s.trips.length){o+=‘AJOMATKAT:\n’;s.trips.forEach(t=>{const km=calcTripKm(t);o+=`  [${t.role}] ${t.from||'?'} ${km}km${t.ts?' '+t.ts:''}${t.te?'–'+t.te:''}\n`;});o+=’\n’;}
+if(s.visits.length){o+=‘ASIAKASKÄYNNIT (Tmi):\n’;s.visits.forEach(v=>{const km=calcVisitKm(v);o+=`  ${v.client||'?'} ${km}km — ${v.topic||''}\n`;});o+=’\n’;}
+if(pvr)o+=`PÄIVÄRAHA: ${pvr}€ (${s.pvr}, ${s.pvrRole})\n`;
+o+=`\n🔵 OY MATKALASKU: ${Math.round(kmOy)}km × 0,55€ = ${(kmOy*KM_RATE).toFixed(2)}€`;
+if(s.pvrRole===‘Oy’&&pvr)o+=` + pvr ${pvr}€ = ${(kmOy*KM_RATE+pvr).toFixed(2)}€ yhteensä`;
+o+=`\n🟢 TMI VEROVÄHENNYS: ${Math.round(kmTmi)}km × 0,55€ = ${(kmTmi*KM_RATE).toFixed(2)}€`;
+if(s.pvrRole===‘Tmi’&&pvr)o+=` + pvr ${pvr}€ = ${(kmTmi*KM_RATE+pvr).toFixed(2)}€ yhteensä`;
+if(navigator.clipboard){navigator.clipboard.writeText(o).then(()=>toast(‘Kopioitu ✓’));}
+else{const ta=document.createElement(‘textarea’);ta.value=o;document.body.appendChild(ta);ta.select();document.execCommand(‘copy’);document.body.removeChild(ta);toast(‘Kopioitu ✓’);}
 };
 
-
 function se(a){return a.reduce((s,b)=>s+(parseFloat(b.eur)||0),0);}
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000);}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg){const t=document.getElementById(‘toast’);t.textContent=msg;t.classList.add(‘show’);clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove(‘show’),2000);}
+function esc(s){return(s||’’).replace(/&/g,’&’).replace(/</g,’<’).replace(/>/g,’>’).replace(/”/g,’"’);}
 window.esc=esc;
+
+// ── AJOPÄIVÄKIRJA ──────────────────────────────────────
+
+window.addApkStop=()=>{
+if(!ST.apkStops)ST.apkStops=[];
+ST.apkStops.push({kohde:’’,osoite:’’,mittari:’’,aika:’’,role:‘Oy’});
+rdApk();
+// Scroll to new stop
+setTimeout(()=>{
+const list=document.getElementById(‘apk-list’);
+if(list)list.lastElementChild&&list.lastElementChild.scrollIntoView({behavior:‘smooth’});
+},100);
+};
+
+window.delApkStop=i=>{
+ST.apkStops.splice(i,1);
+rdApk();
+autoSave();
+};
+
+window.setApkRole=(i,r)=>{
+ST.apkStops[i].role=r;
+rdApk();
+autoSave();
+};
+
+// Hae edellisen päivän lopetuskilometrit Firestoresta
+async function fetchPrevDayKm(date){
+try{
+// Laske edellinen päivä
+const d=new Date(date);d.setDate(d.getDate()-1);
+const prev=d.toISOString().slice(0,10);
+const snap=await getDoc(doc(db,‘paivyri’,prev));
+if(!snap.exists())return null;
+const s=snap.data();
+if(!s.apkStops||!s.apkStops.length)return null;
+// Viimeisen pysähdyksen mittarilukema = edellisen päivän lopetus
+const last=s.apkStops[s.apkStops.length-1];
+return{km:last.mittari,date:prev};
+}catch(e){return null;}
+}
+
+function rdApk(){
+if(!ST.apkStops)ST.apkStops=[];
+
+// Laske etapit: aloitus → pysähdys1 → pysähdys2 → …
+const alku=parseFloat(ST.apkAlku)||0;
+let prevKm=alku;
+let totalTmi=0,totalOy=0,totalOma=0;
+
+// Render pysähdyslista
+const listEl=document.getElementById(‘apk-list’);
+if(!listEl)return;
+
+listEl.innerHTML=ST.apkStops.map((s,i)=>{
+const mittariKm=parseFloat(s.mittari)||0;
+const etappiKm=mittariKm>0&&prevKm>0&&mittariKm>prevKm?Math.round(mittariKm-prevKm):0;
+const roleColor=s.role===‘Oy’?‘var(–oy)’:s.role===‘Tmi’?‘var(–tmi)’:‘var(–hlo)’;
+const roleBg=s.role===‘Oy’?‘rgba(91,140,255,.1)’:s.role===‘Tmi’?‘rgba(0,229,160,.1)’:‘rgba(180,138,255,.1)’;
+const roleBorder=s.role===‘Oy’?‘rgba(91,140,255,.3)’:s.role===‘Tmi’?‘rgba(0,229,160,.3)’:‘rgba(180,138,255,.3)’;
+
+```
+// Laske kumulatiivinen edellinen km tätä iteraatiota varten
+const thisEtappiKm=etappiKm;
+if(s.role==='Tmi')totalTmi+=thisEtappiKm;
+else if(s.role==='Oy')totalOy+=thisEtappiKm;
+else totalOma+=thisEtappiKm;
+prevKm=mittariKm||prevKm;
+
+return`<div class="card" style="border-left:4px solid ${roleColor}">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:12px;font-weight:700;color:#4a6080">Pysähdys ${i+1}</div>
+    ${etappiKm>0?`<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:${roleColor}">${etappiKm} km</div>`:'<div style="font-size:12px;color:#8a9bb0">— km</div>'}
+  </div>
+  <div class="rsel">
+    <button class="rbtn oy ${s.role==='Oy'?'on':''}" onclick="setApkRole(${i},'Oy')">🔵 Oy</button>
+    <button class="rbtn tmi ${s.role==='Tmi'?'on':''}" onclick="setApkRole(${i},'Tmi')">🟢 Tmi</button>
+    <button class="rbtn hlo ${s.role==='Oma'?'on':''}" onclick="setApkRole(${i},'Oma')">🟣 Oma</button>
+  </div>
+  <div class="r2" style="margin-bottom:8px">
+    <div class="field">
+      <label>Saapumisaika</label>
+      <input type="time" value="${s.aika||''}" data-apk="${i}" data-field="aika" class="apk-input"/>
+    </div>
+    <div class="field">
+      <label>Mittarilukema</label>
+      <input type="number" value="${s.mittari||''}" data-apk="${i}" data-field="mittari" class="apk-input"
+        placeholder="km" min="0" step="1"
+        style="font-family:var(--mono);font-size:16px;font-weight:600"/>
+    </div>
+  </div>
+  <div class="field" style="margin-bottom:8px">
+    <label>Kohde / asiakas</label>
+    <input type="text" value="${esc(s.kohde||'')}" data-apk="${i}" data-field="kohde" class="apk-input"
+      placeholder="esim. Mairuen Kone ja Pultti Oy"/>
+  </div>
+  <div class="field" style="margin-bottom:10px">
+    <label>Osoite</label>
+    <input type="text" value="${esc(s.osoite||'')}" data-apk="${i}" data-field="osoite" class="apk-input"
+      placeholder="Katuosoite, kaupunki"/>
+  </div>
+  ${etappiKm>0?`<div style="background:${roleBg};border:1px solid ${roleBorder};border-radius:10px;padding:8px 12px;font-size:12px;color:${roleColor};font-weight:600">
+    Etappi: ${i===0?'lähtö':'pysähdys '+(i)}  →  pysähdys ${i+1} · <strong>${etappiKm} km</strong> · ${s.role}
+  </div>`:''}
+  <button onclick="delApkStop(${i})" style="margin-top:10px;width:100%;font-family:var(--sans);font-size:13px;font-weight:700;padding:9px;border-radius:10px;border:1.5px solid rgba(255,92,122,.4);background:rgba(255,92,122,.08);color:#cc2244;cursor:pointer">🗑 Poista pysähdys</button>
+</div>`;
+```
+
+}).join(’’);
+
+// Attach listeners
+document.querySelectorAll(’#apk-list .apk-input’).forEach(inp=>{
+inp.addEventListener(‘input’,function(){
+const idx=parseInt(this.dataset.apk);
+const field=this.dataset.field;
+if(!ST.apkStops[idx])return;
+ST.apkStops[idx][field]=this.value;
+rdApk();
+if(field===‘aika’)autoFillWorkTime();
+autoSave();
+});
+});
+
+// Summary
+const totalKm=totalTmi+totalOy+totalOma;
+const lastMittari=ST.apkStops.length?parseFloat(ST.apkStops[ST.apkStops.length-1].mittari)||0:0;
+const pvrData=calcPvrFromTrips();
+// APK-matkoilla lasketaan aika pysähdyksistä
+const apkTimes=ST.apkStops.filter(s=>s.aika).map(s=>s.aika);
+if(ST.apkLahto)apkTimes.unshift(ST.apkLahto);
+apkTimes.sort();
+let apkDurMin=0;
+if(apkTimes.length>=2){
+const s=apkTimes[0].split(’:’).map(Number),e=apkTimes[apkTimes.length-1].split(’:’).map(Number);
+apkDurMin=(e[0]*60+e[1])-(s[0]*60+s[1]);
+if(apkDurMin<0)apkDurMin+=1440;
+}
+const apkH=Math.floor(apkDurMin/60),apkM=apkDurMin%60;
+const apkDurStr=apkDurMin>0?`${apkH}h${apkM>0?' '+apkM+'min':''}`:’—’;
+const apkPvr=apkDurMin>600?54:apkDurMin>360?25:0;
+const apkPvrLabel=apkDurMin>600?‘Kokopäiväraha 54 €’:apkDurMin>360?‘Osapäiväraha 25 €’:‘Ei päivärahaa (alle 6h)’;
+
+const summEl=document.getElementById(‘apk-summary’);
+if(!summEl)return;
+
+if(!ST.apkStops.length){
+summEl.innerHTML=’<div style="color:#4a6080;font-size:13px;padding:8px 0">Lisää pysähdyksiä päivän aikana.</div>’;
+// Also update aloitus info
+const infoEl=document.getElementById(‘apk-alku-info’);
+if(infoEl&&alku>0)infoEl.textContent=`Aloituskilometrit: ${alku} km`;
+return;
+}
+
+summEl.innerHTML=`
+<div class="rpt-section">
+<div class="rpt-title">📋 ${curDate} — Ajopäiväkirja</div>
+
+```
+  <!-- Kilometrit per rooli -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+    <div style="background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);border-radius:10px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--tmi);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟢 Tmi</div>
+      <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--tmi)">${totalTmi} km</div>
+      <div style="font-size:11px;color:#4a6080;margin-top:2px">${(totalTmi*KM_RATE).toFixed(2)} €</div>
+    </div>
+    <div style="background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.3);border-radius:10px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--oy);font-weight:700;text-transform:uppercase;margin-bottom:4px">🔵 Oy</div>
+      <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--oy)">${totalOy} km</div>
+      <div style="font-size:11px;color:#4a6080;margin-top:2px">${(totalOy*KM_RATE).toFixed(2)} €</div>
+    </div>
+    <div style="background:rgba(180,138,255,.1);border:1px solid rgba(180,138,255,.3);border-radius:10px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--hlo);font-weight:700;text-transform:uppercase;margin-bottom:4px">🟣 Oma</div>
+      <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--hlo)">${totalOma} km</div>
+      <div style="font-size:11px;color:#4a6080;margin-top:2px">ei korv.</div>
+    </div>
+  </div>
+
+  <!-- Päiväraha -->
+  <div style="background:${apkPvr>0?'rgba(255,184,48,.12)':'rgba(255,255,255,.05)'};border:1px solid ${apkPvr>0?'rgba(255,184,48,.4)':'rgba(30,63,110,.15)'};border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:${apkPvr>0?'#a06000':'#4a6080'}">${apkPvrLabel}</div>
+      <div style="font-size:11px;color:#6a80a0;margin-top:2px">Ajoaika: ${apkDurStr} · ${ST.apkLahto||'?'} – ${apkTimes[apkTimes.length-1]||'?'}</div>
+    </div>
+    <div style="font-family:var(--mono);font-size:24px;font-weight:700;color:${apkPvr>0?'var(--warn)':'var(--dim)'}">${apkPvr>0?apkPvr+' €':'—'}</div>
+  </div>
+
+  <!-- Mittariluvut -->
+  <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(30,63,110,.1)">
+    <span style="font-size:13px;color:#4a6080">Mittari alussa</span>
+    <span style="font-family:var(--mono);font-weight:600;color:#1a2a4a">${alku>0?alku+' km':'—'}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(30,63,110,.1)">
+    <span style="font-size:13px;color:#4a6080">Mittari lopussa</span>
+    <span style="font-family:var(--mono);font-weight:600;color:#1a2a4a">${lastMittari>0?lastMittari+' km':'—'}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid rgba(30,63,110,.2);margin-top:4px">
+    <span style="font-size:14px;font-weight:700;color:#1a2a4a">Ajettu yhteensä</span>
+    <span style="font-family:var(--mono);font-size:16px;font-weight:700;color:#2a5cc8">${totalKm} km</span>
+  </div>
+
+  <!-- CSV nappi -->
+  <button onclick="doApkCSV()" style="width:100%;margin-top:10px;background:linear-gradient(135deg,var(--accent),#7b6bff);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer;box-shadow:0 4px 12px rgba(91,140,255,.3)">⬇ Lataa ajopäiväkirja CSV</button>
+</div>`;
+```
+
+// Update aloitus info
+const infoEl=document.getElementById(‘apk-alku-info’);
+if(infoEl){
+infoEl.textContent=lastMittari>0?`Päivän lopetuskilometrit: ${lastMittari} km — siirtyy huomisen aloitukseksi`:’’;
+}
+}
+
+window.rdApk=rdApk;
+
+// Hae edellisen päivän lopetuskilometrit automaattisesti
+async function loadApkAlku(date){
+const el=document.getElementById(‘apk-alku’);
+if(!el)return;
+// Jos jo täytetty manuaalisesti, ei ylikirjoiteta
+if(ST.apkAlku&&parseFloat(ST.apkAlku)>0){
+el.value=ST.apkAlku;
+return;
+}
+// Tarkista onko kuukauden 1. päivä
+const day=parseInt(date.split(’-’)[2]);
+if(day===1){
+const infoEl=document.getElementById(‘apk-alku-info’);
+if(infoEl)infoEl.textContent=‘Kuukauden ensimmäinen päivä — syötä aloituskilometrit manuaalisesti.’;
+return;
+}
+// Hae edellinen päivä
+const prev=await fetchPrevDayKm(date);
+if(prev&&prev.km&&parseFloat(prev.km)>0){
+ST.apkAlku=prev.km;
+el.value=prev.km;
+const infoEl=document.getElementById(‘apk-alku-info’);
+if(infoEl)infoEl.textContent=`Haettu automaattisesti: ${prev.date} lopetuskilometrit ${prev.km} km`;
+rdApk();
+}
+}
+
+// APK CSV export
+window.doApkCSV=()=>{
+fromDOM();
+const alku=parseFloat(ST.apkAlku)||0;
+const rows=[[‘Pvm’,‘Pysähdys’,‘Kohde’,‘Osoite’,‘Aika’,‘Mittarilukema’,‘Etappi km’,‘Rooli’,‘Km-korvaus €’]];
+let prevKm=alku;
+rows.push([curDate,‘Lähtö’,’’,’’,ST.apkLahto||’’,alku,’’,’’,’’]);
+(ST.apkStops||[]).forEach((s,i)=>{
+const mittari=parseFloat(s.mittari)||0;
+const etappi=mittari>0&&prevKm>0&&mittari>prevKm?Math.round(mittari-prevKm):0;
+const korv=s.role!==‘Oma’?(etappi*KM_RATE).toFixed(2):‘0’;
+rows.push([curDate,`Pysähdys ${i+1}`,s.kohde||’’,s.osoite||’’,s.aika||’’,mittari||’’,etappi,s.role,korv]);
+prevKm=mittari||prevKm;
+});
+// Yhteensä
+let tTmi=0,tOy=0,tOma=0;
+let pk=alku;
+(ST.apkStops||[]).forEach(s=>{
+const m=parseFloat(s.mittari)||0;
+const e=m>0&&pk>0&&m>pk?Math.round(m-pk):0;
+if(s.role===‘Tmi’)tTmi+=e;
+else if(s.role===‘Oy’)tOy+=e;
+else tOma+=e;
+pk=m||pk;
+});
+rows.push([’’,’’,’’,’’,’’,’’,’’,’’,’’]);
+rows.push([curDate,‘YHTEENSÄ’,’’,’’,’’,’’,tTmi+tOy+tOma,’’,((tTmi+tOy)*KM_RATE).toFixed(2)]);
+rows.push([curDate,‘Tmi’,’’,’’,’’,’’,tTmi,‘Tmi’,(tTmi*KM_RATE).toFixed(2)]);
+rows.push([curDate,‘Oy’,’’,’’,’’,’’,tOy,‘Oy’,(tOy*KM_RATE).toFixed(2)]);
+const csv=rows.map(r=>r.map(x=>`"${(x+'').replace(/"/g,'""')}"`).join(’,’)).join(’\n’);
+const a=document.createElement(‘a’);
+a.href=URL.createObjectURL(new Blob([’\ufeff’+csv],{type:‘text/csv;charset=utf-8’}));
+a.download=`ajopaivakirja_${curDate}.csv`;a.click();
+};
+
 </script>
 </body>
 </html>
