@@ -1,4 +1,4 @@
-<!-- Päivyri v1.4 2026-03-18 -->
+<!-- Päivyri v1.5 2026-03-18 -->
 <!DOCTYPE html>
 <html lang="fi">
 <head>
@@ -156,7 +156,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 <div id="app" style="display:none">
 <div class="topbar">
-  <div class="tt">Päivyri <span style="font-size:9px;color:var(--di);font-family:var(--mono)">v1.4</span></div>
+  <div class="tt">Päivyri <span style="font-size:9px;color:var(--di);font-family:var(--mono)">v1.5</span></div>
   <div class="td" id="ddsp" onclick="openDP()">—</div>
   <input type="date" id="dip" onchange="changeDate(this.value)"/>
   <div class="tr">
@@ -264,7 +264,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="sec"><div class="slbl">Muistiinpanot</div><textarea id="notes" placeholder="Vapaamuotoiset muistiinpanot..." oninput="autoSave()"></textarea></div>
   <div class="sec">
     <div style="background:var(--card);border:1px solid var(--b0);border-radius:var(--r);padding:15px">
-      <button class="xbtn pr" onclick="doCSV()">⬇ Kaikki CSV</button>
+      <button class="xbtn pr" onclick="addDayToCalendar()">📅 Vie päivä Google Kalenteriin</button>
+      <button class="xbtn" onclick="doCSV()">⬇ Kaikki CSV</button>
       <button class="xbtn" onclick="doOyCSV()">🔵 Oy matkalasku CSV</button>
       <button class="xbtn" onclick="doTmiCSV()">🟢 Tmi verovähennys CSV</button>
       <button class="xbtn" onclick="doApkCSV()">🚘 Ajopäiväkirja CSV</button>
@@ -847,27 +848,41 @@ window.showDayModal=async id=>{
     const snap=await getDoc(doc(db,'paivyri',id));
     if(!snap.exists()){gi('mbody').innerHTML='<div style="color:var(--di)">Ei tietoja.</div>';return;}
     const s={...empty(),...snap.data()};let h='';
-    if(s.ts||s.te){
-      let dd='';if(s.ts&&s.te){let d=toMin(s.te)-toMin(s.ts);if(d<0)d+=1440;dd=' ('+Math.floor(d/60)+'h'+(d%60?' '+d%60+'min':'')+')';}
-      h+='<div class="msec"><div class="msh">⏰ Työaika</div><div class="mitem">'+(s.ts||'?')+' – '+(s.te||'?')+dd+'</div></div>';
-    }
-    if((s.tasks||[]).length){h+='<div class="msec"><div class="msh">✅ Tehtävät</div>';s.tasks.forEach(t=>h+='<div class="mitem"><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.text)+(t.done?' ✓':'')+'</div>');h+='</div>';}
-    if((s.trips||[]).length){h+='<div class="msec"><div class="msh">🚗 Matkat</div>';s.trips.forEach(t=>h+='<div class="mitem"><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.from||'matka')+' <strong>'+(parseFloat(t.km)||0)+' km</strong></div>');h+='</div>';}
-    if((s.visits||[]).length){h+='<div class="msec"><div class="msh">👤 Asiakaskäynnit</div>';s.visits.forEach(v=>h+='<div class="mitem">'+esc(v.client||'käynti')+' <strong>'+(parseFloat(v.km)||0)+' km</strong>'+(v.topic?' — '+esc(v.topic):'')+'</div>');h+='</div>';}
+    if(s.ts||s.te){let dd='';if(s.ts&&s.te){let d=toMin(s.te)-toMin(s.ts);if(d<0)d+=1440;dd=' ('+Math.floor(d/60)+'h'+(d%60?' '+d%60+'min':'')+')';}
+      h+='<div class="msec"><div class="msh">⏰ Työaika</div><div class="mitem">'+(s.ts||'?')+' – '+(s.te||'?')+dd+'</div></div>';}
+    if((s.tasks||[]).length){h+='<div class="msec"><div class="msh">✅ Tehtävät</div>';
+      s.tasks.forEach(t=>h+='<div class="mitem"><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.text)+(t.done?' ✓':'')+'</div>');h+='</div>';}
+    if((s.trips||[]).length){h+='<div class="msec"><div class="msh">🚗 Matkat</div>';
+      s.trips.forEach(t=>{const km=parseFloat(t.km)||0;h+='<div class="mitem" style="display:flex;justify-content:space-between"><div><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.from||'matka')+(t.ts?' '+t.ts+(t.te?'–'+t.te:''):'')+'</div><strong>'+km+' km'+(t.role!=='Hlö'?' · '+(km*KM).toFixed(2)+' €':'')+'</strong></div>';});h+='</div>';}
+    if((s.sails||[]).length){h+='<div class="msec"><div class="msh">⛵ Purjehdus</div>';
+      s.sails.forEach(t=>h+='<div class="mitem" style="display:flex;justify-content:space-between"><div><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.from||'')+(t.to?' → '+esc(t.to):'')+'</div><strong>'+(parseFloat(t.km)||0)+' mpk</strong></div>');h+='</div>';}
+    if((s.visits||[]).length){h+='<div class="msec"><div class="msh">👤 Asiakaskäynnit</div>';
+      s.visits.forEach(v=>{const km=parseFloat(v.km)||0;h+='<div class="mitem" style="display:flex;justify-content:space-between"><div>'+esc(v.client||'käynti')+(v.topic?' · '+esc(v.topic):'')+'</div><strong>'+km+' km · '+(km*KM).toFixed(2)+' €</strong></div>';});h+='</div>';}
     const pvr=pvrFS(s);
-    if(pvr)h+='<div class="msec"><div class="msh">💰 Päiväraha</div><div class="mitem" style="color:var(--wa)">'+(s.dieta==='osa'?'Osapäiväraha':'Kokopäiväraha')+' <strong>'+pvr+' €</strong> — '+(s.drole||'Oy')+'</div></div>';
+    if(pvr)h+='<div class="msec"><div class="msh">💰 Päiväraha</div><div class="mitem" style="display:flex;justify-content:space-between"><span>'+(s.dieta==='osa'?'Osapäiväraha':s.dieta==='koko'?'Kokopäiväraha':'Ulkomaan pvr')+' · '+(s.drole||'Oy')+'</span><strong>'+pvr+' €</strong></div></div>';
+    const loy=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
+    const ltmi=(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
+    if(loy>0||ltmi>0){h+='<div class="msec"><div class="msh">💶 Laskutus</div>';
+      if(loy>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🔵 Oy</span><strong>'+loy.toFixed(2)+' €</strong></div>';
+      if(ltmi>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🟢 Tmi</span><strong>'+ltmi.toFixed(2)+' €</strong></div>';
+      h+='</div>';}
     const ko=(s.trips||[]).filter(t=>t.role==='Oy').reduce((a,t)=>a+(parseFloat(t.km)||0),0);
     const kt=(s.trips||[]).filter(t=>t.role==='Tmi').reduce((a,t)=>a+(parseFloat(t.km)||0),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
-    if(kt>0||ko>0){
-      h+='<div class="msec"><div class="msh">💶 Kilometrit</div>';
+    if(kt>0||ko>0){h+='<div class="msec"><div class="msh">📊 Km-yhteenveto</div>';
       if(ko>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🔵 Oy '+Math.round(ko)+' km</span><strong>'+(ko*KM).toFixed(2)+' €</strong></div>';
       if(kt>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🟢 Tmi '+Math.round(kt)+' km</span><strong>'+(kt*KM).toFixed(2)+' €</strong></div>';
-      h+='</div>';
-    }
+      h+='</div>';}
+    if((s.apkStops||[]).length){let prev=parseFloat(s.apkAlku)||0,totApk=0;
+      s.apkStops.forEach(st=>{const m=parseFloat(st.mittari)||0;if(m>0&&prev>0&&m>prev)totApk+=Math.round(m-prev);prev=m||prev;});
+      if(totApk>0)h+='<div class="msec"><div class="msh">🚘 Ajopäiväkirja</div><div class="mitem" style="display:flex;justify-content:space-between"><span>'+s.apkStops.length+' pysähdystä</span><strong>'+totApk+' km</strong></div></div>';}
     if(s.notes)h+='<div class="msec"><div class="msh">📝 Muistiinpanot</div><div class="mitem">'+esc(s.notes)+'</div></div>';
-    h+='<button onclick="changeDate(\''+id+'\')" style="width:100%;margin-top:10px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
+    const cTitle='Työpäivä '+id+(pvr?' · pvr '+pvr+'€':'');
+    const cDesc='Oy '+Math.round(ko)+'km, Tmi '+Math.round(kt)+'km'+(pvr?', pvr '+pvr+'€':'')+(s.notes?'\n'+s.notes:'');
+    h+='<a href="'+esc(gcalUrl(cTitle,id,s.ts||null,s.te||null,cDesc))+'" target="_blank" style="display:block;width:100%;margin-top:10px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);color:var(--ac);font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;text-align:center;text-decoration:none">📅 Vie Google Kalenteriin</a>';
+    h+='<button onclick="changeDate(\''+id+'\')" style="width:100%;margin-top:8px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
+    h+='<button onclick="deleteDay(\''+id+'\')" style="width:100%;margin-top:6px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--da);font-family:var(--sans);font-size:13px;font-weight:600;padding:10px;border-radius:12px;cursor:pointer">🗑 Poista tämä päivä</button>';
     gi('mbody').innerHTML=h;
-  }catch(e){gi('mbody').innerHTML='<div style="color:var(--da)">Virhe.</div>';}
+  }catch(e){gi('mbody').innerHTML='<div style="color:var(--da)">Virhe: '+esc(e.message)+'</div>';}
 };
 window.showMonthModal=async mo=>{
   gi('mtitle').textContent='Kuukausikoosto';
@@ -894,6 +909,28 @@ window.showMonthModal=async mo=>{
       +sc2('gr','Oy yhteensä',(tOy*KM+tPOy).toFixed(0)+' €','km+pvr')
       +'</div>';
   }catch(e){gi('mbody').innerHTML='<div style="color:var(--da)">Virhe.</div>';}
+};
+window.addDayToCalendar=()=>{
+  fromDOM();const s=ST,pvr=getDE(),ko=kmOy(),kt=kmTmi();
+  const title='Työpäivä '+D+(pvr?' · pvr '+pvr+'€':'');
+  const lines=[];
+  if(s.ts&&s.te)lines.push('Työaika: '+s.ts+' – '+s.te);
+  s.trips.forEach(t=>lines.push('['+t.role+'] '+(t.from||'matka')+' '+(t.km||0)+'km'));
+  s.visits.forEach(v=>lines.push('Asiakaskäynti: '+(v.client||'')+(v.topic?' – '+v.topic:'')+' '+(v.km||0)+'km'));
+  if(ko>0)lines.push('Oy: '+Math.round(ko)+'km = '+(ko*KM).toFixed(2)+'€');
+  if(kt>0)lines.push('Tmi: '+Math.round(kt)+'km = '+(kt*KM).toFixed(2)+'€');
+  if(pvr)lines.push('Päiväraha: '+pvr+'€ ('+s.drole+')');
+  if(s.notes)lines.push(s.notes);
+  window.open(gcalUrl(title,D,s.ts||null,s.te||null,lines.join('\n')),'_blank');
+  ST.gcal=true;autoSave();rdGcalDay();
+};
+window.deleteDay=async id=>{
+  if(!confirm('Poistetaanko '+fmtD(id)+'?\nTätä ei voi perua.'))return;
+  try{
+    const{deleteDoc:dd2}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await dd2(doc(db,'paivyri',id));
+    gi('modal').style.display='none';toast('Poistettu ✓');rdHist();
+  }catch(e){toast('Virhe: '+e.message);}
 };
 window.closeModal=e=>{if(!e||e.target===gi('modal'))gi('modal').style.display='none';};
 
