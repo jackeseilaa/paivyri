@@ -1,4 +1,4 @@
-<!-- Päivyri v1.5 2026-03-18 -->
+<!-- Päivyri v1.6 2026-03-18 -->
 <!DOCTYPE html>
 <html lang="fi">
 <head>
@@ -156,7 +156,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 <div id="app" style="display:none">
 <div class="topbar">
-  <div class="tt">Päivyri <span style="font-size:9px;color:var(--di);font-family:var(--mono)">v1.5</span></div>
+  <div class="tt">Päivyri <span style="font-size:9px;color:var(--di);font-family:var(--mono)">v1.6</span></div>
   <div class="td" id="ddsp" onclick="openDP()">—</div>
   <input type="date" id="dip" onchange="changeDate(this.value)"/>
   <div class="tr">
@@ -833,10 +833,12 @@ async function rdHist(){
       const kt=(s.trips||[]).reduce((a,t)=>a+(parseFloat(t.km)||0),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
       const apkKt=kt===0?(()=>{const stops=s.apkStops||[];let prev=parseFloat(s.apkAlku)||0,tot=0;stops.forEach(st=>{const m=parseFloat(st.mittari)||0;if(m>0&&prev>0&&m>prev)tot+=Math.round(m-prev);prev=m||prev;});return tot;})():0;
       const pvr=pvrFS(s);
-      return'<div class="hrow" onclick="showDayModal(\''+d.id+'\')">'
-        +'<div class="hdate">'+fmtD(d.id)+'</div>'
-        +'<div class="hinfo">'+(s.ts&&s.te?s.ts+'–'+s.te+' · ':'')+( s.tasks||[]).length+' teht · '+Math.round(kt+apkKt)+' km'+(pvr?' · pvr '+pvr+'€':'')+'</div>'
-        +'<div style="color:var(--di);font-size:16px">›</div></div>';
+      return'<div style="background:var(--card);border:1px solid var(--b0);border-radius:var(--r2);margin-bottom:6px;overflow:hidden">'
+        +'<div class="hrow" style="margin-bottom:0;border:none;border-bottom:1px solid var(--b0);border-radius:0" onclick="showDayModal(\''+d.id+'\')"><div class="hdate">'+fmtD(d.id)+'</div><div class="hinfo">'+(s.ts&&s.te?s.ts+'–'+s.te+' · ':'')+( s.tasks||[]).length+' teht · '+Math.round(kt+apkKt)+' km'+(pvr?' · pvr '+pvr+'€':'')+'</div><div style="color:var(--di);font-size:16px">›</div></div>'
+        +'<div style="display:flex">'
+        +'<button onclick="window.changeDate(\''+d.id+'\')" style="flex:1;background:rgba(79,156,249,.08);border:none;border-right:1px solid var(--b0);color:var(--ac);font-family:var(--sans);font-size:12px;font-weight:600;padding:8px;cursor:pointer">✏️ Muokkaa</button>'
+        +'<button onclick="deleteDay(\''+d.id+'\')" style="flex:1;background:rgba(248,113,113,.06);border:none;color:var(--da);font-family:var(--sans);font-size:12px;font-weight:600;padding:8px;cursor:pointer">🗑 Poista</button>'
+        +'</div></div>';
     }).join('');
   }catch(e){gi('hlist').innerHTML='<div style="color:var(--da);font-size:13px">Latausvirhe.</div>';}
 }
@@ -879,7 +881,7 @@ window.showDayModal=async id=>{
     const cTitle='Työpäivä '+id+(pvr?' · pvr '+pvr+'€':'');
     const cDesc='Oy '+Math.round(ko)+'km, Tmi '+Math.round(kt)+'km'+(pvr?', pvr '+pvr+'€':'')+(s.notes?'\n'+s.notes:'');
     h+='<a href="'+esc(gcalUrl(cTitle,id,s.ts||null,s.te||null,cDesc))+'" target="_blank" style="display:block;width:100%;margin-top:10px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);color:var(--ac);font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;text-align:center;text-decoration:none">📅 Vie Google Kalenteriin</a>';
-    h+='<button onclick="changeDate(\''+id+'\')" style="width:100%;margin-top:8px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
+    h+='<button onclick="window.changeDate(\''+id+'\')" style="width:100%;margin-top:8px;background:var(--ac);border:none;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer">✏️ Muokkaa tätä päivää</button>';
     h+='<button onclick="deleteDay(\''+id+'\')" style="width:100%;margin-top:6px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--da);font-family:var(--sans);font-size:13px;font-weight:600;padding:10px;border-radius:12px;cursor:pointer">🗑 Poista tämä päivä</button>';
     gi('mbody').innerHTML=h;
   }catch(e){gi('mbody').innerHTML='<div style="color:var(--da)">Virhe: '+esc(e.message)+'</div>';}
@@ -916,7 +918,7 @@ window.addDayToCalendar=()=>{
   const lines=[];
   if(s.ts&&s.te)lines.push('Työaika: '+s.ts+' – '+s.te);
   s.trips.forEach(t=>lines.push('['+t.role+'] '+(t.from||'matka')+' '+(t.km||0)+'km'));
-  s.visits.forEach(v=>lines.push('Asiakaskäynti: '+(v.client||'')+(v.topic?' – '+v.topic:'')+' '+(v.km||0)+'km'));
+  s.visits.forEach(v=>lines.push('Käynti: '+(v.client||'')+(v.topic?' – '+v.topic:'')+' '+(v.km||0)+'km'));
   if(ko>0)lines.push('Oy: '+Math.round(ko)+'km = '+(ko*KM).toFixed(2)+'€');
   if(kt>0)lines.push('Tmi: '+Math.round(kt)+'km = '+(kt*KM).toFixed(2)+'€');
   if(pvr)lines.push('Päiväraha: '+pvr+'€ ('+s.drole+')');
