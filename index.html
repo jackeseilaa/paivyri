@@ -1,4 +1,4 @@
-<!-- Päivyri v1.6 2026-03-18 -->
+<!-- Päivyri v1.7 2026-03-18 -->
 <!DOCTYPE html>
 <html lang="fi">
 <head>
@@ -156,7 +156,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 <div id="app" style="display:none">
 <div class="topbar">
-  <div class="tt">Päivyri <span style="font-size:9px;color:var(--di);font-family:var(--mono)">v1.6</span></div>
+  <div class="tt">Päivyri <span style="font-size:9px;color:var(--di);font-family:var(--mono)">v1.7</span></div>
   <div class="td" id="ddsp" onclick="openDP()">—</div>
   <input type="date" id="dip" onchange="changeDate(this.value)"/>
   <div class="tr">
@@ -335,6 +335,7 @@ import{getFirestore,doc,getDoc,setDoc,getDocs,collection,orderBy,query,serverTim
 const FB={apiKey:"AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",authDomain:"paivuri.firebaseapp.com",projectId:"paivuri",storageBucket:"paivuri.firebasestorage.app",messagingSenderId:"602861240385",appId:"1:602861240385:web:f215c3b44388ddfe9346c0"};
 const ALLOWED="jacke.seilaa@gmail.com";
 const KM=0.55;
+function tripKm(t){const k=parseFloat(t.km)||0;if(k>0)return k;const od=parseFloat(t.odoon)||0,os=parseFloat(t.odosta)||0;return od>os?Math.round(od-os):0;}
 const CAL_SCOPE="https://www.googleapis.com/auth/calendar.readonly";
 const fbApp=initializeApp(FB);
 const auth=getAuth(fbApp);
@@ -486,12 +487,12 @@ function syncApkToState(){
 
 // km functions — manual trips take priority, APK fills in if no manual entries
 function kmTmi(){
-  const m=ST.trips.filter(t=>t.role==='Tmi').reduce((s,t)=>s+(parseFloat(t.km)||0),0)
+  const m=ST.trips.filter(t=>t.role==='Tmi').reduce((s,t)=>s+tripKm(t),0)
          +ST.visits.reduce((s,v)=>s+(parseFloat(v.km)||0),0);
   return m>0?m:apkKm().Tmi;
 }
 function kmOy(){
-  const m=ST.trips.filter(t=>t.role==='Oy').reduce((s,t)=>s+(parseFloat(t.km)||0),0);
+  const m=ST.trips.filter(t=>t.role==='Oy').reduce((s,t)=>s+tripKm(t),0);
   return m>0?m:apkKm().Oy;
 }
 function kmHlo(){
@@ -676,11 +677,7 @@ window.fetchCalendar=async()=>{
       return'<div class="cal-ev">'
         +'<div class="cal-ev-title">'+esc(ev.summary||'Tapahtuma')+'</div>'
         +'<div class="cal-ev-sub">'+(ts?ts+(te?' – '+te:'')+' · ':'')+( loc||'')+(desc?' | '+desc:'')+'</div>'
-        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap">'
-        +'<span style="font-size:11px;color:var(--mu)">Rooli:</span>'
-        +'<select id="cal-role-'+i+'" style="width:90px;padding:4px 8px;font-size:12px;border-radius:6px;background:var(--sur);color:var(--tx);border:1px solid var(--b1)">'
-        +'<option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Hlö">Hlö</option>'
-        +'</select></div>'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px"><span style="font-size:11px;color:var(--mu)">Rooli:</span><select id="cal-role-'+i+'" style="width:90px;padding:4px 8px;font-size:12px;border-radius:6px;background:var(--sur);color:var(--tx);border:1px solid var(--b1)"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Hlö">Hlö</option></select></div>'
         +'<div class="cal-ev-btns">'
         +'<button class="cal-btn cal-btn-t" onclick="calImportTask('+i+')">+ Tehtäväksi</button>'
         +(ts?'<button class="cal-btn cal-btn-v" onclick="calImportVisit('+i+')">+ Asiakaskäynniksi</button>':'')
@@ -806,7 +803,7 @@ async function loadApkAlku(date){
 }
 
 // ── HISTORIA ──────────────────────────────────────────────
-function pvrFS(s){if(s.dieta==='osa')return 25;if(s.dieta==='koko')return 54;if(s.dieta==='ulk')return parseFloat(s.ulk)||0;return 0;}
+function pvrFS(s){if(s.dieta==='osa')return 25;if(s.dieta==='koko')return 54;if(s.dieta==='ulk')return parseFloat(s.ulk)||0;if(s.pvr==='osa')return 25;if(s.pvr==='koko')return 54;return 0;}
 async function rdHist(){
   gi('hlist').innerHTML='<div style="color:var(--mu);font-size:13px;padding:8px 0">Ladataan...</div>';
   gi('hmonth').innerHTML='';
@@ -818,7 +815,7 @@ async function rdHist(){
       const s=d.data(),mo=d.id.slice(0,7);
       if(!byMo[mo])byMo[mo]={km:0,pvr:0,days:0};
       byMo[mo].days++;
-      const kt=(s.trips||[]).filter(t=>t.role==='Tmi').reduce((a,t)=>a+(parseFloat(t.km)||0),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
+      const kt=(s.trips||[]).reduce((a,t)=>a+tripKm(t),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
       byMo[mo].km+=kt;byMo[mo].pvr+=pvrFS(s);
     });
     gi('hmonth').innerHTML=Object.keys(byMo).sort().reverse().slice(0,6).map(mo=>{
@@ -830,15 +827,10 @@ async function rdHist(){
     }).join('');
     gi('hlist').innerHTML=snap.docs.map(d=>{
       const s=d.data();
-      const kt=(s.trips||[]).reduce((a,t)=>a+(parseFloat(t.km)||0),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
+      const kt=(s.trips||[]).reduce((a,t)=>a+tripKm(t),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
       const apkKt=kt===0?(()=>{const stops=s.apkStops||[];let prev=parseFloat(s.apkAlku)||0,tot=0;stops.forEach(st=>{const m=parseFloat(st.mittari)||0;if(m>0&&prev>0&&m>prev)tot+=Math.round(m-prev);prev=m||prev;});return tot;})():0;
       const pvr=pvrFS(s);
-      return'<div style="background:var(--card);border:1px solid var(--b0);border-radius:var(--r2);margin-bottom:6px;overflow:hidden">'
-        +'<div class="hrow" style="margin-bottom:0;border:none;border-bottom:1px solid var(--b0);border-radius:0" onclick="showDayModal(\''+d.id+'\')"><div class="hdate">'+fmtD(d.id)+'</div><div class="hinfo">'+(s.ts&&s.te?s.ts+'–'+s.te+' · ':'')+( s.tasks||[]).length+' teht · '+Math.round(kt+apkKt)+' km'+(pvr?' · pvr '+pvr+'€':'')+'</div><div style="color:var(--di);font-size:16px">›</div></div>'
-        +'<div style="display:flex">'
-        +'<button onclick="window.changeDate(\''+d.id+'\')" style="flex:1;background:rgba(79,156,249,.08);border:none;border-right:1px solid var(--b0);color:var(--ac);font-family:var(--sans);font-size:12px;font-weight:600;padding:8px;cursor:pointer">✏️ Muokkaa</button>'
-        +'<button onclick="deleteDay(\''+d.id+'\')" style="flex:1;background:rgba(248,113,113,.06);border:none;color:var(--da);font-family:var(--sans);font-size:12px;font-weight:600;padding:8px;cursor:pointer">🗑 Poista</button>'
-        +'</div></div>';
+      return'<div style="background:var(--card);border:1px solid var(--b0);border-radius:var(--r2);margin-bottom:6px;overflow:hidden">'        +'<div class="hrow" style="margin-bottom:0;border:none;border-bottom:1px solid var(--b0);border-radius:0" onclick="showDayModal(\''+d.id+'\')"><div class="hdate">'+fmtD(d.id)+'</div><div class="hinfo">'+(s.ts&&s.te?s.ts+'–'+s.te+' · ':'')+( s.tasks||[]).length+' teht · '+Math.round(kt+apkKt)+' km'+(pvr?' · pvr '+pvr+'€':'')+'</div><div style="color:var(--di);font-size:16px">›</div></div>'        +'<div style="display:flex">'        +'<button onclick="window.changeDate(\''+d.id+'\')" style="flex:1;background:rgba(79,156,249,.08);border:none;border-right:1px solid var(--b0);color:var(--ac);font-family:var(--sans);font-size:12px;font-weight:600;padding:8px;cursor:pointer">✏️ Muokkaa</button>'        +'<button onclick="deleteDay(\''+d.id+'\')" style="flex:1;background:rgba(248,113,113,.06);border:none;color:var(--da);font-family:var(--sans);font-size:12px;font-weight:600;padding:8px;cursor:pointer">🗑 Poista</button>'        +'</div></div>';
     }).join('');
   }catch(e){gi('hlist').innerHTML='<div style="color:var(--da);font-size:13px">Latausvirhe.</div>';}
 }
@@ -855,21 +847,21 @@ window.showDayModal=async id=>{
     if((s.tasks||[]).length){h+='<div class="msec"><div class="msh">✅ Tehtävät</div>';
       s.tasks.forEach(t=>h+='<div class="mitem"><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.text)+(t.done?' ✓':'')+'</div>');h+='</div>';}
     if((s.trips||[]).length){h+='<div class="msec"><div class="msh">🚗 Matkat</div>';
-      s.trips.forEach(t=>{const km=parseFloat(t.km)||0;h+='<div class="mitem" style="display:flex;justify-content:space-between"><div><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.from||'matka')+(t.ts?' '+t.ts+(t.te?'–'+t.te:''):'')+'</div><strong>'+km+' km'+(t.role!=='Hlö'?' · '+(km*KM).toFixed(2)+' €':'')+'</strong></div>';});h+='</div>';}
+      s.trips.forEach(t=>{const km=tripKm(t);h+='<div class="mitem" style="display:flex;justify-content:space-between"><div><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.from||'matka')+(t.ts?' '+t.ts+(t.te?'–'+t.te:''):'')+'</div><strong>'+km+' km'+(t.role!=='Hlö'?' · '+(km*KM).toFixed(2)+' €':'')+'</strong></div>';});h+='</div>';}
     if((s.sails||[]).length){h+='<div class="msec"><div class="msh">⛵ Purjehdus</div>';
       s.sails.forEach(t=>h+='<div class="mitem" style="display:flex;justify-content:space-between"><div><span class="badge b-'+t.role.toLowerCase()+'">'+t.role+'</span> '+esc(t.from||'')+(t.to?' → '+esc(t.to):'')+'</div><strong>'+(parseFloat(t.km)||0)+' mpk</strong></div>');h+='</div>';}
     if((s.visits||[]).length){h+='<div class="msec"><div class="msh">👤 Asiakaskäynnit</div>';
       s.visits.forEach(v=>{const km=parseFloat(v.km)||0;h+='<div class="mitem" style="display:flex;justify-content:space-between"><div>'+esc(v.client||'käynti')+(v.topic?' · '+esc(v.topic):'')+'</div><strong>'+km+' km · '+(km*KM).toFixed(2)+' €</strong></div>';});h+='</div>';}
     const pvr=pvrFS(s);
-    if(pvr)h+='<div class="msec"><div class="msh">💰 Päiväraha</div><div class="mitem" style="display:flex;justify-content:space-between"><span>'+(s.dieta==='osa'?'Osapäiväraha':s.dieta==='koko'?'Kokopäiväraha':'Ulkomaan pvr')+' · '+(s.drole||'Oy')+'</span><strong>'+pvr+' €</strong></div></div>';
+    if(pvr)h+='<div class="msec"><div class="msh">💰 Päiväraha</div><div class="mitem" style="display:flex;justify-content:space-between"><span>'+(s.dieta==='osa'||s.pvr==='osa'?'Osapäiväraha':s.dieta==='koko'||s.pvr==='koko'?'Kokopäiväraha':'Ulkomaan pvr')+' · '+(s.drole||s.pvrRole||'Oy')+'</span><strong>'+pvr+' €</strong></div></div>';
     const loy=(s.bOy||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
     const ltmi=(s.bTmi||[]).reduce((a,b)=>a+(parseFloat(b.eur)||0),0);
     if(loy>0||ltmi>0){h+='<div class="msec"><div class="msh">💶 Laskutus</div>';
       if(loy>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🔵 Oy</span><strong>'+loy.toFixed(2)+' €</strong></div>';
       if(ltmi>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🟢 Tmi</span><strong>'+ltmi.toFixed(2)+' €</strong></div>';
       h+='</div>';}
-    const ko=(s.trips||[]).filter(t=>t.role==='Oy').reduce((a,t)=>a+(parseFloat(t.km)||0),0);
-    const kt=(s.trips||[]).filter(t=>t.role==='Tmi').reduce((a,t)=>a+(parseFloat(t.km)||0),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
+    const ko=(s.trips||[]).filter(t=>t.role==='Oy').reduce((a,t)=>a+tripKm(t),0);
+    const kt=(s.trips||[]).filter(t=>t.role==='Tmi').reduce((a,t)=>a+tripKm(t),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
     if(kt>0||ko>0){h+='<div class="msec"><div class="msh">📊 Km-yhteenveto</div>';
       if(ko>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🔵 Oy '+Math.round(ko)+' km</span><strong>'+(ko*KM).toFixed(2)+' €</strong></div>';
       if(kt>0)h+='<div class="mitem" style="display:flex;justify-content:space-between"><span>🟢 Tmi '+Math.round(kt)+' km</span><strong>'+(kt*KM).toFixed(2)+' €</strong></div>';
@@ -917,7 +909,7 @@ window.addDayToCalendar=()=>{
   const title='Työpäivä '+D+(pvr?' · pvr '+pvr+'€':'');
   const lines=[];
   if(s.ts&&s.te)lines.push('Työaika: '+s.ts+' – '+s.te);
-  s.trips.forEach(t=>lines.push('['+t.role+'] '+(t.from||'matka')+' '+(t.km||0)+'km'));
+  s.trips.forEach(t=>lines.push('['+t.role+'] '+(t.from||'matka')+' '+tripKm(t)+'km'));
   s.visits.forEach(v=>lines.push('Käynti: '+(v.client||'')+(v.topic?' – '+v.topic:'')+' '+(v.km||0)+'km'));
   if(ko>0)lines.push('Oy: '+Math.round(ko)+'km = '+(ko*KM).toFixed(2)+'€');
   if(kt>0)lines.push('Tmi: '+Math.round(kt)+'km = '+(kt*KM).toFixed(2)+'€');
