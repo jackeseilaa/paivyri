@@ -1,3 +1,4 @@
+<!-- Päivyri v1.4 2026-03-18 -->
 <!DOCTYPE html>
 <html lang="fi">
 <head>
@@ -155,7 +156,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 <div id="app" style="display:none">
 <div class="topbar">
-  <div class="tt">Päivyri</div>
+  <div class="tt">Päivyri <span style="font-size:9px;color:var(--di);font-family:var(--mono)">v1.4</span></div>
   <div class="td" id="ddsp" onclick="openDP()">—</div>
   <input type="date" id="dip" onchange="changeDate(this.value)"/>
   <div class="tr">
@@ -828,11 +829,12 @@ async function rdHist(){
     }).join('');
     gi('hlist').innerHTML=snap.docs.map(d=>{
       const s=d.data();
-      const kt=(s.trips||[]).filter(t=>t.role==='Tmi').reduce((a,t)=>a+(parseFloat(t.km)||0),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
+      const kt=(s.trips||[]).reduce((a,t)=>a+(parseFloat(t.km)||0),0)+(s.visits||[]).reduce((a,v)=>a+(parseFloat(v.km)||0),0);
+      const apkKt=kt===0?(()=>{const stops=s.apkStops||[];let prev=parseFloat(s.apkAlku)||0,tot=0;stops.forEach(st=>{const m=parseFloat(st.mittari)||0;if(m>0&&prev>0&&m>prev)tot+=Math.round(m-prev);prev=m||prev;});return tot;})():0;
       const pvr=pvrFS(s);
       return'<div class="hrow" onclick="showDayModal(\''+d.id+'\')">'
         +'<div class="hdate">'+fmtD(d.id)+'</div>'
-        +'<div class="hinfo">'+(s.ts&&s.te?s.ts+'–'+s.te+' · ':'')+( s.tasks||[]).length+' teht · '+Math.round(kt)+' km'+(pvr?' · pvr '+pvr+'€':'')+'</div>'
+        +'<div class="hinfo">'+(s.ts&&s.te?s.ts+'–'+s.te+' · ':'')+( s.tasks||[]).length+' teht · '+Math.round(kt+apkKt)+' km'+(pvr?' · pvr '+pvr+'€':'')+'</div>'
         +'<div style="color:var(--di);font-size:16px">›</div></div>';
     }).join('');
   }catch(e){gi('hlist').innerHTML='<div style="color:var(--da);font-size:13px">Latausvirhe.</div>';}
