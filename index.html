@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.30 - Vakaa</title>
+    <title>Päivyri v5.32 - Raportti Arkisto</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --cal: #4285f4; }
+        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --cal: #4285f4; --danger: #ef4444; }
         body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
         .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
         .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 10px; text-transform: uppercase; }
@@ -20,21 +20,21 @@
         input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; }
         .btn-main { background: #000; color: #fff; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-bottom: 10px; }
         .btn-cal { background: var(--cal); color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px; }
-        .btn-print { background: #475569; color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-top: 20px; width: 100%; }
-        .report-filters { display: flex; gap: 5px; margin-bottom: 20px; }
+        .btn-print { background: #475569; color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-top: 20px; }
+        .report-filters { display: flex; gap: 5px; margin-bottom: 15px; }
         .filter-btn { flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #e2e8f0; background: #fff; font-size: 11px; font-weight: 800; cursor: pointer; }
         .filter-btn.active { border-color: var(--ac); background: #eff6ff; color: var(--ac); }
-        .report-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; }
-        .report-table th { text-align: left; padding: 10px; border-bottom: 2px solid #000; font-size: 10px; }
-        .report-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 15px; }
+        .report-table th { text-align: left; padding: 8px; border-bottom: 2px solid #000; font-size: 9px; text-transform: uppercase; }
+        .report-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
         .total-box { background: #0f172a; color: #fff; padding: 20px; border-radius: 12px; margin-top: 20px; }
         .total-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .history-item { background: #fff; padding: 15px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #e2e8f0; border-left: 5px solid #ccc; }
         .actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
-        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; }
 
         @media print {
-            .tabs, .btn-main, .report-filters, .btn-print, .actions, #cal-btn-wrap, .btn-cal, .footer { display: none !important; }
+            .tabs, .btn-main, .report-filters, .btn-print, .actions, #cal-btn-wrap, .btn-cal, .footer, #month-selector-wrap { display: none !important; }
             body { background: white; padding-bottom: 0; }
             .page { display: none !important; }
             #p-report.page { display: block !important; }
@@ -85,6 +85,10 @@
 
 <div id="p-report" class="page">
     <div class="card">
+        <div id="month-selector-wrap">
+            <label>Valitse Kuukausi</label>
+            <select id="f-report-month" onchange="paivitaKaikki()"></select>
+        </div>
         <div class="report-filters">
             <button class="filter-btn active" id="f-oy" onclick="setFilter('Oy')">OY</button>
             <button class="filter-btn" id="f-tmi" onclick="setFilter('Tmi')">TMI</button>
@@ -95,7 +99,7 @@
     </div>
 </div>
 
-<div class="footer">Versio 5.30 | Enter-hyppy & Poista-nappi</div>
+<div class="footer">Versio 5.32 | Kuukausivalinta lisätty</div>
 
 <script>
 const firebaseConfig = { databaseURL: "https://paivuri-6379b-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -106,33 +110,21 @@ const KM_HINTA = 0.55;
 let omatAjot = JSON.parse(localStorage.getItem('paivuri_data')) || [];
 let currentFilter = "Oy";
 
-// --- UUSI: ENTER-NÄPPÄIMEN HALLINTA ---
 document.getElementById('form-container').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         const inputs = Array.from(this.querySelectorAll('input:not([type="hidden"]), select'));
         const index = inputs.indexOf(e.target);
         if (index > -1 && index < inputs.length - 1) {
-            e.preventDefault(); // Estää tallennuksen
-            inputs[index + 1].focus(); // Siirtyy seuraavaan
+            e.preventDefault();
+            inputs[index + 1].focus();
         }
     }
 });
 
 function asetaNykyinenAika() {
     const nyt = new Date();
-    const tunnit = String(nyt.getHours()).padStart(2, '0');
-    const minuutit = String(nyt.getMinutes()).padStart(2, '0');
-    document.getElementById('f-start').value = `${tunnit}:${minuutit}`;
-    const loppuTunnit = String((nyt.getHours() + 8) % 24).padStart(2, '0');
-    document.getElementById('f-end').value = `${loppuTunnit}:${minuutit}`;
-}
-
-function vieKalenteriin() {
-    const pvm = document.getElementById('f-date').value.replace(/-/g, "");
-    const alku = document.getElementById('f-start').value.replace(/:/g, "") + "00";
-    const loppu = document.getElementById('f-end').value.replace(/:/g, "") + "00";
-    const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(document.getElementById('f-client').value)}&dates=${pvm}T${alku}/${pvm}T${loppu}&location=${encodeURIComponent(document.getElementById('f-route').value)}`;
-    window.open(url, '_blank');
+    document.getElementById('f-start').value = String(nyt.getHours()).padStart(2, '0') + ":" + String(nyt.getMinutes()).padStart(2, '0');
+    document.getElementById('f-end').value = String((nyt.getHours() + 8) % 24).padStart(2, '0') + ":" + String(nyt.getMinutes()).padStart(2, '0');
 }
 
 function tallennaKaikki() {
@@ -152,24 +144,36 @@ function tallennaKaikki() {
     
     localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
     db.ref('ajot/' + id).set(ajo);
+    paivitaKuukausiValikko(); // Päivitetään valikko jos tuli uusi kuukausi
     resetForm(); paivitaKaikki(); showPage('stats');
 }
 
-// --- UUSI: POISTA-TOIMINTO ---
 function poistaAjo(id) {
     if(confirm("Poistetaanko tämä merkintä pysyvästi?")) {
         omatAjot = omatAjot.filter(x => x.id !== id);
         localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
         db.ref('ajot/' + id).remove();
+        paivitaKuukausiValikko();
         paivitaKaikki();
     }
 }
 
-function setFilter(f) {
-    currentFilter = f;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('f-' + f.toLowerCase()).classList.add('active');
-    paivitaKaikki();
+// --- UUSI: PÄIVITÄ KUUKAUSIVALIKKO ---
+function paivitaKuukausiValikko() {
+    const selector = document.getElementById('f-report-month');
+    const nykyinenValinta = selector.value || new Date().toISOString().substring(0, 7);
+    
+    // Kerätään kaikki uniikit YYYY-MM yhdistelmät datasta
+    let kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0, 7)))];
+    
+    // Varmistetaan että kuluva kuukausi on listalla vaikkei dataa olisikaan
+    const tamaKuu = new Date().toISOString().substring(0, 7);
+    if (!kuukaudet.includes(tamaKuu)) kuukaudet.push(tamaKuu);
+    
+    kuukaudet.sort().reverse(); // Uusin ensin
+
+    selector.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join('');
+    selector.value = nykyinenValinta;
 }
 
 function paivitaKaikki() {
@@ -185,20 +189,22 @@ function paivitaKaikki() {
     });
     document.getElementById('history-ui').innerHTML = h || "Ei merkintöjä.";
 
-    const kuu = new Date().toISOString().substring(0, 7);
+    // KÄYTETÄÄN VALITTUA KUUKAUTTA
+    const valittuKuu = document.getElementById('f-report-month').value || new Date().toISOString().substring(0, 7);
     let tKm = 0, tKmEur = 0, tOsa = 0, tKoko = 0;
-    let table = `<table class="report-table"><thead><tr><th>PVM</th><th>KOHDE</th><th>KM</th><th>PR</th></tr></thead><tbody>`;
+    let table = `<table class="report-table"><thead><tr><th>PVM</th><th>KOHDE</th><th>KM</th><th>PR</th><th>KM €</th></tr></thead><tbody>`;
     
-    omatAjot.filter(a => a.type === currentFilter && a.date.startsWith(kuu)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(a => {
+    omatAjot.filter(a => a.type === currentFilter && a.date.startsWith(valittuKuu)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(a => {
         const km = a.ke - a.ks;
-        tKm += km; tKmEur += (km * KM_HINTA);
+        const riviKmEur = km * KM_HINTA;
+        tKm += km; tKmEur += riviKmEur;
         if(a.perdiem == 25) tOsa++; else if(a.perdiem == 54) tKoko++;
-        table += `<tr><td>${a.date.split('-')[2]}.${a.date.split('-')[1]}</td><td>${a.client}</td><td>${km}</td><td>${a.perdiem}€</td></tr>`;
+        table += `<tr><td>${a.date.split('-')[2]}.${a.date.split('-')[1]}</td><td>${a.client}</td><td>${km}</td><td>${a.perdiem}€</td><td>${riviKmEur.toFixed(2)}€</td></tr>`;
     });
     
     const prYht = (tOsa * 25) + (tKoko * 54);
     document.getElementById('report-output').innerHTML = `
-        <h3>${currentFilter} RAPORTTI - ${kuu}</h3>${table}</tbody></table>
+        <h3>${currentFilter} RAPORTTI - ${valittuKuu}</h3>${table}</tbody></table>
         <div class="total-box">
             <div class="total-row"><span>Km (${tKm} km):</span><b>${tKmEur.toFixed(2)}€</b></div>
             <div class="total-row"><span>Osapäivärahat (${tOsa} kpl):</span><b>${(tOsa * 25).toFixed(2)}€</b></div>
@@ -231,11 +237,18 @@ function toggleMode() {
     document.getElementById('crm-fields').style.display = document.getElementById('f-mode').value === 'meeting' ? 'block' : 'none'; 
 }
 
+function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('f-' + f.toLowerCase()).classList.add('active');
+    paivitaKaikki();
+}
+
 function resetForm() { 
     ['f-id','f-client','f-title','f-route','f-ks','f-ke'].forEach(f => document.getElementById(f).value = "");
     document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
     asetaNykyinenAika();
-    laskePaivarahaEhdotus();
+    document.getElementById('f-perdiem').value = "0";
 }
 
 function laskePaivarahaEhdotus() {
@@ -247,7 +260,6 @@ function laskePaivarahaEhdotus() {
     document.getElementById('f-perdiem').value = tunnit >= 10 ? "54" : (tunnit >= 6 ? "25" : "0");
 }
 
-// Ladataan pilvidata taustalla, jotta se synkronoituu localStoragen kanssa
 db.ref('ajot').on('value', (snapshot) => {
     let cloudData = [];
     snapshot.forEach((child) => {
@@ -258,10 +270,12 @@ db.ref('ajot').on('value', (snapshot) => {
     if (cloudData.length > 0) {
         omatAjot = cloudData;
         localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
+        paivitaKuukausiValikko();
         paivitaKaikki();
     }
 });
 
+paivitaKuukausiValikko();
 resetForm(); 
 toggleMode(); 
 paivitaKaikki();
