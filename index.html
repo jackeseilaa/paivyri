@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.29 - Vakaa (Enter & Poisto)</title>
+    <title>Päivyri v5.30 - Vakaa</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --cal: #4285f4; --danger: #ef4444; }
+        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --cal: #4285f4; }
         body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
         .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
         .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 10px; text-transform: uppercase; }
@@ -51,7 +51,7 @@
 </div>
 
 <div id="p-input" class="page active">
-    <div class="card" id="form-card">
+    <div class="card" id="form-container">
         <input type="hidden" id="f-id">
         <label>Toimintatila</label>
         <select id="f-mode" onchange="toggleMode()">
@@ -77,7 +77,7 @@
         <label>Päiväraha</label>
         <select id="f-perdiem"><option value="0">Ei PR</option><option value="25">Osa (25€)</option><option value="54">Koko (54€)</option></select>
         <div id="cal-btn-wrap"><button class="btn-cal" onclick="vieKalenteriin()">📅 VIE GOOGLE KALENTERIIN</button></div>
-        <button class="btn-main" id="btn-save" onclick="tallennaKaikki()" style="background: var(--success);">TALLENNA ARKISTOON</button>
+        <button class="btn-main" onclick="tallennaKaikki()" style="background: var(--success);">TALLENNA ARKISTOON</button>
     </div>
 </div>
 
@@ -95,9 +95,7 @@
     </div>
 </div>
 
-<div class="footer">
-    Versio 5.29 | Enter-hyppy & Poista
-</div>
+<div class="footer">Versio 5.30 | Enter-hyppy & Poista-nappi</div>
 
 <script>
 const firebaseConfig = { databaseURL: "https://paivuri-6379b-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -105,25 +103,28 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const KM_HINTA = 0.55;
 
-let omatAjot = [];
+let omatAjot = JSON.parse(localStorage.getItem('paivuri_data')) || [];
 let currentFilter = "Oy";
 
-// --- ENTER-SÄÄNTÖ ---
-document.getElementById('form-card').addEventListener('keydown', function(e) {
+// --- UUSI: ENTER-NÄPPÄIMEN HALLINTA ---
+document.getElementById('form-container').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-        const focusable = Array.from(this.querySelectorAll('input:not([type="hidden"]), select'));
-        const index = focusable.indexOf(e.target);
-        if (index > -1 && index < focusable.length - 1) {
-            e.preventDefault();
-            focusable[index + 1].focus();
+        const inputs = Array.from(this.querySelectorAll('input:not([type="hidden"]), select'));
+        const index = inputs.indexOf(e.target);
+        if (index > -1 && index < inputs.length - 1) {
+            e.preventDefault(); // Estää tallennuksen
+            inputs[index + 1].focus(); // Siirtyy seuraavaan
         }
     }
 });
 
 function asetaNykyinenAika() {
     const nyt = new Date();
-    document.getElementById('f-start').value = String(nyt.getHours()).padStart(2, '0') + ":" + String(nyt.getMinutes()).padStart(2, '0');
-    document.getElementById('f-end').value = String((nyt.getHours() + 8) % 24).padStart(2, '0') + ":" + String(nyt.getMinutes()).padStart(2, '0');
+    const tunnit = String(nyt.getHours()).padStart(2, '0');
+    const minuutit = String(nyt.getMinutes()).padStart(2, '0');
+    document.getElementById('f-start').value = `${tunnit}:${minuutit}`;
+    const loppuTunnit = String((nyt.getHours() + 8) % 24).padStart(2, '0');
+    document.getElementById('f-end').value = `${loppuTunnit}:${minuutit}`;
 }
 
 function vieKalenteriin() {
@@ -134,23 +135,10 @@ function vieKalenteriin() {
     window.open(url, '_blank');
 }
 
-// Ladataan data suoraan tietokannasta UI-päivitystä varten
-function lataaData() {
-    db.ref('ajot').on('value', (snapshot) => {
-        omatAjot = [];
-        snapshot.forEach((child) => {
-            let val = child.val();
-            val.id = child.key;
-            omatAjot.push(val);
-        });
-        localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
-        paivitaKaikki();
-    });
-}
-
 function tallennaKaikki() {
     const id = document.getElementById('f-id').value || "id_" + Date.now();
     const ajo = {
+        id: id,
         date: document.getElementById('f-date').value,
         client: document.getElementById('f-client').value || "Ajo",
         route: document.getElementById('f-route').value || "-",
@@ -159,15 +147,21 @@ function tallennaKaikki() {
         type: document.getElementById('f-type').value,
         perdiem: parseFloat(document.getElementById('f-perdiem').value) || 0
     };
-    db.ref('ajot/' + id).set(ajo).then(() => {
-        resetForm();
-        showPage('stats');
-    });
+    const idx = omatAjot.findIndex(x => x.id === id);
+    if(idx > -1) omatAjot[idx] = ajo; else omatAjot.push(ajo);
+    
+    localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
+    db.ref('ajot/' + id).set(ajo);
+    resetForm(); paivitaKaikki(); showPage('stats');
 }
 
+// --- UUSI: POISTA-TOIMINTO ---
 function poistaAjo(id) {
-    if(confirm("Poistetaanko tämä ajo pysyvästi?")) {
+    if(confirm("Poistetaanko tämä merkintä pysyvästi?")) {
+        omatAjot = omatAjot.filter(x => x.id !== id);
+        localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
         db.ref('ajot/' + id).remove();
+        paivitaKaikki();
     }
 }
 
@@ -185,7 +179,7 @@ function paivitaKaikki() {
             <small>${e.date} | ${e.type}</small><br><b>${e.client}</b>
             <div class="actions">
                 <button onclick="muokkaa('${e.id}')" style="background:#eff6ff; border:none; padding:5px 10px; border-radius:4px; color:var(--ac); font-weight:800; cursor:pointer">Muokkaa</button>
-                <button onclick="poistaAjo('${e.id}')" style="background:#fff1f2; border:none; padding:5px 10px; border-radius:4px; color:var(--danger); font-weight:800; cursor:pointer; margin-left:10px">Poista</button>
+                <button onclick="poistaAjo('${e.id}')" style="background:#fff1f2; border:none; padding:5px 10px; border-radius:4px; color:red; font-weight:800; cursor:pointer; margin-left:10px">Poista</button>
             </div>
         </div>`;
     });
@@ -253,9 +247,24 @@ function laskePaivarahaEhdotus() {
     document.getElementById('f-perdiem').value = tunnit >= 10 ? "54" : (tunnit >= 6 ? "25" : "0");
 }
 
-lataaData();
+// Ladataan pilvidata taustalla, jotta se synkronoituu localStoragen kanssa
+db.ref('ajot').on('value', (snapshot) => {
+    let cloudData = [];
+    snapshot.forEach((child) => {
+        let val = child.val();
+        val.id = child.key;
+        cloudData.push(val);
+    });
+    if (cloudData.length > 0) {
+        omatAjot = cloudData;
+        localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
+        paivitaKaikki();
+    }
+});
+
 resetForm(); 
-toggleMode();
+toggleMode(); 
+paivitaKaikki();
 </script>
 </body>
 </html>
