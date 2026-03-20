@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.26 - Älykäs Enter</title>
+    <title>Päivyri v5.27 - Vakaa</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --danger: #ef4444; }
@@ -23,7 +23,7 @@
         .actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
         .btn-edit { background:#eff6ff; border:none; padding:8px 12px; border-radius:6px; color:var(--ac); font-weight:800; cursor:pointer; }
         .btn-del { background:#fff1f2; border:none; padding:8px 12px; border-radius:6px; color:var(--danger); font-weight:800; cursor:pointer; }
-        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 9px; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -35,15 +35,15 @@
 </div>
 
 <div id="p-input" class="page active">
-    <div class="card" id="input-container">
+    <div class="card" id="form-area">
         <input type="hidden" id="f-id">
         <label>Päivämäärä</label><input type="date" id="f-date" class="nextable">
         <div style="display:flex; gap:10px">
             <div style="flex:1"><label>Alku</label><input type="time" id="f-start" class="nextable"></div>
             <div style="flex:1"><label>Loppu</label><input type="time" id="f-end" class="nextable"></div>
         </div>
-        <label>Asiakas</label><input type="text" id="f-client" class="nextable" placeholder="Nimi">
-        <label>Reitti</label><input type="text" id="f-route" class="nextable" placeholder="Mistä-Mihin">
+        <label>Asiakas</label><input type="text" id="f-client" class="nextable">
+        <label>Reitti</label><input type="text" id="f-route" class="nextable">
         <div style="display:flex; gap:10px">
             <div style="flex:1"><label>KM Alku</label><input type="number" id="f-ks" class="nextable"></div>
             <div style="flex:1"><label>KM Loppu</label><input type="number" id="f-ke" class="nextable"></div>
@@ -52,53 +52,44 @@
         <select id="f-type" class="nextable"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
         <label>Päiväraha</label>
         <select id="f-perdiem" class="nextable"><option value="0">Ei PR</option><option value="25">Osa (25€)</option><option value="54">Koko (54€)</option></select>
-        <button class="btn-main" id="save-btn" onclick="tallennaKaikki()" style="background: var(--success);">TALLENNA ARKISTOON</button>
+        <button class="btn-main" onclick="tallennaKaikki()" style="background: var(--success);">TALLENNA ARKISTOON</button>
     </div>
 </div>
 
-<div id="p-stats" class="page"><div id="history-ui"></div></div>
+<div id="p-stats" class="page"><div id="history-ui">Ladataan...</div></div>
 <div id="p-report" class="page"><div id="report-output"></div></div>
 
-<div class="footer" id="info-status">v5.26 | Valmis</div>
+<div class="footer">v5.27 PRO | Vakaa versio</div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",
-  authDomain: "paivuri.firebaseapp.com",
-  projectId: "paivuri",
-  storageBucket: "paivuri.firebasestorage.app",
-  messagingSenderId: "602861240385",
-  appId: "1:602861240385:web:f215c3b44388ddfe9346c0"
-};
-
+// ALKUPERÄINEN KONFIGURAATIO
+const firebaseConfig = { databaseURL: "https://paivuri-6379b-default-rtdb.europe-west1.firebasedatabase.app" };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db = firebase.database();
 
 let omatAjot = [];
 
-// --- ÄLYKÄS ENTER-TOIMINTO ---
-document.getElementById('input-container').addEventListener('keydown', function(e) {
+// --- ENTER-SÄÄNTÖ (HYPPÄÄ SEURAAVAAN) ---
+document.getElementById('form-area').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
         const inputs = Array.from(document.querySelectorAll('.nextable'));
         const index = inputs.indexOf(e.target);
-        
         if (index > -1 && index < inputs.length - 1) {
-            // Siirry seuraavaan kenttään
-            inputs[index + 1].focus();
+            inputs[index + 1].focus(); // Hyppää seuraavaan
         } else {
-            // Jos oltiin viimeisessä kentässä, tallenna
-            tallennaKaikki();
+            tallennaKaikki(); // Tallenna vain jos ollaan viimeisessä tai kaukana
         }
     }
 });
 
 function lataaData() {
-    db.collection("ajot").orderBy("date", "desc").onSnapshot((snapshot) => {
+    db.ref('ajot').on('value', (snapshot) => {
         omatAjot = [];
-        snapshot.forEach(doc => {
-            let d = doc.data(); d.id = doc.id;
-            omatAjot.push(d);
+        snapshot.forEach((child) => {
+            let data = child.val();
+            data.id = child.key;
+            omatAjot.push(data);
         });
         paivitaUI();
     });
@@ -108,15 +99,14 @@ function tallennaKaikki() {
     const id = document.getElementById('f-id').value || "id_" + Date.now();
     const ajo = {
         date: document.getElementById('f-date').value,
-        client: document.getElementById('f-client').value || "-",
+        client: document.getElementById('f-client').value || "Ajo",
         route: document.getElementById('f-route').value || "-",
         ks: parseFloat(document.getElementById('f-ks').value) || 0,
         ke: parseFloat(document.getElementById('f-ke').value) || 0,
         type: document.getElementById('f-type').value,
         perdiem: parseFloat(document.getElementById('f-perdiem').value) || 0
     };
-
-    db.collection("ajot").doc(id).set(ajo).then(() => {
+    db.ref('ajot/' + id).set(ajo).then(() => {
         resetForm();
         showPage('stats');
     });
@@ -124,13 +114,13 @@ function tallennaKaikki() {
 
 function poistaAjo(id) {
     if(confirm("Poistetaanko tämä ajo?")) {
-        db.collection("ajot").doc(id).delete();
+        db.ref('ajot/' + id).remove();
     }
 }
 
 function paivitaUI() {
     let h = "";
-    omatAjot.forEach(e => {
+    [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).forEach(e => {
         h += `<div class="history-item" style="border-left-color:${e.type==='Oy'?'#2563eb':'#10b981'}">
             <b>${e.date}</b> | ${e.client}<br><small>${e.route}</small>
             <div class="actions">
@@ -139,7 +129,7 @@ function paivitaUI() {
             </div>
         </div>`;
     });
-    document.getElementById('history-ui').innerHTML = h || "Ei ajoja.";
+    document.getElementById('history-ui').innerHTML = h || "Arkisto tyhjä.";
 }
 
 function muokkaa(id) {
