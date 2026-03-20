@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.25 - Enter Edition</title>
+    <title>Päivyri v5.26 - Älykäs Enter</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --cal: #4285f4; }
+        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --danger: #ef4444; }
         body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
         .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
         .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 10px; text-transform: uppercase; }
@@ -19,30 +19,14 @@
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
         input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; }
         .btn-main { background: #000; color: #fff; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-bottom: 10px; }
-        .btn-cal { background: var(--cal); color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px; }
-        .btn-print { background: #475569; color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-top: 20px; width: 100%; }
-        .report-filters { display: flex; gap: 5px; margin-bottom: 20px; }
-        .filter-btn { flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #e2e8f0; background: #fff; font-size: 11px; font-weight: 800; cursor: pointer; }
-        .filter-btn.active { border-color: var(--ac); background: #eff6ff; color: var(--ac); }
-        .report-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; }
-        .report-table th { text-align: left; padding: 10px; border-bottom: 2px solid #000; font-size: 10px; }
-        .report-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-        .total-box { background: #0f172a; color: #fff; padding: 20px; border-radius: 12px; margin-top: 20px; }
-        .total-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .history-item { background: #fff; padding: 15px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #e2e8f0; border-left: 5px solid #ccc; }
         .actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
-        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-
-        @media print {
-            .tabs, .btn-main, .report-filters, .btn-print, .actions, #cal-btn-wrap, .btn-cal, .footer { display: none !important; }
-            body { background: white; padding-bottom: 0; }
-            .page { display: none !important; }
-            #p-report.page { display: block !important; }
-            .total-box { background: #f1f5f9 !important; color: #000 !important; border: 2px solid #000; }
-        }
+        .btn-edit { background:#eff6ff; border:none; padding:8px 12px; border-radius:6px; color:var(--ac); font-weight:800; cursor:pointer; }
+        .btn-del { background:#fff1f2; border:none; padding:8px 12px; border-radius:6px; color:var(--danger); font-weight:800; cursor:pointer; }
+        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; }
     </style>
 </head>
-<body onkeypress="if(event.key==='Enter') tallennaKaikki()">
+<body>
 
 <div class="tabs">
     <div class="tab active" id="t-input" onclick="showPage('input')">Syöte</div>
@@ -51,56 +35,33 @@
 </div>
 
 <div id="p-input" class="page active">
-    <div class="card">
+    <div class="card" id="input-container">
         <input type="hidden" id="f-id">
-        <label>Toimintatila</label>
-        <select id="f-mode" onchange="toggleMode()">
-            <option value="meeting">Tapaaminen (CRM)</option>
-            <option value="drive">Pelkkä Ajo</option>
-        </select>
-        <label>Päivämäärä</label><input type="date" id="f-date">
+        <label>Päivämäärä</label><input type="date" id="f-date" class="nextable">
         <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>Alku</label><input type="time" id="f-start" onchange="laskePaivarahaEhdotus()"></div>
-            <div style="flex:1"><label>Loppu</label><input type="time" id="f-end" onchange="laskePaivarahaEhdotus()"></div>
+            <div style="flex:1"><label>Alku</label><input type="time" id="f-start" class="nextable"></div>
+            <div style="flex:1"><label>Loppu</label><input type="time" id="f-end" class="nextable"></div>
         </div>
-        <div id="crm-fields">
-            <label>Asiakas / Yritys</label><input type="text" id="f-client" placeholder="Enter tallentaa">
-            <label>Aihe</label><input type="text" id="f-title">
-        </div>
-        <label>Reitti / Osoite</label><input type="text" id="f-route">
+        <label>Asiakas</label><input type="text" id="f-client" class="nextable" placeholder="Nimi">
+        <label>Reitti</label><input type="text" id="f-route" class="nextable" placeholder="Mistä-Mihin">
         <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>KM Alku</label><input type="number" id="f-ks"></div>
-            <div style="flex:1"><label>KM Loppu</label><input type="number" id="f-ke"></div>
+            <div style="flex:1"><label>KM Alku</label><input type="number" id="f-ks" class="nextable"></div>
+            <div style="flex:1"><label>KM Loppu</label><input type="number" id="f-ke" class="nextable"></div>
         </div>
         <label>Tyyppi</label>
-        <select id="f-type"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
+        <select id="f-type" class="nextable"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
         <label>Päiväraha</label>
-        <select id="f-perdiem"><option value="0">Ei PR</option><option value="25">Osa (25€)</option><option value="54">Koko (54€)</option></select>
-        <div id="cal-btn-wrap"><button class="btn-cal" onclick="vieKalenteriin()">📅 VIE GOOGLE KALENTERIIN</button></div>
-        <button class="btn-main" onclick="tallennaKaikki()" style="background: var(--success);">TALLENNA ARKISTOON (ENTER)</button>
+        <select id="f-perdiem" class="nextable"><option value="0">Ei PR</option><option value="25">Osa (25€)</option><option value="54">Koko (54€)</option></select>
+        <button class="btn-main" id="save-btn" onclick="tallennaKaikki()" style="background: var(--success);">TALLENNA ARKISTOON</button>
     </div>
 </div>
 
 <div id="p-stats" class="page"><div id="history-ui"></div></div>
+<div id="p-report" class="page"><div id="report-output"></div></div>
 
-<div id="p-report" class="page">
-    <div class="card">
-        <div class="report-filters">
-            <button class="filter-btn active" id="f-oy" onclick="setFilter('Oy')">OY</button>
-            <button class="filter-btn" id="f-tmi" onclick="setFilter('Tmi')">TMI</button>
-            <button class="filter-btn" id="f-oma" onclick="setFilter('Oma')">OMA</button>
-        </div>
-        <div id="report-output"></div>
-        <button class="btn-print" onclick="window.print()">🖨️ TULOSTA RAPORTTI (PDF)</button>
-    </div>
-</div>
-
-<div class="footer" id="info-status">
-    v5.25 PRO | Yhdistetään tietokantaan...
-</div>
+<div class="footer" id="info-status">v5.26 | Valmis</div>
 
 <script>
-// PÄIVITETYT TALLENNUSPIUHAT
 const firebaseConfig = {
   apiKey: "AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",
   authDomain: "paivuri.firebaseapp.com",
@@ -112,30 +73,34 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const KM_HINTA = 0.55;
 
 let omatAjot = [];
-let currentFilter = "Oy";
 
-function asetaNykyinenAika() {
-    const nyt = new Date();
-    document.getElementById('f-start').value = String(nyt.getHours()).padStart(2, '0') + ":" + String(nyt.getMinutes()).padStart(2, '0');
-    const loppu = new Date(nyt.getTime() + 8*60*60*1000);
-    document.getElementById('f-end').value = String(loppu.getHours()).padStart(2, '0') + ":" + String(loppu.getMinutes()).padStart(2, '0');
-}
+// --- ÄLYKÄS ENTER-TOIMINTO ---
+document.getElementById('input-container').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const inputs = Array.from(document.querySelectorAll('.nextable'));
+        const index = inputs.indexOf(e.target);
+        
+        if (index > -1 && index < inputs.length - 1) {
+            // Siirry seuraavaan kenttään
+            inputs[index + 1].focus();
+        } else {
+            // Jos oltiin viimeisessä kentässä, tallenna
+            tallennaKaikki();
+        }
+    }
+});
 
 function lataaData() {
     db.collection("ajot").orderBy("date", "desc").onSnapshot((snapshot) => {
         omatAjot = [];
         snapshot.forEach(doc => {
-            let data = doc.data();
-            data.id = doc.id;
-            omatAjot.push(data);
+            let d = doc.data(); d.id = doc.id;
+            omatAjot.push(d);
         });
-        paivitaKaikki();
-        document.getElementById('info-status').innerText = `v5.25 PRO | Arkistossa ${omatAjot.length} ajoa`;
-    }, (err) => {
-        document.getElementById('info-status').innerText = "VIRHE: " + err.message;
+        paivitaUI();
     });
 }
 
@@ -143,53 +108,38 @@ function tallennaKaikki() {
     const id = document.getElementById('f-id').value || "id_" + Date.now();
     const ajo = {
         date: document.getElementById('f-date').value,
-        client: document.getElementById('f-client').value || "Ajo",
+        client: document.getElementById('f-client').value || "-",
         route: document.getElementById('f-route').value || "-",
         ks: parseFloat(document.getElementById('f-ks').value) || 0,
         ke: parseFloat(document.getElementById('f-ke').value) || 0,
         type: document.getElementById('f-type').value,
-        perdiem: parseFloat(document.getElementById('f-perdiem').value) || 0,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        perdiem: parseFloat(document.getElementById('f-perdiem').value) || 0
     };
 
     db.collection("ajot").doc(id).set(ajo).then(() => {
         resetForm();
         showPage('stats');
-    }).catch(err => alert("Tallennusvirhe: " + err.message));
+    });
 }
 
-function paivitaKaikki() {
+function poistaAjo(id) {
+    if(confirm("Poistetaanko tämä ajo?")) {
+        db.collection("ajot").doc(id).delete();
+    }
+}
+
+function paivitaUI() {
     let h = "";
     omatAjot.forEach(e => {
         h += `<div class="history-item" style="border-left-color:${e.type==='Oy'?'#2563eb':'#10b981'}">
-            <small>${e.date} | ${e.type}</small><br><b>${e.client}</b>
+            <b>${e.date}</b> | ${e.client}<br><small>${e.route}</small>
             <div class="actions">
-                <button onclick="muokkaa('${e.id}')" style="background:#eff6ff; border:none; padding:5px 10px; border-radius:4px; color:var(--ac); font-weight:800; cursor:pointer">Muokkaa</button>
+                <button class="btn-edit" onclick="muokkaa('${e.id}')">Muokkaa</button>
+                <button class="btn-del" onclick="poistaAjo('${e.id}')">Poista</button>
             </div>
         </div>`;
     });
-    document.getElementById('history-ui').innerHTML = h || "Ei merkintöjä.";
-
-    const kuu = new Date().toISOString().substring(0, 7);
-    let tKm = 0, tKmEur = 0, tOsa = 0, tKoko = 0;
-    let table = `<table class="report-table"><thead><tr><th>PVM</th><th>KOHDE</th><th>KM</th><th>PR</th></tr></thead><tbody>`;
-    
-    omatAjot.filter(a => a.type === currentFilter && a.date.startsWith(kuu)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(a => {
-        const km = a.ke - a.ks;
-        tKm += km; tKmEur += (km * KM_HINTA);
-        if(a.perdiem == 25) tOsa++; else if(a.perdiem == 54) tKoko++;
-        table += `<tr><td>${a.date.split('-')[2]}.${a.date.split('-')[1]}</td><td>${a.client}</td><td>${km}</td><td>${a.perdiem}€</td></tr>`;
-    });
-    
-    const prYht = (tOsa * 25) + (tKoko * 54);
-    document.getElementById('report-output').innerHTML = `
-        <h3>${currentFilter} RAPORTTI - ${kuu}</h3>${table}</tbody></table>
-        <div class="total-box">
-            <div class="total-row"><span>Km (${tKm} km):</span><b>${tKmEur.toFixed(2)}€</b></div>
-            <div class="total-row"><span>Osapäivärahat (${tOsa} kpl):</span><b>${(tOsa * 25).toFixed(2)}€</b></div>
-            <div class="total-row"><span>Kokopäivärahat (${tKoko} kpl):</span><b>${(tKoko * 54).toFixed(2)}€</b></div>
-            <div class="total-row" style="border:none; font-size:18px; margin-top:10px;"><span>YHTEENSÄ:</span><b>${(tKmEur + prYht).toFixed(2)}€</b></div>
-        </div>`;
+    document.getElementById('history-ui').innerHTML = h || "Ei ajoja.";
 }
 
 function muokkaa(id) {
@@ -206,49 +156,20 @@ function muokkaa(id) {
     showPage('input');
 }
 
-function vieKalenteriin() {
-    const pvm = document.getElementById('f-date').value.replace(/-/g, "");
-    const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(document.getElementById('f-client').value)}&location=${encodeURIComponent(document.getElementById('f-route').value)}`;
-    window.open(url, '_blank');
-}
-
-function setFilter(f) {
-    currentFilter = f;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('f-' + f.toLowerCase()).classList.add('active');
-    paivitaKaikki();
-}
-
-function showPage(p) { 
-    document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active')); 
-    document.getElementById('p-' + p).classList.add('active'); 
-    document.getElementById('t-' + p).classList.add('active'); 
-}
-
-function toggleMode() { 
-    document.getElementById('crm-fields').style.display = document.getElementById('f-mode').value === 'meeting' ? 'block' : 'none'; 
-}
-
-function resetForm() { 
-    ['f-id','f-client','f-title','f-route','f-ks','f-ke'].forEach(f => document.getElementById(f).value = "");
+function resetForm() {
+    document.getElementById('f-id').value = "";
+    ['f-client','f-route','f-ks','f-ke'].forEach(f => document.getElementById(f).value = "");
     document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-    asetaNykyinenAika();
-    laskePaivarahaEhdotus();
 }
 
-function laskePaivarahaEhdotus() {
-    const t1 = document.getElementById('f-start').value;
-    const t2 = document.getElementById('f-end').value;
-    if(!t1 || !t2) return;
-    const diff = (new Date("2000-01-01T"+t2) - new Date("2000-01-01T"+t1)) / 3600000;
-    const tunnit = diff < 0 ? diff + 24 : diff;
-    document.getElementById('f-perdiem').value = tunnit >= 10 ? "54" : (tunnit >= 6 ? "25" : "0");
+function showPage(p) {
+    document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('p-' + p).classList.add('active');
+    document.getElementById('t-' + p).classList.add('active');
 }
 
-// KÄYNNISTYS
-resetForm(); 
-toggleMode(); 
 lataaData();
+resetForm();
 </script>
 </body>
 </html>
