@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.54</title>
+    <title>Päivyri v5.55</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --danger: #ef4444; }
+        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --km-rate: 0.53; }
         body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 80px; }
         .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
         .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 11px; text-transform: uppercase; }
@@ -19,13 +19,14 @@
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
         input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; }
         .btn-main { background: var(--success); color: #fff; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-bottom: 10px; }
+        .btn-cal { background: #4285f4; color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; font-size: 13px; margin-bottom: 10px; }
         .btn-print { background: #000; color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-        th { text-align: left; border-bottom: 2px solid #000; padding: 8px 4px; }
-        td { padding: 8px 4px; border-bottom: 1px solid #eee; }
-        .summary-res { margin-top: 20px; padding: 15px; background: #f1f5f9; border-radius: 12px; font-weight: 800; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+        th { text-align: left; border-bottom: 2px solid #000; padding: 8px 2px; }
+        td { padding: 8px 2px; border-bottom: 1px solid #eee; }
+        .summary-res { margin-top: 20px; padding: 15px; background: #f1f5f9; border-radius: 12px; font-weight: 800; line-height: 1.6; }
         .status-bar { font-size: 9px; text-align: center; padding: 4px; font-weight: 800; }
-        @media print { .tabs, .status-bar, .btn-print, .no-print, select, label { display: none !important; } .page { display: block !important; padding: 0; } .card { box-shadow: none; border: none; } body { background: #fff; } h2 { display: block !important; } }
+        @media print { .tabs, .status-bar, .btn-print, .btn-cal, .btn-main, select, label { display: none !important; } .page { display: block !important; padding: 0; } .card { box-shadow: none; border: none; } body { background: #fff; } h2 { display: block !important; } }
         h2 { display: none; margin-top: 0; }
     </style>
 </head>
@@ -56,6 +57,7 @@
         <label>Tyyppi</label><select id="f-type"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
         <label>Päiväraha (€)</label><select id="f-perdiem"><option value="0">0</option><option value="25">25</option><option value="54">54</option></select>
         <button class="btn-main" onclick="tallenna()">TALLENNA</button>
+        <button class="btn-cal" onclick="vieKalenteriin()">📅 VIE KALENTERIIN</button>
     </div>
 </div>
 
@@ -64,21 +66,15 @@
 <div id="p-report" class="page">
     <div class="card">
         <div class="no-print">
-            <label>1. Valitse kuukausi</label>
+            <label>Valitse kuukausi</label>
             <select id="f-rep-month" onchange="paivitaUI()"></select>
-            <label>2. Valitse tyyppi</label>
-            <select id="f-rep-type" onchange="paivitaUI()">
-                <option value="Oy">Oy</option>
-                <option value="Tmi">Tmi</option>
-                <option value="Oma">Oma</option>
-            </select>
+            <label>Valitse tyyppi (Oy / Tmi)</label>
+            <select id="f-rep-type" onchange="paivitaUI()"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
         </div>
-        
         <div id="report-content">
             <h2 id="print-title">Ajopäiväkirja</h2>
             <div id="report-table-target"></div>
         </div>
-
         <button class="btn-print" onclick="window.print()">🖨 TULOSTA VALITTU RAPORTTI</button>
     </div>
 </div>
@@ -88,6 +84,7 @@ const firebaseConfig = { databaseURL: "https://paivuri-default-rtdb.europe-west1
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 let omatAjot = [];
+const KM_HINTA = 0.53; // Voit muuttaa tätä korvaussummaa tarvittaessa
 
 db.ref(".info/connected").on("value", s => {
     const el = document.getElementById("sync-status");
@@ -96,7 +93,7 @@ db.ref(".info/connected").on("value", s => {
 });
 
 function paivitaUI() {
-    // Arkisto (kaikki näkyvissä)
+    // Arkisto
     let h = "";
     [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).forEach(a => {
         const diff = (parseFloat(a.ke||0) - parseFloat(a.ks||0)).toFixed(1);
@@ -111,38 +108,36 @@ function paivitaUI() {
     });
     document.getElementById('history-ui').innerHTML = h || "Ei merkintöjä.";
 
-    // Raportti-logiikka
+    // Raportti
     const monthSel = document.getElementById('f-rep-month');
     const typeSel = document.getElementById('f-rep-type');
-    
     const kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0,7)))].sort().reverse();
-    if (monthSel.innerHTML === "") {
-        monthSel.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join('');
-    }
+    if (monthSel.innerHTML === "" && kuukaudet.length > 0) monthSel.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join('');
 
     if(monthSel.value) {
-        const suodatetut = omatAjot.filter(a => a.date.startsWith(monthSel.value) && a.type === typeSel.value)
-                                   .sort((a,b)=>a.date.localeCompare(b.date));
+        const suodatetut = omatAjot.filter(a => a.date.startsWith(monthSel.value) && a.type === typeSel.value).sort((a,b)=>a.date.localeCompare(b.date));
+        document.getElementById('print-title').innerText = `Ajopäiväkirja: ${typeSel.value} - ${monthSel.value}`;
         
-        document.getElementById('print-title').innerText = `Ajopäiväkirja: ${typeSel.value} (${monthSel.value})`;
-        
-        let tKm = 0, tPr = 0;
+        let tKm = 0, tPr = 0, tEur = 0;
         let rows = "";
         
         suodatetut.forEach(a => {
             const km = Math.max(0, parseFloat(a.ke||0) - parseFloat(a.ks||0));
             const pr = parseFloat(a.perdiem||0);
-            tKm += km; tPr += pr;
-            rows += `<tr><td>${a.date.split('-').reverse().join('.')}</td><td>${a.client}</td><td>${a.route}</td><td>${km.toFixed(1)}</td><td>${pr}€</td></tr>`;
+            const kmEur = km * KM_HINTA;
+            tKm += km; tPr += pr; tEur += kmEur;
+            rows += `<tr><td>${a.date.split('-').reverse().join('.')}</td><td>${a.client}</td><td>${km.toFixed(1)}</td><td>${kmEur.toFixed(2)}€</td><td>${pr}€</td></tr>`;
         });
 
         document.getElementById('report-table-target').innerHTML = `
-            <table><thead><tr><th>PVM</th><th>KOHDE</th><th>REITTI</th><th>KM</th><th>PR</th></tr></thead>
+            <table><thead><tr><th>PVM</th><th>KOHDE</th><th>KM</th><th>KM €</th><th>PR</th></tr></thead>
             <tbody>${rows}</tbody></table>
             <div class="summary-res">
                 KUUKAUSI YHTEENSÄ (${typeSel.value}):<br>
                 Matka: ${tKm.toFixed(1)} km<br>
-                Päivärahat: ${tPr} €
+                Kilometrikorvaus (${KM_HINTA}€/km): ${tEur.toFixed(2)} €<br>
+                Päivärahat: ${tPr.toFixed(2)} €<br>
+                <span style="font-size:16px; border-top:1px solid #000; display:block; margin-top:5px; padding-top:5px;">MAKSETTAVAA YHT: ${(tEur + tPr).toFixed(2)} €</span>
             </div>`;
     }
 }
@@ -177,6 +172,12 @@ function muokkaa(id) {
 }
 
 function poista(id) { if(confirm("Poistetaanko?")) db.ref('ajot/' + id).remove(); }
+function vieKalenteriin() {
+    const pvm = document.getElementById('f-date').value.replace(/-/g, '');
+    const ts = (document.getElementById('f-ts').value || "08:00").replace(':','');
+    const te = (document.getElementById('f-te').value || "16:00").replace(':','');
+    window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(document.getElementById('f-client').value)}&dates=${pvm}T${ts}00/${pvm}T${te}00&details=${encodeURIComponent(document.getElementById('f-route').value)}`, '_blank');
+}
 function showPage(p) { document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active')); document.getElementById('p-' + p).classList.add('active'); document.getElementById('t-' + p).classList.add('active'); }
 function resetForm() { ['f-id','f-client','f-route','f-ks','f-ke','f-ts','f-te'].forEach(f => { document.getElementById(f).value = ""; }); document.getElementById('f-date').value = new Date().toISOString().split('T')[0]; }
 
