@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.48</title>
+    <title>Päivyri v5.49</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -26,7 +26,7 @@
 </head>
 <body>
 
-<div id="sync-status" class="status-bar">ODOTTAA...</div>
+<div id="sync-status" class="status-bar">YHDISTETÄÄN...</div>
 
 <div class="tabs">
     <div class="tab active" id="t-input" onclick="showPage('input')">Syöte</div>
@@ -40,23 +40,18 @@
         <label>Toimintatila</label>
         <select id="f-mode" onchange="toggleMode()"><option value="meeting">Tapaaminen (CRM)</option><option value="drive">Pelkkä Ajo</option></select>
         <label>Päivämäärä</label><input type="date" id="f-date">
-        
         <div style="display:flex; gap:10px">
             <div style="flex:1"><label>Klo Alku</label><input type="time" id="f-ts"></div>
             <div style="flex:1"><label>Klo Loppu</label><input type="time" id="f-te"></div>
         </div>
-
         <div id="crm-fields"><label>Asiakas</label><input type="text" id="f-client"></div>
         <label>Reitti</label><input type="text" id="f-route">
-        
         <div style="display:flex; gap:10px">
             <div style="flex:1"><label>KM Alku</label><input type="number" id="f-ks"></div>
             <div style="flex:1"><label>KM Loppu</label><input type="number" id="f-ke"></div>
         </div>
-        
         <label>Tyyppi</label><select id="f-type"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
         <label>Päiväraha</label><select id="f-perdiem"><option value="0">Ei PR</option><option value="25">25€</option><option value="54">54€</option></select>
-        
         <button class="btn-main" onclick="tallenna()" style="background: var(--success)">TALLENNA</button>
         <button class="btn-cal" onclick="vieKalenteriin()">📅 VIE KALENTERIIN</button>
     </div>
@@ -66,7 +61,7 @@
     <div id="history-ui"></div>
     <div class="card" style="margin-top:20px; border-style:dashed;">
         <label>Datan tuonti</label>
-        <textarea id="import-area" rows="2" placeholder="Liitä PVM;ASIAKAS;REITTI;ALKU;LOPPU;TYYPPI;PR"></textarea>
+        <textarea id="import-area" rows="2" placeholder="PVM;ASIAKAS;REITTI;ALKU;LOPPU;TYYPPI;PR"></textarea>
         <button class="btn-main" onclick="tuoDatan()" style="background:#64748b">TUO RIVIT</button>
     </div>
 </div>
@@ -76,26 +71,26 @@
 </div>
 
 <script>
-const firebaseConfig = { databaseURL: "https://paivuri-6379b-default-rtdb.europe-west1.firebasedatabase.app" };
+// TÄMÄ ON NYT SE OIKEA OSOITE JONKA LÖYSIT:
+const firebaseConfig = { databaseURL: "https://paivuri-default-rtdb.europe-west1.firebasedatabase.app/" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let omatAjot = JSON.parse(localStorage.getItem('paivuri_db')) || [];
 
 db.ref(".info/connected").on("value", s => {
-    document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA" : "○ OFFLINE (Välimuisti)";
+    const el = document.getElementById("sync-status");
+    if(s.val()) { el.innerText = "● PILVIYHTEYS OK"; el.style.color="#10b981"; el.style.background="#ecfdf5"; }
+    else { el.innerText = "○ OFFLINE (Välimuisti)"; el.style.color="#f59e0b"; el.style.background="#fffbeb"; }
 });
 
 function paivitaUI() {
     let h = "";
     [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).forEach(a => {
-        h += `<div class="history-item">
-            <small>${a.date} | ${a.ts||''}-${a.te||''}</small><br><b>${a.client}</b><br>
-            <small>${a.ks}-${a.ke} km (${a.type})</small>
-            <button onclick="muokkaa('${a.id}')" style="float:right; border:none; background:none; color:blue; font-weight:800;">MUOKKAA</button>
-        </div>`;
+        h += `<div class="history-item"><small>${a.date} | ${a.ts||''}-${a.te||''}</small><br><b>${a.client}</b><br><small>${a.ks}-${a.ke} km (${a.type})</small>
+        <button onclick="muokkaa('${a.id}')" style="float:right; border:none; background:none; color:blue; font-weight:800;">MUOKKAA</button></div>`;
     });
-    document.getElementById('history-ui').innerHTML = h || "Tyhjä.";
+    document.getElementById('history-ui').innerHTML = h || "Ei tietoja.";
 
     const kuuSel = document.getElementById('f-report-month');
     const kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0,7)))].sort().reverse();
@@ -137,10 +132,9 @@ function tallenna() {
 
 function vieKalenteriin() {
     const pvm = document.getElementById('f-date').value.replace(/-/g, '');
-    const ts = document.getElementById('f-ts').value.replace(':','');
-    const te = document.getElementById('f-te').value.replace(':','');
-    const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(document.getElementById('f-client').value)}&dates=${pvm}T${ts||'0800'}00/${pvm}T${te||'1600'}00&details=${encodeURIComponent(document.getElementById('f-route').value)}`;
-    window.open(url, '_blank');
+    const ts = (document.getElementById('f-ts').value || "08:00").replace(':','');
+    const te = (document.getElementById('f-te').value || "16:00").replace(':','');
+    window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(document.getElementById('f-client').value)}&dates=${pvm}T${ts}00/${pvm}T${te}00&details=${encodeURIComponent(document.getElementById('f-route').value)}`, '_blank');
 }
 
 function tuoDatan() {
@@ -157,7 +151,7 @@ function tuoDatan() {
             });
         }
     });
-    alert("Data lähetetty pilveen!");
+    alert("Lähetetty pilveen!");
 }
 
 function muokkaa(id) {
