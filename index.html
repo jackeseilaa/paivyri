@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.46</title>
+    <title>Päivyri v5.47 - STABLE</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --cal: #4285f4; }
-        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
+        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; }
+        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 80px; }
         .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
-        .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 10px; text-transform: uppercase; }
+        .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 11px; text-transform: uppercase; }
         .tab.active { color: var(--ac); border-bottom: 4px solid var(--ac); background: #f1f5f9; }
         .page { display: none; padding: 20px; }
         .page.active { display: block; }
@@ -19,16 +19,16 @@
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
         input, select, textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; }
         .btn-main { background: #000; color: #fff; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-bottom: 10px; }
-        .btn-cal { background: var(--cal); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; font-size: 12px; }
-        .sync-status { font-size: 9px; text-align: center; padding: 8px; font-weight: 800; transition: 0.3s; }
+        .btn-cal { background: #4285f4; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; font-size: 12px; }
         .history-item { background: #fff; padding: 15px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #e2e8f0; border-left: 5px solid #ccc; position: relative; }
-        .report-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
         .report-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+        .status-bar { font-size: 9px; text-align: center; padding: 4px; font-weight: 800; background: #eee; }
     </style>
 </head>
 <body>
 
-<div id="sync-msg" class="sync-status" style="background: #eee; color: #666;">ALUSTETAAN...</div>
+<div id="sync-status" class="status-bar">ODOTTAA YHTEYTTÄ...</div>
 
 <div class="tabs">
     <div class="tab active" id="t-input" onclick="showPage('input')">Syöte</div>
@@ -51,62 +51,74 @@
         <label>Tyyppi</label><select id="f-type"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
         <label>Päiväraha</label><select id="f-perdiem"><option value="0">Ei PR</option><option value="25">25€</option><option value="54">54€</option></select>
         <button class="btn-main" onclick="tallenna()" style="background: var(--success)">TALLENNA</button>
-        <button class="btn-cal" onclick="vieKalenteriin()">📅 VIE GOOGLE-KALENTERIIN</button>
+        <button class="btn-cal" onclick="vieKalenteriin()">📅 VIE KALENTERIIN</button>
     </div>
 </div>
 
-<div id="p-stats" class="page"><div id="history-ui"></div></div>
-<div id="p-report" class="page"><div class="card"><select id="f-report-month" onchange="paivitaUI()"></select><div id="report-output"></div></div></div>
+<div id="p-stats" class="page">
+    <div id="history-ui"></div>
+    <div class="card" style="margin-top:20px; border-style:dashed;">
+        <label>Tuonti (PVM;ASIAKAS;REITTI;ALKU;LOPPU;TYYPPI;PR)</label>
+        <textarea id="import-area" rows="2"></textarea>
+        <button class="btn-main" onclick="tuoDatan()" style="background:#64748b">TUO RIVIT</button>
+    </div>
+</div>
+
+<div id="p-report" class="page">
+    <div class="card">
+        <label>Valitse Kuukausi</label>
+        <select id="f-report-month" onchange="paivitaUI()"></select>
+        <div id="report-output"></div>
+    </div>
+</div>
 
 <script>
 const firebaseConfig = { databaseURL: "https://paivuri-6379b-default-rtdb.europe-west1.firebasedatabase.app" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Ladataan heti paikallinen muisti, jotta sovellus ei näytä tyhjää
-let omatAjot = JSON.parse(localStorage.getItem('paivuri_cache')) || [];
+let omatAjot = JSON.parse(localStorage.getItem('paivuri_db')) || [];
+
+// Yhteysseuranta
+db.ref(".info/connected").on("value", s => {
+    document.getElementById("sync-status").innerText = s.val() ? "● PILVIYHTEYS OK" : "○ OFFLINE (Käytetään paikallista muistia)";
+});
 
 function paivitaUI() {
     // Arkisto
     let h = "";
     [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).forEach(a => {
         h += `<div class="history-item"><small>${a.date} | ${a.type}</small><br><b>${a.client}</b><br><small>${a.ks}-${a.ke} km</small>
-        <button onclick="muokkaa('${a.id}')" style="border:none; background:none; color:var(--ac); font-weight:800; float:right;">MUOKKAA</button></div>`;
+        <button onclick="muokkaa('${a.id}')" style="float:right; border:none; background:none; color:blue; font-weight:800;">MUOKKAA</button></div>`;
     });
-    document.getElementById('history-ui').innerHTML = h || "Ei tietoja.";
+    document.getElementById('history-ui').innerHTML = h || "Ei merkintöjä.";
 
     // Raportit
     const kuuSel = document.getElementById('f-report-month');
-    const vanhaKuu = kuuSel.value;
-    const kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0, 7)))].sort().reverse();
-    kuuSel.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join('') || `<option value="">Ei dataa</option>`;
-    if(vanhaKuu) kuuSel.value = vanhaKuu;
-
     const valittuKuu = kuuSel.value;
-    if(!valittuKuu) return;
-    let tKm = 0, tPr = 0;
-    let table = `<table class="report-table">`;
-    omatAjot.filter(a => a.date.startsWith(valittuKuu)).forEach(a => {
-        const km = a.ke - a.ks; tKm += km; tPr += a.perdiem;
-        table += `<tr><td>${a.date.split('-')[2]}.${a.date.split('-')[1]}</td><td>${a.client}</td><td>${km} km</td></tr>`;
-    });
-    document.getElementById('report-output').innerHTML = table + `</table><div style="margin-top:10px; font-weight:800; border-top:1px solid #000;">YHT: ${tKm} km / ${tPr} €</div>`;
+    const kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0,7)))].sort().reverse();
+    kuuSel.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join('');
+    if(valittuKuu) kuuSel.value = valittuKuu;
+
+    if(kuuSel.value) {
+        let tKm = 0, tPr = 0;
+        let table = `<table class="report-table">`;
+        omatAjot.filter(a => a.date.startsWith(kuuSel.value)).forEach(a => {
+            const km = a.ke - a.ks; tKm += km; tPr += a.perdiem;
+            table += `<tr><td>${a.date.split('-')[2]}.${a.date.split('-')[1]}</td><td>${a.client}</td><td>${km} km</td></tr>`;
+        });
+        document.getElementById('report-output').innerHTML = table + `</table><div style="margin-top:10px; font-weight:800; border-top:1px solid #000; padding-top:5px;">YHT: ${tKm} km | ${tPr}€</div>`;
+    }
 }
 
-// Synkronointi pilven kanssa
+// Lataus pilvestä
 db.ref('ajot').on('value', snap => {
     const data = snap.val();
     if(data) {
         omatAjot = Object.values(data);
-        localStorage.setItem('paivuri_cache', JSON.stringify(omatAjot));
+        localStorage.setItem('paivuri_db', JSON.stringify(omatAjot));
         paivitaUI();
     }
-});
-
-db.ref(".info/connected").on("value", snap => {
-    const el = document.getElementById("sync-msg");
-    if(snap.val()) { el.innerText = "● PILVIYHTEYS OK"; el.style.color="#10b981"; el.style.background="#ecfdf5"; }
-    else { el.innerText = "○ OFFLINE (Käytetään välimuistia)"; el.style.color="#f59e0b"; el.style.background="#fffbeb"; }
 });
 
 function tallenna() {
@@ -121,17 +133,32 @@ function tallenna() {
         perdiem: parseFloat(document.getElementById('f-perdiem').value) || 0
     };
     db.ref('ajot/' + id).set(ajo);
-    // Päivitetään heti paikallisesti
-    const idx = omatAjot.findIndex(x => x.id === id);
-    if(idx > -1) omatAjot[idx] = ajo; else omatAjot.push(ajo);
-    localStorage.setItem('paivuri_cache', JSON.stringify(omatAjot));
-    resetForm(); showPage('stats');
+    resetForm();
+    showPage('stats');
 }
 
 function vieKalenteriin() {
     const pvm = document.getElementById('f-date').value.replace(/-/g, '');
     const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(document.getElementById('f-client').value || "Ajo")}&dates=${pvm}/${pvm}&details=${encodeURIComponent(document.getElementById('f-route').value)}`;
     window.open(url, '_blank');
+}
+
+function tuoDatan() {
+    const raw = document.getElementById('import-area').value.trim();
+    if(!raw) return;
+    raw.split('\n').forEach(line => {
+        const p = line.split(';');
+        if(p.length >= 6) {
+            const id = "id_" + Math.random().toString(16).slice(2);
+            db.ref('ajot/' + id).set({
+                id, date: p[0], client: p[1], route: p[2],
+                ks: parseFloat(p[3]), ke: parseFloat(p[4]),
+                type: p[5], perdiem: parseFloat(p[6]) || 0
+            });
+        }
+    });
+    document.getElementById('import-area').value = "";
+    alert("Tuotu pilveen!");
 }
 
 function muokkaa(id) {
@@ -148,7 +175,6 @@ function showPage(p) {
     document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
     document.getElementById('p-' + p).classList.add('active');
     document.getElementById('t-' + p).classList.add('active');
-    paivitaUI();
 }
 
 function resetForm() {
