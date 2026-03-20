@@ -3,46 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.42</title>
+    <title>Päivyri v5.43</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --warn: #f59e0b; }
-        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 80px; }
+        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; }
+        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
         .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
-        .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 11px; text-transform: uppercase; border-bottom: 4px solid transparent; }
-        .tab.active { color: var(--ac); border-bottom-color: var(--ac); background: #f1f5f9; }
+        .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 10px; text-transform: uppercase; }
+        .tab.active { color: var(--ac); border-bottom: 4px solid var(--ac); background: #f1f5f9; }
         .page { display: none; padding: 20px; }
         .page.active { display: block; }
         .card { background: #fff; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
         input, select, textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; }
         .btn-main { background: #000; color: #fff; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; }
-        .sync-status { font-size: 9px; text-align: center; padding: 8px; font-weight: 800; text-transform: uppercase; background: #eee; }
-        .status-online { color: var(--success); background: #ecfdf5; }
-        .status-offline { color: var(--warn); background: #fffbeb; }
         .history-item { background: #fff; padding: 15px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #e2e8f0; border-left: 5px solid #ccc; }
-        .actions { display: flex; gap: 10px; margin-top: 8px; }
-        .btn-del { color: #ef4444; border: none; background: none; font-weight: 800; cursor: pointer; font-size: 12px; }
-        .btn-edit { color: var(--ac); border: none; background: none; font-weight: 800; cursor: pointer; font-size: 12px; }
+        .actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
+        .btn-act { background: #f1f5f9; border: none; padding: 8px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 11px; }
+        .sync-info { font-size: 9px; text-align: center; padding: 5px; font-weight: 800; color: #64748b; }
     </style>
 </head>
 <body>
 
-<div id="connection-status" class="sync-status status-offline">Yhdistetään...</div>
+<div id="sync-msg" class="sync-info">Yhdistetään...</div>
 
 <div class="tabs">
-    <div class="tab active" id="tab-input" onclick="showPage('input')">Syöte</div>
-    <div class="tab" id="tab-stats" onclick="showPage('stats')">Arkisto</div>
+    <div class="tab active" id="t-input" onclick="showPage('input')">Syöte</div>
+    <div class="tab" id="t-stats" onclick="showPage('stats')">Arkisto</div>
 </div>
 
 <div id="p-input" class="page active">
     <div class="card">
         <input type="hidden" id="f-id">
+        <label>Toimintatila</label>
+        <select id="f-mode" onchange="toggleMode()">
+            <option value="meeting">Tapaaminen (CRM)</option>
+            <option value="drive">Pelkkä Ajo</option>
+        </select>
         <label>Päivämäärä</label><input type="date" id="f-date">
-        <label>Asiakas / Yritys</label><input type="text" id="f-client" placeholder="esim. TAKSI">
-        <label>Reitti</label><input type="text" id="f-route">
+        <div id="crm-fields">
+            <label>Asiakas / Yritys</label><input type="text" id="f-client">
+        </div>
+        <label>Reitti / Osoite</label><input type="text" id="f-route">
         <div style="display:flex; gap:10px">
             <div style="flex:1"><label>KM Alku</label><input type="number" id="f-ks"></div>
             <div style="flex:1"><label>KM Loppu</label><input type="number" id="f-ke"></div>
@@ -50,17 +54,17 @@
         <label>Tyyppi</label>
         <select id="f-type"><option value="Oy">Oy</option><option value="Tmi">Tmi</option><option value="Oma">Oma</option></select>
         <label>Päiväraha</label>
-        <select id="f-perdiem"><option value="0">Ei PR</option><option value="25">25€</option><option value="54">54€</option></select>
-        <button class="btn-main" onclick="tallenna()" id="save-btn" style="background:var(--success)">TALLENNA PILVEEN</button>
+        <select id="f-perdiem"><option value="0">Ei PR</option><option value="25">Osa (25€)</option><option value="54">Koko (54€)</option></select>
+        <button class="btn-main" onclick="tallenna()" style="background: var(--success)">TALLENNA</button>
     </div>
 </div>
 
 <div id="p-stats" class="page">
-    <div id="history-ui">Ladataan arkistoa...</div>
-    <div class="card" style="margin-top:20px; border-style:dashed;">
-        <label>PIKATUONTI (PVM;ASIAKAS;REITTI;ALKU;LOPPU;TYYPPI;PR)</label>
-        <textarea id="import-area" rows="3"></textarea>
-        <button class="btn-main" onclick="tuoDatan()" style="background:#475569">TUO RIVIT</button>
+    <div id="history-ui"></div>
+    <div class="card" style="margin-top:30px; border-style: dashed;">
+        <label>Datan tuonti (PVM;ASIAKAS;REITTI;ALKU;LOPPU;TYYPPI;PR)</label>
+        <textarea id="import-area" rows="3" placeholder="Liitä data tähän..."></textarea>
+        <button class="btn-main" onclick="tuoDatan()" style="background: #475569">TUO RIVIT</button>
     </div>
 </div>
 
@@ -72,19 +76,15 @@ const db = firebase.database();
 let omatAjot = [];
 
 // Yhteyden seuranta
-db.ref(".info/connected").on("value", (snap) => {
-    const el = document.getElementById("connection-status");
-    if (snap.val() === true) {
-        el.innerText = "● Pilviyhteys OK";
-        el.className = "sync-status status-online";
-    } else {
-        el.innerText = "○ Offline - Tarkista yhteys";
-        el.className = "sync-status status-offline";
-    }
+db.ref(".info/connected").on("value", snap => {
+    document.getElementById("sync-msg").innerText = snap.val() ? "● PILVIYHTEYS OK" : "○ OFFLINE";
 });
 
-async function tallenna() {
-    const btn = document.getElementById('save-btn');
+function toggleMode() {
+    document.getElementById('crm-fields').style.display = document.getElementById('f-mode').value === 'meeting' ? 'block' : 'none';
+}
+
+function tallenna() {
     const id = document.getElementById('f-id').value || "id_" + Date.now();
     const ajo = {
         id,
@@ -96,20 +96,10 @@ async function tallenna() {
         type: document.getElementById('f-type').value,
         perdiem: parseFloat(document.getElementById('f-perdiem').value) || 0
     };
-
-    btn.disabled = true;
-    btn.innerText = "TALLENNETAAN...";
-
-    try {
-        await db.ref('ajot/' + id).set(ajo);
+    db.ref('ajot/' + id).set(ajo).then(() => {
         resetForm();
         showPage('stats');
-    } catch (e) {
-        alert("Virhe: " + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "TALLENNA PILVEEN";
-    }
+    });
 }
 
 function tuoDatan() {
@@ -127,24 +117,23 @@ function tuoDatan() {
         }
     });
     document.getElementById('import-area').value = "";
-    showPage('stats');
+    alert("Data tuotu pilveen!");
 }
 
-// Päivitä arkisto kun data muuttuu pilvessä
 db.ref('ajot').on('value', snap => {
     const data = snap.val();
     omatAjot = data ? Object.values(data) : [];
-    paivitaArkistoUI();
+    paivitaArkisto();
 });
 
-function paivitaArkistoUI() {
+function paivitaArkisto() {
     let h = "";
     [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).forEach(a => {
         h += `<div class="history-item">
-            <small>${a.date} | ${a.type}</small><br><b>${a.client}</b><br><small>${a.ks}-${a.ke} km (${a.ke-a.ks} km)</small>
+            <small>${a.date} | ${a.type}</small><br><b>${a.client}</b><br><small>${a.ks}-${a.ke} km</small>
             <div class="actions">
-                <button class="btn-edit" onclick="muokkaa('${a.id}')">Muokkaa</button>
-                <button class="btn-del" onclick="poista('${a.id}')">Poista</button>
+                <button class="btn-act" onclick="muokkaa('${a.id}')">Muokkaa</button>
+                <button class="btn-act" style="color:red" onclick="poista('${a.id}')">Poista</button>
             </div>
         </div>`;
     });
@@ -168,22 +157,18 @@ function muokkaa(id) {
 function poista(id) { if(confirm("Poistetaanko?")) db.ref('ajot/' + id).remove(); }
 
 function showPage(p) {
-    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
     document.getElementById('p-' + p).classList.add('active');
-    document.getElementById('tab-' + p).classList.add('active');
+    document.getElementById('t-' + p).classList.add('active');
 }
 
 function resetForm() {
-    document.getElementById('f-id').value = "";
-    document.getElementById('f-client').value = "";
-    document.getElementById('f-route').value = "";
-    document.getElementById('f-ks').value = "";
-    document.getElementById('f-ke').value = "";
+    ['f-id','f-client','f-route','f-ks','f-ke'].forEach(f => document.getElementById(f).value = "");
     document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 }
 
 resetForm();
+toggleMode();
 </script>
 </body>
 </html>
