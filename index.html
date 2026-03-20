@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.32 - Raportti Arkisto</title>
+    <title>Päivyri v5.33 - Data Import</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
         .page.active { display: block; }
         .card { background: #fff; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
-        input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; }
         .btn-main { background: #000; color: #fff; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-bottom: 10px; }
         .btn-cal { background: var(--cal); color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px; }
         .btn-print { background: #475569; color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; cursor: pointer; margin-top: 20px; }
@@ -32,9 +32,12 @@
         .history-item { background: #fff; padding: 15px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #e2e8f0; border-left: 5px solid #ccc; }
         .actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
         .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+        
+        /* Import-tyyli */
+        .import-section { margin-top: 40px; padding-top: 20px; border-top: 2px dashed #cbd5e1; }
 
         @media print {
-            .tabs, .btn-main, .report-filters, .btn-print, .actions, #cal-btn-wrap, .btn-cal, .footer, #month-selector-wrap { display: none !important; }
+            .tabs, .btn-main, .report-filters, .btn-print, .actions, #cal-btn-wrap, .btn-cal, .footer, #month-selector-wrap, .import-section { display: none !important; }
             body { background: white; padding-bottom: 0; }
             .page { display: none !important; }
             #p-report.page { display: block !important; }
@@ -81,7 +84,16 @@
     </div>
 </div>
 
-<div id="p-stats" class="page"><div id="history-ui"></div></div>
+<div id="p-stats" class="page">
+    <div id="history-ui"></div>
+    
+    <div class="import-section">
+        <label>TUO DATAA EXCELISTÄ</label>
+        <p style="font-size: 10px; color: #64748b;">Muoto: PVM;Asiakas;Reitti;KM_Alku;KM_Loppu;Tyyppi;PR</p>
+        <textarea id="import-area" rows="4" placeholder="2026-01-15;Asiakas Oy;Hki-Tre;1000;1200;Oy;25"></textarea>
+        <button class="btn-main" onclick="tuoExcelista()" style="background: #475569; font-size: 12px;">TUO RIVIT</button>
+    </div>
+</div>
 
 <div id="p-report" class="page">
     <div class="card">
@@ -99,7 +111,7 @@
     </div>
 </div>
 
-<div class="footer">Versio 5.32 | Kuukausivalinta lisätty</div>
+<div class="footer">Versio 5.33 | Import-työkalu lisätty</div>
 
 <script>
 const firebaseConfig = { databaseURL: "https://paivuri-6379b-default-rtdb.europe-west1.firebasedatabase.app" };
@@ -110,6 +122,7 @@ const KM_HINTA = 0.55;
 let omatAjot = JSON.parse(localStorage.getItem('paivuri_data')) || [];
 let currentFilter = "Oy";
 
+// ENTER-ESTO
 document.getElementById('form-container').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         const inputs = Array.from(this.querySelectorAll('input:not([type="hidden"]), select'));
@@ -121,10 +134,38 @@ document.getElementById('form-container').addEventListener('keydown', function(e
     }
 });
 
-function asetaNykyinenAika() {
-    const nyt = new Date();
-    document.getElementById('f-start').value = String(nyt.getHours()).padStart(2, '0') + ":" + String(nyt.getMinutes()).padStart(2, '0');
-    document.getElementById('f-end').value = String((nyt.getHours() + 8) % 24).padStart(2, '0') + ":" + String(nyt.getMinutes()).padStart(2, '0');
+function tuoExcelista() {
+    const text = document.getElementById('import-area').value.trim();
+    if(!text) return;
+    
+    const lines = text.split('\n');
+    let tuodut = 0;
+    
+    lines.forEach(line => {
+        const parts = line.split(/[;\t]/); // Tukee puolipistettä tai Tabia (suora copy Excelistä)
+        if(parts.length >= 5) {
+            const id = "id_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+            const ajo = {
+                id: id,
+                date: parts[0].trim(),
+                client: parts[1]?.trim() || "Import",
+                route: parts[2]?.trim() || "-",
+                ks: parseFloat(parts[3]) || 0,
+                ke: parseFloat(parts[4]) || 0,
+                type: parts[5]?.trim() || "Oy",
+                perdiem: parseFloat(parts[6]) || 0
+            };
+            omatAjot.push(ajo);
+            db.ref('ajot/' + id).set(ajo);
+            tuodut++;
+        }
+    });
+    
+    localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
+    document.getElementById('import-area').value = "";
+    alert("Tuotu " + tuodut + " riviä onnistuneesti!");
+    paivitaKuukausiValikko();
+    paivitaKaikki();
 }
 
 function tallennaKaikki() {
@@ -144,7 +185,7 @@ function tallennaKaikki() {
     
     localStorage.setItem('paivuri_data', JSON.stringify(omatAjot));
     db.ref('ajot/' + id).set(ajo);
-    paivitaKuukausiValikko(); // Päivitetään valikko jos tuli uusi kuukausi
+    paivitaKuukausiValikko();
     resetForm(); paivitaKaikki(); showPage('stats');
 }
 
@@ -158,20 +199,13 @@ function poistaAjo(id) {
     }
 }
 
-// --- UUSI: PÄIVITÄ KUUKAUSIVALIKKO ---
 function paivitaKuukausiValikko() {
     const selector = document.getElementById('f-report-month');
     const nykyinenValinta = selector.value || new Date().toISOString().substring(0, 7);
-    
-    // Kerätään kaikki uniikit YYYY-MM yhdistelmät datasta
     let kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0, 7)))];
-    
-    // Varmistetaan että kuluva kuukausi on listalla vaikkei dataa olisikaan
     const tamaKuu = new Date().toISOString().substring(0, 7);
     if (!kuukaudet.includes(tamaKuu)) kuukaudet.push(tamaKuu);
-    
-    kuukaudet.sort().reverse(); // Uusin ensin
-
+    kuukaudet.sort().reverse();
     selector.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join('');
     selector.value = nykyinenValinta;
 }
@@ -189,7 +223,6 @@ function paivitaKaikki() {
     });
     document.getElementById('history-ui').innerHTML = h || "Ei merkintöjä.";
 
-    // KÄYTETÄÄN VALITTUA KUUKAUTTA
     const valittuKuu = document.getElementById('f-report-month').value || new Date().toISOString().substring(0, 7);
     let tKm = 0, tKmEur = 0, tOsa = 0, tKoko = 0;
     let table = `<table class="report-table"><thead><tr><th>PVM</th><th>KOHDE</th><th>KM</th><th>PR</th><th>KM €</th></tr></thead><tbody>`;
@@ -247,7 +280,8 @@ function setFilter(f) {
 function resetForm() { 
     ['f-id','f-client','f-title','f-route','f-ks','f-ke'].forEach(f => document.getElementById(f).value = "");
     document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-    asetaNykyinenAika();
+    document.getElementById('f-start').value = "08:00";
+    document.getElementById('f-end').value = "16:00";
     document.getElementById('f-perdiem').value = "0";
 }
 
