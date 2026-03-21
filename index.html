@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v100.9</title>
+    <title>Päivyri v101.0</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -23,11 +23,11 @@
         .mini-btn { padding: 8px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; }
         .del-btn { background: var(--err); color: white; padding: 8px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; float: right; }
         .stop-row { background: #f1f5f9; padding: 15px; border-radius: 14px; margin-bottom: 10px; border-left: 6px solid var(--ac); position: relative; }
+        .date-container { position: relative; flex: 1.5; }
+        .cal-btn { position: absolute; right: 10px; top: 32px; background: none; border: none; font-size: 20px; cursor: pointer; }
         .report-table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; border: 1px solid #000; }
         .report-table th, .report-table td { border: 1px solid #000; padding: 8px; text-align: left; }
         .summary-box { margin-top: 15px; border: 2px solid #000; padding: 15px; font-weight: bold; background: #eee; }
-        .date-container { position: relative; flex: 1.5; }
-        .cal-btn { position: absolute; right: 10px; top: 32px; background: none; border: none; font-size: 20px; cursor: pointer; }
         @media print { .no-print { display: none !important; } .page { display: block !important; } }
     </style>
 </head>
@@ -37,14 +37,13 @@
 
 <div class="tabs no-print">
     <div id="tab-input" class="tab active" onclick="showPage('input')">Syöte</div>
-    <div id="tab-crm" class="tab" onclick="showPage('crm')">Asiakkaat</div>
+    <div id="tab-crm" class="tab" onclick="showPage('crm')">Yritykset</div>
     <div id="tab-report" class="tab" onclick="showPage('report')">Raportit</div>
 </div>
 
 <div id="p-input" class="page active">
     <div class="card">
         <input type="hidden" id="f-id">
-        
         <label>Yritys / Tyyppi</label>
         <select id="f-type" onchange="toggleQuickMode()" class="e-nav">
             <option value="Tmi">Tmi (Työajo)</option>
@@ -84,6 +83,7 @@
         </div>
 
         <button class="btn-save" onclick="tallennaAjo()">TALLENNA MERKINTÄ</button>
+        <button class="mini-btn no-print" onclick="vieKalenteriin()" style="background:#000; color:white; width:100%; margin-top:20px; height:50px; font-size:14px">📅 VIE PÄIVÄ KALENTERIIN</button>
         <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:10px">ARKISTO</button>
     </div>
     <div id="history-ui" style="display:none" class="no-print"></div>
@@ -91,12 +91,15 @@
 
 <div id="p-crm" class="page">
     <div class="card">
-        <h3>Asiakasrekisteri</h3>
+        <h3>Yritysrekisteri</h3>
         <input type="hidden" id="c-id">
-        <label>Nimi</label><input type="text" id="c-name" class="c-nav">
+        <label>Yrityksen nimi</label><input type="text" id="c-name" class="c-nav">
+        <label>Y-tunnus</label><input type="text" id="c-ytun" class="c-nav" placeholder="1234567-8">
         <label>Osoite</label><input type="text" id="c-addr" class="c-nav">
+        <label>Yhteyshenkilö</label><input type="text" id="c-person" class="c-nav">
+        <label>Sähköposti</label><input type="email" id="c-email" class="c-nav">
         <label>Puhelin</label><input type="tel" id="c-phone" class="c-nav">
-        <button class="btn-save" onclick="saveCrm()">TALLENNA ASIAKAS</button>
+        <button class="btn-save" onclick="saveCrm()">TALLENNA YRITYS</button>
     </div>
     <div id="crm-list-container"></div>
 </div>
@@ -152,7 +155,7 @@ function addStop(val="", addr="") {
     div.className = 'stop-row';
     div.innerHTML = `
         <span style="position:absolute; right:10px; top:10px; color:red; cursor:pointer" onclick="this.parentElement.remove()">✕</span>
-        <label>Asiakas <button class="mini-btn" style="padding:2px 6px; font-size:8px; background:#10b981; color:white" onclick="pikaAsiakas(this)">+ UUSI</button></label>
+        <label>Yritys <button class="mini-btn" style="padding:2px 6px; font-size:8px; background:#10b981; color:white" onclick="pikaAsiakas(this)">+ UUSI</button></label>
         <input type="text" class="s-client e-nav" value="${esc(val)}" list="crm-datalist" onchange="autoFillAddr(this)">
         <label>Osoite</label>
         <input type="text" class="s-addr e-nav" value="${esc(addr)}">
@@ -166,13 +169,14 @@ function autoFillAddr(input) {
 }
 
 function pikaAsiakas(btn) {
-    const nimi = prompt("Asiakkaan nimi:");
-    if(!nimi) return;
-    const osoite = prompt("Osoite:");
-    db.ref('asiakkaat').push({ name: nimi, addr: osoite || "" }).then(() => {
+    const n = prompt("Yrityksen nimi:"); if(!n) return;
+    const y = prompt("Y-tunnus (vapaaehtoinen):") || "";
+    const a = prompt("Osoite:") || "";
+    const h = prompt("Yhteyshenkilö:") || "";
+    db.ref('asiakkaat').push({ name: n, ytun: y, addr: a, person: h }).then(() => {
         const row = btn.closest('.stop-row');
-        row.querySelector('.s-client').value = nimi;
-        row.querySelector('.s-addr').value = osoite || "";
+        row.querySelector('.s-client').value = n;
+        row.querySelector('.s-addr').value = a;
     });
 }
 
@@ -203,6 +207,19 @@ function nollaaLomake() {
     document.getElementById('f-allowance').value = "-";
 }
 
+function vieKalenteriin() {
+    const pvm = document.getElementById('f-date').value.replace(/-/g, '');
+    const tyyppi = document.getElementById('f-type').value;
+    const kohteet = Array.from(document.querySelectorAll('.s-client')).map(i => i.value).join(', ');
+    const km = (parseFloat(document.getElementById('f-ke').value || 0) - parseFloat(document.getElementById('f-ks').value || 0)).toFixed(1);
+    
+    const otsikko = encodeURIComponent(`Ajopäivä: ${tyyppi} (${km} km)`);
+    const tiedot = encodeURIComponent(`Kohteet: ${kohteet}\nMittari: ${document.getElementById('f-ks').value} - ${document.getElementById('f-ke').value}\nPäiväraha: ${document.getElementById('f-allowance').value}`);
+    
+    const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${otsikko}&dates=${pvm}/${pvm}&details=${tiedot}`;
+    window.open(url, '_blank');
+}
+
 function laskePvrahaAutomaatti() {
     const s = document.getElementById('f-ts').value, e = document.getElementById('f-te').value;
     if(!s || !e) return;
@@ -217,10 +234,11 @@ db.ref('asiakkaat').on('value', s => {
     document.getElementById('crm-datalist').innerHTML = asiakkaat.map(c => `<option value="${esc(c.name)}">`).join('');
     document.getElementById('crm-list-container').innerHTML = asiakkaat.map(c => `
         <div class="card">
-            <b>${esc(c.name)}</b> - ${esc(c.addr)}
+            <b>${esc(c.name)}</b> ${c.ytun ? '('+esc(c.ytun)+')' : ''}<br>
+            <small>${esc(c.addr)} | ${esc(c.person)} | ${esc(c.email)}</small>
             <div style="margin-top:10px">
                 <button onclick="editCrm('${c.id}')" class="mini-btn" style="background:var(--ac);color:white">MUOKKAA</button>
-                <button onclick="if(confirm('Poistetaanko asiakas?')) db.ref('asiakkaat/${c.id}').remove()" class="del-btn">POISTA</button>
+                <button onclick="if(confirm('Poistetaanko yritys?')) db.ref('asiakkaat/${c.id}').remove()" class="del-btn">POISTA</button>
             </div>
         </div>`).join('');
 });
@@ -240,6 +258,35 @@ db.ref('ajot').on('value', s => {
     paivitaRaportti();
 });
 
+function saveCrm() {
+    const id = document.getElementById('c-id').value;
+    const data = { 
+        name: document.getElementById('c-name').value, 
+        ytun: document.getElementById('c-ytun').value,
+        addr: document.getElementById('c-addr').value, 
+        person: document.getElementById('c-person').value,
+        email: document.getElementById('c-email').value,
+        phone: document.getElementById('c-phone').value 
+    };
+    if(!data.name) return;
+    const ref = id ? db.ref('asiakkaat/'+id) : db.ref('asiakkaat').push();
+    ref.set(data).then(() => { alert("Yritys tallennettu!"); resetCrm(); });
+}
+
+function resetCrm() { ['c-id','c-name','c-ytun','c-addr','c-person','c-email','c-phone'].forEach(i=>document.getElementById(i).value=""); }
+
+function editCrm(id) {
+    const c = asiakkaat.find(x => x.id === id);
+    document.getElementById('c-id').value = c.id;
+    document.getElementById('c-name').value = c.name;
+    document.getElementById('c-ytun').value = c.ytun || "";
+    document.getElementById('c-addr').value = c.addr || "";
+    document.getElementById('c-person').value = c.person || "";
+    document.getElementById('c-email').value = c.email || "";
+    document.getElementById('c-phone').value = c.phone || "";
+    showPage('crm');
+}
+
 function editAjo(id) {
     const a = omatAjot.find(x=>x.id===id);
     document.getElementById('f-id').value = a.id;
@@ -254,25 +301,6 @@ function editAjo(id) {
     if(a.stops) a.stops.forEach(s => addStop(s.client, s.addr));
     toggleQuickMode();
     showPage('input');
-}
-
-function saveCrm() {
-    const id = document.getElementById('c-id').value;
-    const data = { name: document.getElementById('c-name').value, addr: document.getElementById('c-addr').value, phone: document.getElementById('c-phone').value };
-    if(!data.name) return;
-    const ref = id ? db.ref('asiakkaat/'+id) : db.ref('asiakkaat').push();
-    ref.set(data).then(() => { alert("Asiakas tallennettu!"); resetCrm(); });
-}
-
-function resetCrm() { ['c-id','c-name','c-addr','c-phone'].forEach(i=>document.getElementById(i).value=""); }
-
-function editCrm(id) {
-    const c = asiakkaat.find(x => x.id === id);
-    document.getElementById('c-id').value = c.id;
-    document.getElementById('c-name').value = c.name;
-    document.getElementById('c-addr').value = c.addr;
-    document.getElementById('c-phone').value = c.phone || "";
-    showPage('crm');
 }
 
 function paivitaRaportti() {
@@ -302,7 +330,7 @@ function toggleArchive() {
 }
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v100.9)" : "○ OFFLINE"; });
+db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v101.0)" : "○ OFFLINE"; });
 </script>
 </body>
 </html>
