@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v101.9</title>
+    <title>Päivyri v102.0</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -23,9 +23,13 @@
         .mini-btn { padding: 8px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; margin-right: 5px; }
         .del-btn { background: var(--err); color: white; padding: 8px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; float: right; }
         .stop-row { background: #f1f5f9; padding: 15px; border-radius: 14px; margin-bottom: 10px; border-left: 6px solid var(--ac); position: relative; }
+        
+        /* RAPORTTITYYLIT */
         .report-table { width: 100%; border-collapse: collapse; font-size: 9px; background: white; margin-top: 10px; }
         .report-table th, .report-table td { border: 1px solid #000; padding: 4px; text-align: left; color: #000; }
         .summary-box { margin-top: 15px; border: 2px solid #000; padding: 10px; background: #fff; font-size: 11px; }
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        
         @media print { .no-print { display: none !important; } .page { display: block !important; } }
     </style>
 </head>
@@ -50,7 +54,7 @@
         </select>
         <label>Päivämäärä</label>
         <input type="date" id="f-date" class="e-nav">
-        <label>Alku KM (Mittarilukema)</label>
+        <label>Alku KM</label>
         <input type="number" id="f-ks" placeholder="0" class="e-nav">
         <div style="display:flex; gap:10px">
             <div style="flex:1"><label>Alku klo</label><input type="time" id="f-ts" class="e-nav" onchange="laskePvrahaAutomaatti()"></div>
@@ -93,12 +97,31 @@
 </div>
 
 <div id="p-report" class="page">
+    <div class="no-print">
+        <div class="filter-grid">
+            <div>
+                <label>Valitse Kuukausi</label>
+                <input type="month" id="rep-month-filter" onchange="paivitaRaportti()">
+            </div>
+            <div>
+                <label>Valitse Yhtiö</label>
+                <select id="rep-type-filter" onchange="paivitaRaportti()">
+                    <option value="Kaikki">Kaikki</option>
+                    <option value="Tmi">Vain Tmi</option>
+                    <option value="Oy">Vain Oy</option>
+                    <option value="Oma">Vain Oma</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
     <div style="text-align:center;">
-        <h2 id="rep-title">AJOPÄIVÄKIRJA 2026</h2>
+        <h2 id="report-title-display">AJOPÄIVÄKIRJA</h2>
         <p style="font-size:10px;">Verohallinnon ohjeen mukainen raportti (0,55 €/km)</p>
     </div>
+
     <div id="report-target"></div>
-    <button class="btn-save no-print" style="background:#000;" onclick="window.print()">TULOSTA PDF (VEROTTAJALLE)</button>
+    <button class="btn-save no-print" style="background:#000;" onclick="window.print()">TULOSTA PDF / ARKISTOI</button>
 </div>
 
 <datalist id="crm-datalist"></datalist>
@@ -109,13 +132,11 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let omatAjot = [], asiakkaat = [];
-
-// PÄIVITETTY KORVAUS 2026: 0,55 €/km
 const HINNAT = { "Osapäivä": 24, "Kokopäivä": 51, "Ateria": 12.75, "km": 0.55 };
 
 function esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-// ENTER-LOGIIKKA
+// ENTER-LOGIIKKA (v101.9 mukainen)
 document.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
         const active = document.activeElement;
@@ -224,10 +245,19 @@ db.ref('ajot').on('value', s => {
     paivitaRaportti();
 });
 
+// PÄIVITETTY RAPORTTI SORTAUKSELLA
 function paivitaRaportti() {
-    const m = new Date().toISOString().substring(0,7);
-    const data = omatAjot.filter(a => a.date?.startsWith(m)).sort((a,b) => a.date.localeCompare(b.date));
+    const selMonth = document.getElementById('rep-month-filter').value;
+    const selType = document.getElementById('rep-type-filter').value;
     
+    document.getElementById('report-title-display').innerText = `AJOPÄIVÄKIRJA ${selMonth} (${selType})`;
+
+    let data = omatAjot.filter(a => a.date?.startsWith(selMonth));
+    if (selType !== "Kaikki") {
+        data = data.filter(a => a.type === selType);
+    }
+    data.sort((a,b) => a.date.localeCompare(b.date));
+
     let html = `<table class="report-table"><thead><tr><th>PVM / KLO</th><th>REITTI JA TARKOITUS</th><th>MITTARILUKEMAT</th><th>KM</th><th>KORVAUS (€)</th></tr></thead><tbody>`;
 
     let tKm = 0, tEur = 0;
@@ -236,30 +266,26 @@ function paivitaRaportti() {
         const reitti = (a.stops || []).map(s => esc(s.client)).join(' -> ');
         const korvaus = (km * HINNAT.km) + (HINNAT[a.allowance] || 0);
         tKm += km; tEur += korvaus;
-
         html += `<tr><td>${esc(a.date)}<br>${esc(a.ts)}-${esc(a.te)}</td><td><b>${esc(a.type)}:</b> ${reitti || 'Suora ajo'}</td><td>${a.ks} - ${a.ke}</td><td>${km.toFixed(1)}</td><td>${korvaus.toFixed(2)}</td></tr>`;
     });
 
-    html += `</tbody></table><div class="summary-box"><b>KUUYHTEENVETO (${m}):</b><br>Kilometrit: ${tKm.toFixed(1)} km x 0,55 € = ${(tKm * 0.55).toFixed(2)} €<br>Päivärahat: ${(tEur - (tKm * 0.55)).toFixed(2)} €<br><b>YHTEENSÄ: ${tEur.toFixed(2)} €</b></div>`;
-    document.getElementById('report-target').innerHTML = html;
+    html += `</tbody></table><div class="summary-box"><b>YHTEENVETO: ${selMonth} / ${selType}</b><br>Kilometrit: ${tKm.toFixed(1)} km x 0,55 € = ${(tKm * 0.55).toFixed(2)} €<br>Päivärahat: ${(tEur - (tKm * 0.55)).toFixed(2)} €<br><b>YHTEENSÄ: ${tEur.toFixed(2)} €</b></div>`;
+    document.getElementById('report-target').innerHTML = data.length > 0 ? html : "<p>Ei ajoja valituilla suodattimilla.</p>";
 }
 
 function saveCrm() {
     const id = document.getElementById('c-id').value;
     const data = { name: document.getElementById('c-name').value, ytun: document.getElementById('c-ytun').value || "", addr: document.getElementById('c-addr').value || "", person: document.getElementById('c-person').value || "", email: document.getElementById('c-email').value || "", phone: document.getElementById('c-phone').value || "" };
     if(!data.name) return alert("Nimi pakollinen");
-    const ref = id ? db.ref('asiakkaat/'+id) : db.ref('asiakkaat').push();
-    ref.set(data).then(() => { alert("Tallennettu!"); resetCrm(); });
+    db.ref(id ? 'asiakkaat/'+id : 'asiakkaat').update(data).then(() => { alert("Tallennettu!"); resetCrm(); });
 }
 
 function resetCrm() { document.getElementById('c-id').value = ""; ['c-name','c-ytun','c-addr','c-person','c-email','c-phone'].forEach(i => document.getElementById(i).value = ""); }
-
 function editCrm(id) {
     const c = asiakkaat.find(x => x.id === id);
     document.getElementById('c-id').value = c.id; document.getElementById('c-name').value = c.name; document.getElementById('c-ytun').value = c.ytun || ""; document.getElementById('c-addr').value = c.addr || ""; document.getElementById('c-person').value = c.person || ""; document.getElementById('c-email').value = c.email || ""; document.getElementById('c-phone').value = c.phone || "";
     showPage('crm');
 }
-
 function editAjo(id) {
     const a = omatAjot.find(x=>x.id===id);
     document.getElementById('f-id').value = a.id; document.getElementById('f-date').value = a.date; document.getElementById('f-ks').value = a.ks; document.getElementById('f-ke').value = a.ke; document.getElementById('f-ts').value = a.ts || ""; document.getElementById('f-te').value = a.te || ""; document.getElementById('f-type').value = a.type; document.getElementById('f-allowance').value = a.allowance || '-';
@@ -267,12 +293,14 @@ function editAjo(id) {
     if(a.stops) a.stops.forEach(s => addStop(s.client, s.addr));
     toggleQuickMode(); showPage('input');
 }
-
 function showPage(p) { document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active')); document.getElementById('p-'+p).classList.add('active'); document.getElementById('tab-'+p).classList.add('active'); }
 function toggleArchive() { const h = document.getElementById('history-ui'); h.style.display = h.style.display === 'none' ? 'block' : 'none'; }
 
-document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v101.9)" : "○ OFFLINE"; });
+// ALUSTUS: Aseta tämä kuukausi suodattimeen oletuksena
+const today = new Date();
+document.getElementById('rep-month-filter').value = today.toISOString().substring(0,7);
+document.getElementById('f-date').value = today.toISOString().split('T')[0];
+db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v102.0)" : "○ OFFLINE"; });
 </script>
 </body>
 </html>
