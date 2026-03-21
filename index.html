@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v100.7</title>
+    <title>Päivyri v100.8</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -46,26 +46,26 @@
         <select id="f-type" onchange="toggleQuickMode()" class="e-nav">
             <option value="Tmi">Tmi (Työajo)</option>
             <option value="Oy">Oy (Työajo)</option>
-            <option value="Oma">Oma (Pika-ajo / Yksityinen)</option>
+            <option value="Oma">Oma (Pika-ajo)</option>
         </select>
 
         <div style="display:flex; gap:10px">
             <div style="flex:1.5"><label>Päivämäärä</label><input type="date" id="f-date" class="e-nav"></div>
-            <div style="flex:1"><label>Alku KM</label><input type="number" id="f-ks" placeholder="0" inputmode="decimal" class="e-nav"></div>
+            <div style="flex:1"><label>Alku KM</label><input type="number" id="f-ks" placeholder="0" class="e-nav"></div>
+        </div>
+
+        <div style="display:flex; gap:10px">
+            <div style="flex:1"><label>Alku klo (Pvraha)</label><input type="time" id="f-ts" class="e-nav" onchange="laskePvrahaAutomaatti()"></div>
+            <div style="flex:1"><label>Loppu klo (Pvraha)</label><input type="time" id="f-te" class="e-nav" onchange="laskePvrahaAutomaatti()"></div>
         </div>
 
         <div id="work-fields">
             <div id="stops-container"></div>
             <button class="mini-btn" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:40px; margin-bottom:15px;">+ LISÄÄ ASIAKASKÄYNTI</button>
-            
-            <div style="display:flex; gap:10px">
-                <div style="flex:1"><label>Alku klo</label><input type="time" id="f-ts" onchange="laskePvrahaAutomaatti()" class="e-nav"></div>
-                <div style="flex:1"><label>Loppu klo</label><input type="time" id="f-te" onchange="laskePvrahaAutomaatti()" class="e-nav"></div>
-            </div>
         </div>
 
         <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>Loppu KM</label><input type="number" id="f-ke" placeholder="0" inputmode="decimal" class="e-nav"></div>
+            <div style="flex:1"><label>Loppu KM</label><input type="number" id="f-ke" placeholder="0" class="e-nav"></div>
             <div style="flex:1"><label>Päiväraha</label>
                 <select id="f-allowance" class="e-nav">
                     <option value="-">-</option>
@@ -84,7 +84,7 @@
 
 <div id="p-crm" class="page">
     <div class="card">
-        <h3 id="crm-title">Asiakasrekisteri</h3>
+        <h3>Asiakasrekisteri</h3>
         <input type="hidden" id="c-id">
         <label>Nimi</label><input type="text" id="c-name" class="c-nav">
         <label>Osoite</label><input type="text" id="c-addr" class="c-nav">
@@ -118,19 +118,16 @@ const HINNAT = { "Osapäivä": 24, "Kokopäivä": 51, "Ateria": 12.75, "km": 0.5
 
 function esc(s) { return s ? String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ""; }
 
-// ENTER-LOGIIKKA (Varmistettu)
+// ENTER-LOGIIKKA (Korjattu ja varmistettu)
 document.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
         const active = document.activeElement;
-        // Syöttölehden logiikka
         if (active.classList.contains('e-nav')) {
             e.preventDefault();
             const all = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null);
             const idx = all.indexOf(active);
             if (idx < all.length - 1) all[idx+1].focus(); else tallennaAjo();
-        } 
-        // Asiakaslehden logiikka
-        else if (active.classList.contains('c-nav')) {
+        } else if (active.classList.contains('c-nav')) {
             e.preventDefault();
             const all = Array.from(document.querySelectorAll('.c-nav'));
             const idx = all.indexOf(active);
@@ -202,22 +199,6 @@ function nollaaLomake() {
     document.getElementById('f-allowance').value = "-";
 }
 
-function saveCrm() {
-    const id = document.getElementById('c-id').value;
-    const data = {
-        name: document.getElementById('c-name').value.trim(),
-        addr: document.getElementById('c-addr').value.trim(),
-        phone: document.getElementById('c-phone').value.trim()
-    };
-    if(!data.name) return;
-    const ref = id ? db.ref('asiakkaat/'+id) : db.ref('asiakkaat').push();
-    ref.set(data).then(() => { alert("Asiakas tallennettu!"); resetCrm(); });
-}
-
-function resetCrm() {
-    ['c-id','c-name','c-addr','c-phone'].forEach(i=>document.getElementById(i).value="");
-}
-
 function laskePvrahaAutomaatti() {
     const s = document.getElementById('f-ts').value, e = document.getElementById('f-te').value;
     if(!s || !e) return;
@@ -259,6 +240,11 @@ function editAjo(id) {
     showPage('input');
 }
 
+function saveCrm() {
+    const data = { name: document.getElementById('c-name').value, addr: document.getElementById('c-addr').value, phone: document.getElementById('c-phone').value };
+    db.ref('asiakkaat').push(data).then(() => { alert("Asiakas tallennettu!"); document.querySelectorAll('.c-nav').forEach(i=>i.value=""); });
+}
+
 function editCrm(id) {
     const c = asiakkaat.find(x => x.id === id);
     document.getElementById('c-id').value = c.id;
@@ -295,7 +281,7 @@ function toggleArchive() {
 }
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v100.7)" : "○ OFFLINE"; });
+db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v100.8)" : "○ OFFLINE"; });
 </script>
 </body>
 </html>
