@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.79</title>
+    <title>Päivyri v5.80</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -17,27 +17,32 @@
         .page { display: none; padding: 15px; }
         .page.active { display: block; }
         .card { background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        
         .mode-switch { display: flex; background: #e2e8f0; padding: 4px; border-radius: 10px; margin-bottom: 15px; }
         .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: 800; font-size: 11px; cursor: pointer; background: transparent; color: #64748b; }
         .mode-btn.active { background: white; color: var(--ac); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
         input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 10px; }
         input:focus { border-color: var(--ac); outline: none; background: #f0f7ff; }
+
         .btn-save { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; width: 100%; font-weight: 800; cursor: pointer; font-size: 16px; margin-bottom: 10px; }
         .stop-row { background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 10px; border-left: 6px solid var(--ac); position: relative; }
+        
         table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; background: white; }
         th, td { border: 1px solid #000; padding: 6px; text-align: left; }
-        th { background: #eee; }
-        .action-btns { display: flex; gap: 5px; margin-top: 5px; }
-        .mini-btn { padding: 5px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; }
+        th { background: #eee; text-transform: uppercase; font-size: 9px; }
+
+        .mini-btn { padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; margin-right: 5px; }
         .edit-btn { background: var(--ac); color: white; }
         .del-btn { background: var(--err); color: white; }
-        @media print { .no-print { display: none !important; } .page { display: none !important; } #p-report { display: block !important; } }
+
+        @media print { .no-print { display: none !important; } .page { display: none !important; } #p-report { display: block !important; } .card { box-shadow: none; border: none; } }
     </style>
 </head>
 <body>
 
-<div id="sync-status" class="status-bar no-print">Ladataan...</div>
+<div id="sync-status" class="status-bar no-print">YHDISTETÄÄN...</div>
 
 <div class="tabs no-print">
     <div class="tab active" id="t-input" onclick="showPage('input')">Syöte</div>
@@ -53,46 +58,53 @@
 
     <div class="card">
         <input type="hidden" id="f-id">
-        <label>Päivämäärä</label><input type="date" id="f-date">
+        <label>1. Päivämäärä</label><input type="date" id="f-date" class="main-ent">
         
+        <div style="display:flex; gap:10px">
+            <div style="flex:1"><label>2. Alku klo</label><input type="time" id="f-ts" class="main-ent"></div>
+            <div style="flex:1"><label>3. Alku KM</label><input type="number" id="f-ks" class="main-ent"></div>
+        </div>
+
         <div id="simple-section">
-            <label>Asiakas / Kohde</label>
-            <input type="text" id="f-client-simple" placeholder="Nimi" list="crm-datalist">
-            <div style="display:flex; gap:10px">
-                <div style="flex:1"><label>Alku klo</label><input type="time" id="f-ts"></div>
-                <div style="flex:1"><label>Loppu klo</label><input type="time" id="f-te"></div>
-            </div>
+            <label>4. Kohde / Asiakas</label>
+            <input type="text" id="f-client-simple" class="main-ent" placeholder="Kirjoita kohteen nimi" list="crm-datalist">
         </div>
 
         <div id="crm-section" style="display:none;">
-            <label>CRM Pysähdykset</label>
+            <label>4. Pysähdykset</label>
             <div id="stops-container"></div>
             <button class="mode-btn" onclick="addStop()" style="background:var(--ac); color:white; width:100%; margin-bottom:15px;">+ LISÄÄ PYSÄHDYS</button>
         </div>
 
         <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>KM Alku</label><input type="number" id="f-ks"></div>
-            <div style="flex:1"><label>KM Loppu</label><input type="number" id="f-ke"></div>
+            <div style="flex:1"><label>5. Loppu klo</label><input type="time" id="f-te" class="main-ent"></div>
+            <div style="flex:1"><label>6. Loppu KM</label><input type="number" id="f-ke" class="main-ent"></div>
         </div>
 
-        <label>Yritys</label>
-        <select id="f-type"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option></select>
+        <label>7. Yritys</label>
+        <select id="f-type" class="main-ent">
+            <option value="Tmi">Tmi</option>
+            <option value="Oy">Oy</option>
+            <option value="Oma">Oma</option>
+        </select>
+
         <button class="btn-save" onclick="tallennaPaiva()">TALLENNA PÄIVÄ</button>
+        <button class="mode-btn no-print" onclick="vieKalenteriin()" style="background:#4285f4; color:white; width:100%; margin-bottom:10px;">📅 VIE KALENTERIIN</button>
         <button class="mode-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%;">NÄYTÄ ARKISTO</button>
     </div>
-    <div id="history-ui" style="display:none;"></div>
+    <div id="history-ui" style="display:none;" class="no-print"></div>
 </div>
 
 <div id="p-crm" class="page">
     <div class="card">
-        <h3 id="crm-title">Uusi Asiakas</h3>
+        <h3 id="crm-title" style="margin-top:0">Uusi Asiakas</h3>
         <input type="hidden" id="c-id">
-        <input type="text" id="c-name" placeholder="Yrityksen nimi">
-        <input type="text" id="c-addr" placeholder="Osoite">
-        <input type="text" id="c-contact" placeholder="Yhteyshenkilö">
-        <input type="tel" id="c-phone" placeholder="Puhelin">
-        <input type="email" id="c-email" placeholder="Sähköposti">
-        <button class="btn-save" id="crm-save-btn" onclick="saveCustomerFromUI()">TALLENNA REKISTERIIN</button>
+        <label>Yritys</label><input type="text" id="c-name" class="crm-ent">
+        <label>Osoite</label><input type="text" id="c-addr" class="crm-ent">
+        <label>Yhteyshenkilö</label><input type="text" id="c-contact" class="crm-ent">
+        <label>Puhelin</label><input type="tel" id="c-phone" class="crm-ent">
+        <label>Email</label><input type="email" id="c-email" class="crm-ent">
+        <button class="btn-save" id="crm-save-btn" onclick="saveCrmFromUI()">TALLENNA REKISTERIIN</button>
         <button class="mode-btn" id="crm-cancel-btn" style="display:none;" onclick="cancelCrmEdit()">PERUUTA</button>
     </div>
     <div id="crm-list-container"></div>
@@ -100,8 +112,8 @@
 
 <div id="p-report" class="page">
     <div class="card no-print">
-        <label>Kuukausi</label><select id="f-rep-month" onchange="paivitaRaportti()"></select>
-        <label>Tyyppi</label><select id="f-rep-type" onchange="paivitaRaportti()"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option></select>
+        <label>Valitse Kuukausi</label><select id="f-rep-month" onchange="paivitaRaportti()"></select>
+        <label>Yritystyyppi</label><select id="f-rep-type" onchange="paivitaRaportti()"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option></select>
     </div>
     <div id="report-target"></div>
     <button class="btn-save no-print" style="background:#000; margin-top:10px;" onclick="window.print()">TULOSTA PDF</button>
@@ -115,7 +127,26 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 let omatAjot = [], asiakkaat = [], currentMode = 'simple';
 
-// --- CRM LOGIIKKA ---
+// --- ENTER LOGIIKKA (UNIVERSAALI) ---
+function setupEnter(selector, callback) {
+    const fields = document.querySelectorAll(selector);
+    fields.forEach((f, i) => {
+        f.onkeydown = e => {
+            if(e.key === 'Enter') {
+                e.preventDefault();
+                if(i < fields.length - 1) fields[i+1].focus();
+                else if(callback) callback();
+            }
+        };
+    });
+}
+
+// Alusta syöttösivun Enterit
+setupEnter('.main-ent', tallennaPaiva);
+// Alusta CRM-sivun Enterit
+setupEnter('.crm-ent', saveCrmFromUI);
+
+// --- CRM TOIMINNOT ---
 
 function addStop(val = "", addr = "", time = "") {
     const container = document.getElementById('stops-container');
@@ -123,44 +154,39 @@ function addStop(val = "", addr = "", time = "") {
     const now = new Date().toLocaleTimeString('fi-FI', {hour: '2-digit', minute:'2-digit'});
     div.className = 'stop-row';
     div.innerHTML = `
-        <label>Kello</label><input type="time" class="s-time" value="${time || now}">
-        <label>Asiakas</label><input type="text" class="s-client" value="${val}" list="crm-datalist" placeholder="Etsi tai kirjoita uusi">
-        <label>Osoite</label><input type="text" class="s-addr" value="${addr}" placeholder="Tallentuu autom. rekisteriin">
+        <label>Kello</label><input type="time" class="s-time s-ent" value="${time || now}">
+        <label>Asiakas</label><input type="text" class="s-client s-ent" value="${val}" list="crm-datalist">
+        <label>Osoite</label><input type="text" class="s-addr s-ent" value="${addr}">
         <span onclick="this.parentElement.remove()" style="position:absolute;right:10px;top:10px;color:red;font-weight:800;cursor:pointer;">✕</span>
     `;
     container.appendChild(div);
-
-    // Enter-sääntö pysähdyksen sisällä
-    const inputs = div.querySelectorAll('input');
-    inputs.forEach((inp, idx) => {
-        inp.addEventListener('keydown', e => {
+    
+    // Aktivoi Enter-ketju uudelle riville
+    const sFields = div.querySelectorAll('.s-ent');
+    sFields.forEach((sf, si) => {
+        sf.onkeydown = e => {
             if(e.key === 'Enter') {
                 e.preventDefault();
-                if(idx < inputs.length - 1) inputs[idx+1].focus();
+                if(si < sFields.length - 1) sFields[si+1].focus();
                 else {
-                    // Kun osoite (viimeinen) on täytetty, tallennetaan asiakas heti taustalla
-                    const cName = div.querySelector('.s-client').value;
-                    const cAddr = div.querySelector('.s-addr').value;
-                    if(cName) silentSaveCustomer(cName, cAddr);
-                    div.style.borderColor = "#10b981"; // Vilauttaa vihreää merkiksi tallennuksesta
+                    const name = div.querySelector('.s-client').value;
+                    const addr = div.querySelector('.s-addr').value;
+                    if(name) silentSaveCrm(name, addr);
+                    div.style.borderLeftColor = "#10b981";
                 }
             }
-        });
+        };
     });
-    inputs[1].focus(); // Kohdistetaan nimeen suoraan
+    sFields[1].focus();
 }
 
-function silentSaveCustomer(name, addr) {
-    if(!name) return;
-    const existing = asiakkaat.find(c => c.name.toLowerCase() === name.toLowerCase());
-    if(!existing) {
-        db.ref('asiakkaat').push({ name, addr, contact: '', phone: '', email: '' });
-    } else if(addr && !existing.addr) {
-        db.ref('asiakkaat/' + existing.id).update({ addr: addr });
-    }
+function silentSaveCrm(name, addr) {
+    const exists = asiakkaat.find(c => c.name.toLowerCase() === name.toLowerCase());
+    if(!exists) db.ref('asiakkaat').push({ name, addr, contact: '', phone: '', email: '' });
+    else if(addr && !exists.addr) db.ref('asiakkaat/' + exists.id).update({ addr });
 }
 
-function saveCustomerFromUI() {
+function saveCrmFromUI() {
     const id = document.getElementById('c-id').value;
     const data = {
         name: document.getElementById('c-name').value,
@@ -169,7 +195,7 @@ function saveCustomerFromUI() {
         phone: document.getElementById('c-phone').value,
         email: document.getElementById('c-email').value
     };
-    if(!data.name) return alert("Nimi tarvitaan");
+    if(!data.name) return;
     if(id) db.ref('asiakkaat/'+id).set(data);
     else db.ref('asiakkaat').push(data);
     cancelCrmEdit();
@@ -184,8 +210,8 @@ function editCrm(id) {
     document.getElementById('c-contact').value = c.contact || '';
     document.getElementById('c-phone').value = c.phone || '';
     document.getElementById('c-email').value = c.email || '';
-    document.getElementById('crm-title').innerText = "Muokkaa asiakasta";
-    document.getElementById('crm-save-btn').innerText = "PÄIVITÄ TIEDOT";
+    document.getElementById('crm-title').innerText = "Muokkaa Asiakasta";
+    document.getElementById('crm-save-btn').innerText = "PÄIVITÄ";
     document.getElementById('crm-cancel-btn').style.display = "block";
     window.scrollTo(0,0);
 }
@@ -202,15 +228,15 @@ db.ref('asiakkaat').on('value', s => {
     document.getElementById('crm-datalist').innerHTML = asiakkaat.map(c => `<option value="${c.name}">`).join('');
     document.getElementById('crm-list-container').innerHTML = asiakkaat.map(c => `
         <div class="card">
-            <b>${c.name}</b><br><small>${c.addr || 'Ei osoitetta'}</small>
-            <div class="action-btns">
+            <b>${c.name}</b><br><small>${c.addr || '-'}</small>
+            <div style="margin-top:10px">
                 <button class="mini-btn edit-btn" onclick="editCrm('${c.id}')">Muokkaa</button>
-                <button class="mini-btn del-btn" onclick="if(confirm('Poistetaanko?')) db.ref('asiakkaat/${c.id}').remove()">Poista</button>
+                <button class="mini-btn del-btn" onclick="if(confirm('Poista?')) db.ref('asiakkaat/${c.id}').remove()">Poista</button>
             </div>
         </div>`).reverse().join('');
 });
 
-// --- AJOTALLENNUS ---
+// --- AJOT JA RAPORTIT ---
 
 function tallennaPaiva() {
     const id = document.getElementById('f-id').value || "p_" + Date.now();
@@ -231,7 +257,10 @@ function tallennaPaiva() {
         stops: stops
     };
 
-    db.ref('ajot/' + id).set(data).then(() => { alert("Tallennettu!"); resetForm(); });
+    db.ref('ajot/' + id).set(data).then(() => { 
+        alert("Päivä tallennettu!"); 
+        resetForm(); 
+    });
 }
 
 function paivitaRaportti() {
@@ -242,26 +271,33 @@ function paivitaRaportti() {
     let rows = "";
     data.forEach(a => {
         const km = (a.ke || 0) - (a.ks || 0);
-        // Aloitusrivi
-        rows += `<tr style="background:#f1f5f9; font-weight:800;"><td>${a.date.split('-').reverse().join('.')}</td><td>${a.ts||'-'}</td><td>ALOITUS (KM: ${a.ks})</td><td>-</td></tr>`;
-        
-        // Pysähdykset
+        // ALOITUS
+        rows += `<tr style="background:#eee; font-weight:800;"><td>${a.date.split('-').reverse().join('.')}</td><td>${a.ts}</td><td>ALOITUS</td><td>Mittarilukema: ${a.ks}</td><td>-</td></tr>`;
+        // PYSÄHDYKSET
         if(a.mode === 'full' && a.stops) {
             a.stops.forEach(s => {
-                rows += `<tr><td></td><td>${s.time}</td><td>${s.client}</td><td>${s.addr || ''}</td></tr>`;
+                rows += `<tr><td></td><td>${s.time}</td><td>KÄYNTI: ${s.client}</td><td>${s.addr || '-'}</td><td>-</td></tr>`;
             });
         } else {
-            rows += `<tr><td></td><td>${a.ts||''}</td><td>${a.simpleClient || '-'}</td><td>-</td></tr>`;
+            rows += `<tr><td></td><td>${a.ts}</td><td>KÄYNTI: ${a.simpleClient}</td><td>-</td><td>-</td></tr>`;
         }
-        
-        // Lopetusrivi
-        rows += `<tr style="border-bottom: 2px solid #000;"><td></td><td>${a.te||'-'}</td><td>LOPETUS (KM: ${a.ke})</td><td align="right"><b>${km.toFixed(1)} km</b></td></tr>`;
+        // LOPETUS
+        rows += `<tr style="border-bottom:2px solid #000;"><td></td><td>${a.te}</td><td>LOPETUS</td><td>Mittarilukema: ${a.ke}</td><td align="right"><b>${km.toFixed(1)} km</b></td></tr>`;
     });
 
-    document.getElementById('report-target').innerHTML = `<h3>Matkalasku: ${t} - ${m}</h3><table><thead><tr><th>PVM</th><th>KLO</th><th>KOHDE / ASIAKAS</th><th>OSOITE / KM</th></tr></thead><tbody>${rows}</tbody></table>`;
+    document.getElementById('report-target').innerHTML = `
+        <h3>AJOPÄIVÄKIRJA: ${t} (${m})</h3>
+        <table>
+            <thead><tr><th>PVM</th><th>KLO</th><th>TAPAHTUMA</th><th>OSOITE / HUOMIO</th><th>KM</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
 }
 
-// --- APUFUNKTIOT ---
+function vieKalenteriin() {
+    const pvm = document.getElementById('f-date').value.replace(/-/g, '');
+    const kohde = encodeURIComponent(document.getElementById('f-client-simple').value || "Työajo");
+    window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${kohde}&dates=${pvm}T080000/${pvm}T160000`, '_blank');
+}
 
 function setMode(m) {
     currentMode = m;
@@ -271,16 +307,11 @@ function setMode(m) {
     document.getElementById('crm-section').style.display = m === 'full' ? 'block' : 'none';
 }
 
-function showPage(p) {
-    document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('p-' + p).classList.add('active');
-    document.getElementById('t-' + p).classList.add('active');
-}
-
 function resetForm() {
     ['f-id','f-ks','f-ke','f-ts','f-te','f-client-simple'].forEach(i=>document.getElementById(i).value="");
     document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('stops-container').innerHTML = "";
+    setupEnter('.main-ent', tallennaPaiva);
 }
 
 db.ref('ajot').on('value', snap => {
@@ -294,8 +325,14 @@ db.ref('ajot').on('value', snap => {
 
 function paivitaArkisto() {
     const h = [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(a => `
-        <div class="card" style="font-size:12px"><b>${a.date}</b>: ${a.simpleClient || (a.stops ? a.stops.length+' pysähdystä' : 'Ajo')}</div>`).join('');
+        <div class="card" style="font-size:12px"><b>${a.date}</b> | ${a.simpleClient || 'Laaja ajo'}</div>`).join('');
     document.getElementById('history-ui').innerHTML = h;
+}
+
+function showPage(p) {
+    document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('p-' + p).classList.add('active');
+    document.getElementById('t-' + p).classList.add('active');
 }
 
 function toggleArchive() {
@@ -305,7 +342,9 @@ function toggleArchive() {
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 db.ref(".info/connected").on("value", s => {
-    document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA" : "○ OFFLINE";
+    const st = document.getElementById("sync-status");
+    st.innerText = s.val() ? "● LINJOILLA" : "○ OFFLINE";
+    st.style.color = s.val() ? "#10b981" : "#ef4444";
 });
 </script>
 </body>
