@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.70 - CRM</title>
+    <title>Päivyri v5.71</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -15,9 +15,8 @@
         .tab.active { color: var(--ac); border-bottom: 4px solid var(--ac); background: #f1f5f9; }
         .page { display: none; padding: 15px; }
         .page.active { display: block; }
-        .card { background: #fff; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .card { background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; }
         
-        /* Modetulostus */
         .mode-switch { display: flex; background: #e2e8f0; padding: 4px; border-radius: 10px; margin-bottom: 15px; }
         .mode-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 10px; cursor: pointer; background: transparent; color: #64748b; }
         .mode-btn.active { background: white; color: var(--ac); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -30,13 +29,14 @@
         .btn-save { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; width: 100%; font-weight: 800; cursor: pointer; font-size: 16px; }
         
         .status-bar { font-size: 10px; text-align: center; padding: 6px; font-weight: 800; background: #fff; border-bottom: 1px solid #eee; }
+        .action-link { font-size: 11px; font-weight: 800; cursor: pointer; margin-right: 15px; text-transform: uppercase; }
         
         @media print { .no-print, .tabs, .status-bar, .mode-switch, .btn-add-stop { display: none !important; } .page { display: block !important; } }
     </style>
 </head>
 <body>
 
-<div id="sync-status" class="status-bar">Yhdistetään...</div>
+<div id="sync-status" class="status-bar">Ladataan...</div>
 
 <div class="tabs no-print">
     <div class="tab active" id="t-input" onclick="showPage('input')">Syöte</div>
@@ -56,19 +56,19 @@
         <input type="date" id="f-date">
 
         <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>Päivä Alku</label><input type="time" id="f-ts" onchange="laskeKesto()"></div>
-            <div style="flex:1"><label>Päivä Loppu</label><input type="time" id="f-te" onchange="laskeKesto()"></div>
+            <div style="flex:1"><label>Alku</label><input type="time" id="f-ts" onchange="laskeKesto()"></div>
+            <div style="flex:1"><label>Loppu</label><input type="time" id="f-te" onchange="laskeKesto()"></div>
         </div>
 
         <div id="crm-section" style="display:none;">
             <label>Päivän pysähdykset (CRM)</label>
             <div id="stops-container"></div>
-            <button class="btn-add-stop" onclick="addStop()">+ LISÄÄ PYSÄHDYS / ASIAKAS</button>
+            <button class="btn-add-stop" onclick="addStop()">+ LISÄÄ ASIAKAS PYSÄHDYS</button>
         </div>
 
         <div id="simple-section">
-            <label>Kohde / Selite</label>
-            <input type="text" id="f-client-simple" placeholder="Esim. Asiakas x tai Reitti y">
+            <label>Kohde / Reitti (Suppea)</label>
+            <input type="text" id="f-client-simple" placeholder="Esim. Reitti x">
         </div>
 
         <div style="display:flex; gap:10px">
@@ -76,176 +76,151 @@
             <div style="flex:1"><label>KM Loppu</label><input type="number" id="f-ke" placeholder="0"></div>
         </div>
 
-        <label>Yritys</label>
-        <select id="f-type"><option value="Tmi">Tmi (Toiminimi)</option><option value="Oy">Oy (Osakeyhtiö)</option></select>
+        <label>Yritys / Tyyppi</label>
+        <select id="f-type">
+            <option value="Tmi">Tmi (Toiminimi)</option>
+            <option value="Oy">Oy (Osakeyhtiö)</option>
+            <option value="Oma">Oma (Ei korvauksia)</option>
+        </select>
 
-        <div id="duration-res" style="font-size:11px; font-weight:800; color:var(--ac); margin-bottom:10px;">Kesto: 0h -> PR: 0€</div>
+        <div id="duration-res" style="font-size:11px; font-weight:800; color:var(--ac); margin-bottom:10px;">PR: 0€</div>
 
         <button class="btn-save" onclick="tallennaPaiva()">TALLENNA PÄIVÄ</button>
     </div>
-</div>
+    <div id="history-ui"></div> </div>
 
 <div id="p-crm" class="page">
     <div class="card">
-        <label>Lisää uusi asiakas rekisteriin</label>
-        <input type="text" id="crm-name" placeholder="Asiakkaan nimi">
-        <input type="text" id="crm-addr" placeholder="Osoite (valinnainen)">
-        <button class="btn-add-stop" onclick="saveCustomer()">TALLENNA ASIAKAS</button>
+        <label>Nimi</label><input type="text" id="crm-name">
+        <label>Osoite</label><input type="text" id="crm-addr">
+        <button class="btn-add-stop" onclick="saveCustomer()">LISÄÄ REKISTERIIN</button>
     </div>
     <div id="crm-list"></div>
 </div>
 
 <div id="p-report" class="page">
     <div class="card no-print">
-        <label>Kuukausi</label><select id="f-rep-month" onchange="paivitaRaportti()"></select>
-        <label>Yritys</label><select id="f-rep-type" onchange="paivitaRaportti()"><option value="Tmi">Tmi</option><option value="Oy">Oy</option></select>
+        <label>Kuu</label><select id="f-rep-month" onchange="paivitaUI()"></select>
+        <label>Tyyppi</label><select id="f-rep-type" onchange="paivitaUI()"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option></select>
     </div>
     <div id="report-target"></div>
+    <button class="no-print" onclick="window.print()" style="margin-top:10px; width:100%; padding:10px; background:#000; color:#fff; border-radius:10px; border:none; font-weight:800;">TULOSTA PDF</button>
 </div>
 
 <script>
 const firebaseConfig = { databaseURL: "https://paivuri-default-rtdb.europe-west1.firebasedatabase.app/" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+let omatAjot = [], asiakkaat = [], currentMode = 'simple';
 
-let omatAjot = [];
-let asiakkaat = [];
-let currentMode = 'simple';
-
-// --- CRM LOGIIKKA ---
-function saveCustomer() {
-    const name = document.getElementById('crm-name').value;
-    if(!name) return;
-    db.ref('asiakkaat').push({ name, addr: document.getElementById('crm-addr').value });
-    document.getElementById('crm-name').value = "";
-    document.getElementById('crm-addr').value = "";
-}
-
+function saveCustomer() { const n = document.getElementById('crm-name').value; if(n) db.ref('asiakkaat').push({name:n, addr:document.getElementById('crm-addr').value}).then(()=>{document.getElementById('crm-name').value="";document.getElementById('crm-addr').value=""}); }
 db.ref('asiakkaat').on('value', s => {
     asiakkaat = s.val() ? Object.values(s.val()) : [];
-    let h = "<h3>Asiakasrekisteri</h3>";
-    asiakkaat.forEach(c => { h += `<div class="card" style="padding:10px; margin-bottom:5px;"><b>${c.name}</b><br><small>${c.addr||''}</small></div>`; });
-    document.getElementById('crm-list').innerHTML = h;
+    let h = asiakkaat.map(c => `<div class="card" style="padding:10px; margin-bottom:5px;"><b>${c.name}</b><small> ${c.addr||''}</small></div>`).join('');
+    document.getElementById('crm-list').innerHTML = h || "Rekisteri tyhjä.";
 });
 
-// --- PYSÄHDYSTEN HALLINTA ---
-function addStop(val = "") {
-    const container = document.getElementById('stops-container');
-    const div = document.createElement('div');
-    div.className = 'stop-row';
-    let options = asiakkaat.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    div.innerHTML = `
-        <select class="stop-client">${val ? `<option value="${val}">${val}</option>` : '<option value="">Valitse asiakas...</option>'}${options}</select>
-        <input type="text" class="stop-note" placeholder="Muistiinpanot tapaamisesta">
-        <span onclick="this.parentElement.remove()" style="position:absolute; right:10px; top:10px; color:red; font-weight:800; cursor:pointer;">X</span>
-    `;
-    container.appendChild(div);
+function addStop(val = "", note = "") {
+    const d = document.createElement('div'); d.className = 'stop-row';
+    let opts = asiakkaat.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    d.innerHTML = `<select class="stop-client"><option value="${val}">${val || 'Valitse...'}</option>${opts}</select><input type="text" class="stop-note" placeholder="Muistiinpano" value="${note}"><span onclick="this.parentElement.remove()" style="position:absolute; right:10px; top:10px; color:red; cursor:pointer;">X</span>`;
+    document.getElementById('stops-container').appendChild(d);
 }
 
-// --- LASKENTA ---
 function laskeKesto() {
-    const ts = document.getElementById('f-ts').value;
-    const te = document.getElementById('f-te').value;
+    const ts = document.getElementById('f-ts').value, te = document.getElementById('f-te').value;
     if(ts && te) {
-        const [h1, m1] = ts.split(':').map(Number);
-        const [h2, m2] = te.split(':').map(Number);
-        let d = (h2 * 60 + m2) - (h1 * 60 + m1);
-        if(d < 0) d += 1440;
-        const h = d / 60;
-        let pr = h > 10 ? 54 : (h > 6 ? 25 : 0);
-        document.getElementById('duration-res').innerText = `Kesto: ${h.toFixed(2)}h -> Päiväraha: ${pr}€`;
+        const [h1, m1] = ts.split(':').map(Number), [h2, m2] = te.split(':').map(Number);
+        let d = (h2 * 60 + m2) - (h1 * 60 + m1); if(d < 0) d += 1440;
+        const h = d / 60, pr = h > 10 ? 54 : (h > 6 ? 25 : 0);
+        document.getElementById('duration-res').innerText = `PR: ${pr}€ (${h.toFixed(1)}h)`;
         return pr;
-    }
-    return 0;
+    } return 0;
 }
 
-// --- TALLENNUS ---
 function tallennaPaiva() {
     const id = document.getElementById('f-id').value || "p_" + Date.now();
-    const stops = Array.from(document.querySelectorAll('.stop-row')).map(row => ({
-        client: row.querySelector('.stop-client').value,
-        note: row.querySelector('.stop-note').value
-    }));
+    const stops = Array.from(document.querySelectorAll('.stop-row')).map(r => ({client: r.querySelector('.stop-client').value, note: r.querySelector('.stop-note').value}));
+    const pd = laskeKesto();
+    const ajo = { id, date: document.getElementById('f-date').value, ts: document.getElementById('f-ts').value, te: document.getElementById('f-te').value, ks: parseFloat(document.getElementById('f-ks').value) || 0, ke: parseFloat(document.getElementById('f-ke').value) || 0, type: document.getElementById('f-type').value, mode: currentMode, simpleClient: document.getElementById('f-client-simple').value, stops: stops, perdiem: pd };
+    db.ref('ajot/' + id).set(ajo).then(() => { resetForm(); showPage('stats'); });
+}
 
-    const ajo = {
-        id,
-        date: document.getElementById('f-date').value,
-        ts: document.getElementById('f-ts').value,
-        te: document.getElementById('f-te').value,
-        ks: parseFloat(document.getElementById('f-ks').value) || 0,
-        ke: parseFloat(document.getElementById('f-ke').value) || 0,
-        type: document.getElementById('f-type').value,
-        mode: currentMode,
-        simpleClient: document.getElementById('f-client-simple').value,
-        stops: stops,
-        perdiem: laskeKesto()
-    };
-
-    db.ref('ajot/' + id).set(ajo).then(() => {
-        alert("Päivä tallennettu!");
-        location.reload(); // Tyhjennetään kaikki
+// --- YHTEENSOPIVUUSKORJAUS RAPORTTEIHIN ---
+function paivitaUI() {
+    // Arkisto
+    let h = "";
+    [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).forEach(a => {
+        h += `<div class="card" style="border-left:8px solid ${a.type=='Oma'?'#cbd5e1':a.type=='Oy'?'#2563eb':'#10b981'}; padding:12px; margin-bottom:8px;">
+            <b>${a.date.split('-').reverse().join('.')}</b> | ${a.type}<br><small>KM: ${a.ke-a.ks} | PR: ${a.perdiem}€</small>
+            <div style="margin-top:10px;">
+                <span class="action-link" style="color:blue;" onclick="muokkaa('${a.id}')">Muokkaa</span>
+                <span class="action-link" style="color:red;" onclick="poista('${a.id}')">Poista</span>
+            </div>
+        </div>`;
     });
-}
+    document.getElementById('history-ui').innerHTML = h;
 
-// --- RAPORTOINTI ---
-function paivitaRaportti() {
-    const m = document.getElementById('f-rep-month').value;
-    const t = document.getElementById('f-rep-type').value;
-    const data = omatAjot.filter(a => a.date.startsWith(m) && a.type === t).sort((a,b)=>a.date.localeCompare(b.date));
-    
-    let rows = "", tKm = 0, tPr = 0;
-    data.forEach(a => {
-        const km = a.ke - a.ks;
-        tKm += km; tPr += a.perdiem;
-        let kohdeText = a.mode === 'full' ? a.stops.map(s => s.client).join(' -> ') : a.simpleClient;
-        rows += `<tr>
-            <td>${a.date.split('-').reverse().join('.')}</td>
-            <td>${a.ts}-${a.te}</td>
-            <td>${kohdeText}</td>
-            <td>${km.toFixed(1)}</td>
-            <td>${a.perdiem}€</td>
-        </tr>`;
-    });
-
-    document.getElementById('report-target').innerHTML = `
-        <table width="100%" border="1" style="border-collapse:collapse; font-size:12px; margin-top:10px;">
-            <thead><tr><th>PVM</th><th>AIKA</th><th>REITTI / ASIAKKAAT</th><th>KM</th><th>PR</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>
-        <div style="margin-top:15px; font-weight:800;">
-            YHTEENSÄ: ${tKm.toFixed(1)} km (${(tKm*0.53).toFixed(2)}€) + PR: ${tPr}€ = ${(tKm*0.53 + tPr).toFixed(2)}€
-        </div>
-    `;
-}
-
-// --- APUTOIMINNOT ---
-function setMode(m) {
-    currentMode = m;
-    document.getElementById('m-simple').classList.toggle('active', m === 'simple');
-    document.getElementById('m-full').classList.toggle('active', m === 'full');
-    document.getElementById('simple-section').style.display = m === 'simple' ? 'block' : 'none';
-    document.getElementById('crm-section').style.display = m === 'full' ? 'block' : 'none';
-}
-
-function showPage(p) {
-    document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('p-' + p).classList.add('active');
-    document.getElementById('t-' + p).classList.add('active');
-}
-
-db.ref('ajot').on('value', snap => {
-    omatAjot = snap.val() ? Object.values(snap.val()) : [];
-    const mSel = document.getElementById('f-rep-month');
+    // Raportti
+    const m = document.getElementById('f-rep-month').value, t = document.getElementById('f-rep-type').value;
     const kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0,7)))].sort().reverse();
     if(mSel.innerHTML === "" && kuukaudet.length > 0) mSel.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join('');
-    paivitaRaportti();
-});
 
-db.ref(".info/connected").on("value", s => {
-    document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA" : "○ OFFLINE";
-});
+    if(m) {
+        const data = omatAjot.filter(a => a.date.startsWith(m) && a.type === t).sort((a,b)=>a.date.localeCompare(b.date));
+        let rows = "", tKm = 0, tPr = 0;
+        
+        data.forEach(a => {
+            const km = a.ke - a.ks;
+            tKm += km; tPr += (a.perdiem||0);
+            
+            // Yhteensopivuus: haetaan 'client' tai 'simpleClient' tai stops-listasta
+            let kohdeText = a.client || a.simpleClient || (a.stops ? a.stops.map(s => s.client).join(' -> ') : 'Ajo');
+            let aika = (a.ts && a.te) ? `${a.ts}-${a.te}` : (a.mode === 'full' ? 'Ketju' : 'Ajo');
 
+            rows += `<tr>
+                <td>${a.date.split('-').reverse().join('.')}</td>
+                <td>${aika}</td>
+                <td>${kohdeText}</td>
+                <td style="text-align:right;">${km.toFixed(1)}</td>
+                <td style="text-align:right;">${(a.perdiem||0)}€</td>
+            </tr>`;
+        });
+
+        document.getElementById('report-target').innerHTML = `
+            <h3>Matkalasku: ${t} (${m})</h3>
+            <table width="100%" border="1" style="border-collapse:collapse; font-size:11px;">
+                <thead><tr><th>PVM</th><th>AIKA</th><th>REITTI / ASIAKKAAT</th><th>KM</th><th>PR</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            <div style="margin-top:10px; font-weight:800; font-size:12px;">
+                YHTEENSÄ: ${tKm.toFixed(1)} km (${(tKm*0.53).toFixed(2)}€) + PR: ${tPr}€ = ${(tKm*0.53 + tPr).toFixed(2)}€
+            </div>
+        `;
+    }
+}
+
+db.ref('ajot').on('value', snap => { omatAjot = snap.val() ? Object.values(snap.val()) : []; const kuukaudet = [...new Set(omatAjot.map(a => a.date.substring(0,7)))].sort().reverse(); if(mSel.innerHTML === "" && kuukaudet.length > 0) mSel.innerHTML = kuukaudet.map(k => `<option value="${k}">${k}</option>`).join(''); paivitaUI(); });
+db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA" : "○ OFFLINE"; });
+
+function muokkaa(id) {
+    resetForm();
+    const a = omatAjot.find(x => x.id === id);
+    if(!a) return;
+    setMode(a.mode || 'simple');
+    ['id','date','ts','te','ks','ke','type','client','simpleClient'].forEach(k => { if(document.getElementById('f-'+k)) document.getElementById('f-'+k).value = a[k] || (k.includes('k') ? 0 : ''); });
+    if(a.stops) a.stops.forEach(s => addStop(s.client, s.note));
+    if(currentMode === 'simple' && a.client && !a.simpleClient) document.getElementById('f-simpleClient').value = a.client; 
+    laskeKesto();
+    showPage('input');
+}
+function poista(id) { if(confirm("Poistetaanko merkintä?")) db.ref('ajot/' + id).remove(); }
+function resetForm() { ['f-id','f-client','f-route','f-ks','f-ke','f-ts','f-te','f-client-simple'].forEach(i=>{if(document.getElementById(i))document.getElementById(i).value=""}); document.getElementById('f-date').value = new Date().toISOString().split('T')[0]; document.getElementById('duration-res').innerText = "PR: 0€"; document.getElementById('f-type').value = "Tmi"; document.getElementById('stops-container').innerHTML = ""; }
+function setMode(m) { currentMode = m; document.getElementById('m-simple').classList.toggle('active', m === 'simple'); document.getElementById('m-full').classList.toggle('active', m === 'full'); document.getElementById('simple-section').style.display = m === 'simple' ? 'block' : 'none'; document.getElementById('crm-section').style.display = m === 'full' ? 'block' : 'none'; }
+function showPage(p) { document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active')); document.getElementById('p-' + p).classList.add('active'); document.getElementById('t-' + p).classList.add('active'); }
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+const mSel = document.getElementById('f-rep-month');
+setMode('simple');
 </script>
 </body>
 </html>
