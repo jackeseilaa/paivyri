@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v101.1</title>
+    <title>Päivyri v101.2</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -83,7 +83,7 @@
         </div>
 
         <button class="btn-save" onclick="tallennaAjo()">TALLENNA MERKINTÄ</button>
-        <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:20px; height:45px">NÄYTÄ ARKISTO / HISTORIA</button>
+        <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:15px; height:45px">NÄYTÄ ARKISTO / HISTORIA</button>
     </div>
     <div id="history-ui" style="display:none" class="no-print"></div>
 </div>
@@ -104,14 +104,6 @@
 </div>
 
 <div id="p-report" class="page">
-    <div class="card no-print">
-        <div style="display:flex; gap:10px">
-            <select id="rep-month" onchange="paivitaRaportti()"></select>
-            <select id="rep-type" onchange="paivitaRaportti()">
-                <option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option>
-            </select>
-        </div>
-    </div>
     <div id="report-target"></div>
     <button class="btn-save no-print" style="background:#000;" onclick="window.print()">TULOSTA PDF</button>
 </div>
@@ -213,7 +205,6 @@ function vieKalenteriin(id) {
     const otsikko = encodeURIComponent(`Ajopäivä: ${a.type} (${km} km)`);
     const tiedot = encodeURIComponent(`Kohteet: ${kohteet}\nMittari: ${a.ks} - ${a.ke}\nPäiväraha: ${a.allowance}`);
     
-    // Merkitään viedyksi kantaan
     db.ref('ajot/'+id).update({ calExported: true });
     
     const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${otsikko}&dates=${pvm}/${pvm}&details=${tiedot}`;
@@ -246,10 +237,8 @@ db.ref('asiakkaat').on('value', s => {
 db.ref('ajot').on('value', s => {
     omatAjot = s.val() ? Object.values(s.val()) : [];
     const sorted = [...omatAjot].sort((a,b) => b.id.localeCompare(a.id));
-    const months = [...new Set(omatAjot.map(a=>a.date?.substring(0,7)))].filter(Boolean).sort().reverse();
-    document.getElementById('rep-month').innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
     
-    document.getElementById('history-ui').innerHTML = sorted.slice(0,10).map(a => {
+    document.getElementById('history-ui').innerHTML = sorted.slice(0,15).map(a => {
         const calStyle = a.calExported ? 'background:var(--success);color:white;' : 'background:#eee;color:#000;';
         const calText = a.calExported ? 'VIETY ✅' : 'VIE 📅';
         return `
@@ -316,18 +305,15 @@ function editAjo(id) {
 }
 
 function paivitaRaportti() {
-    const m = document.getElementById('rep-month').value;
-    const t = document.getElementById('rep-type').value;
-    const data = omatAjot.filter(a => a.date?.startsWith(m) && a.type === t).sort((a,b)=>a.date.localeCompare(b.date));
-    let rows = "", tKm = 0, tEur = 0;
+    const m = new Date().toISOString().substring(0,7);
+    const data = omatAjot.filter(a => a.date?.startsWith(m)).sort((a,b)=>a.date.localeCompare(b.date));
+    let rows = "", tKm = 0;
     data.forEach(a => {
         const dKm = Math.max(0, (a.ke || 0) - (a.ks || 0));
-        let dEur = dKm * HINNAT.km;
-        if(HINNAT[a.allowance]) dEur += HINNAT[a.allowance];
-        tKm += dKm; tEur += dEur;
-        rows += `<tr><td>${esc(a.date)}</td><td>${a.stops?a.stops.map(s=>esc(s.client)).join(','):'-'}</td><td>${a.ks}-${a.ke}</td><td>${dKm.toFixed(1)}</td><td>${a.allowance}</td><td>${dEur.toFixed(2)}€</td></tr>`;
+        tKm += dKm;
+        rows += `<tr><td>${esc(a.date)}</td><td>${a.stops?a.stops.map(s=>esc(s.client)).join(','):'-'}</td><td>${dKm.toFixed(1)}</td></tr>`;
     });
-    document.getElementById('report-target').innerHTML = `<h3 style="text-align:center">${esc(t)} (${esc(m)})</h3><table class="report-table"><thead><tr><th>PVM</th><th>KOHDE</th><th>MITTARI</th><th>KM</th><th>KORV</th><th>YHT</th></tr></thead><tbody>${rows}</tbody></table><div class="summary-box">YHTEENSÄ: ${tKm.toFixed(1)} km | ${tEur.toFixed(2)} €</div>`;
+    document.getElementById('report-target').innerHTML = `<h3>Kuluva kuu (${m})</h3><table class="report-table"><thead><tr><th>PVM</th><th>KOHDE</th><th>KM</th></tr></thead><tbody>${rows}</tbody></table><div class="summary-box">YHTEENSÄ: ${tKm.toFixed(1)} km</div>`;
 }
 
 function showPage(p) {
@@ -342,7 +328,8 @@ function toggleArchive() {
 }
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v101.1)" : "○ OFFLINE"; });
+db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v101.2)" : "○ OFFLINE"; });
 </script>
 </body>
 </html>
+
