@@ -3,105 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.88</title>
+    <title>Päivyri v5.89</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --err: #ef4444; }
-        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
+        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; }
+        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
+        .no-print { padding: 10px; background: white; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 100; }
+        .card { background: white; padding: 15px; border-radius: 8px; margin: 10px; border: 1px solid #e2e8f0; }
         
-        .status-bar { font-size: 10px; text-align: center; padding: 6px; font-weight: 800; background: #fff; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 1000; }
-        .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 27px; z-index: 100; }
-        .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 11px; text-transform: uppercase; }
-        .tab.active { color: var(--ac); border-bottom: 4px solid var(--ac); background: #f1f5f9; }
+        /* Raportti-tyylit */
+        .report-box { background: white; padding: 20px; min-height: 100vh; }
+        .rep-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+        th { background: #eee; }
+        .summary-table { width: auto; margin-left: auto; min-width: 250px; }
+        .summary-table td { font-weight: bold; }
         
-        .page { display: none; padding: 12px; width: 100%; max-width: 1000px; margin: 0 auto; box-sizing: border-box; }
-        .page.active { display: block; }
-        .card { background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        input, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+        .btn { background: var(--ac); color: white; border: none; padding: 15px; border-radius: 8px; font-weight: 800; cursor: pointer; width: 100%; }
         
-        label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
-        input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; font-weight: 600; box-sizing: border-box; font-family: inherit; margin-bottom: 10px; }
-        
-        .btn-save { background: var(--success); color: white; border: none; padding: 18px; border-radius: 14px; width: 100%; font-weight: 800; cursor: pointer; font-size: 16px; margin-top: 5px; }
-        .mini-btn { padding: 10px 14px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; margin: 5px 5px 0 0; }
-        .edit-btn { background: var(--ac); color: white; }
-        .del-btn { background: var(--err); color: white; }
-
-        .stop-row { background: #f1f5f9; padding: 15px; border-radius: 14px; margin-bottom: 12px; border-left: 6px solid var(--ac); position: relative; }
-        
-        /* Raportti-muotoilu */
-        .report-header { background: #0f172a; color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; background: white; margin-top: 10px; }
-        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
-        th { background: #f8fafc; color: #64748b; text-transform: uppercase; font-size: 9px; }
-        .total-box { background: #f1f5f9; padding: 15px; border-radius: 10px; margin-top: 20px; text-align: right; font-size: 18px; font-weight: 800; border: 2px solid var(--ac); }
-
-        @media print { .no-print { display: none !important; } .page { display: block !important; } .card { border: none; box-shadow: none; } }
+        @media print { 
+            .no-print, .tabs { display: none !important; } 
+            body { background: white; padding: 0; }
+            .report-box { padding: 0; }
+            table { font-size: 10px; }
+        }
     </style>
 </head>
 <body>
 
-<div id="sync-status" class="status-bar">Ladataan...</div>
-
-<div class="tabs no-print">
-    <div id="tab-input" class="tab active" onclick="showPage('input')">Syöte</div>
-    <div id="tab-crm" class="tab" onclick="showPage('crm')">Asiakkaat</div>
-    <div id="tab-report" class="tab" onclick="showPage('report')">Raportit</div>
+<div class="no-print">
+    <div style="display:flex; gap:10px; margin-bottom:10px">
+        <button class="btn" style="flex:1" onclick="showPage('input')">SYÖTE</button>
+        <button class="btn" style="flex:1" onclick="showPage('report')">RAPORTIT</button>
+    </div>
+    <div id="report-controls" style="display:none">
+        <div style="display:flex; gap:10px">
+            <select id="rep-month" onchange="paivitaRaportti()"></select>
+            <select id="rep-type" onchange="paivitaRaportti()">
+                <option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option>
+            </select>
+        </div>
+        <button class="btn" style="background:black; margin-top:5px" onclick="window.print()">TULOSTA / PDF</button>
+    </div>
 </div>
 
-<div id="p-input" class="page active">
+<div id="p-input" class="page">
     <div class="card">
         <input type="hidden" id="f-id">
-        <label>Päivämäärä</label><input type="date" id="f-date" class="ent">
-        <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>Alku klo</label><input type="time" id="f-ts" class="ent"></div>
-            <div style="flex:1"><label>Alku KM</label><input type="number" id="f-ks" class="ent" inputmode="decimal"></div>
+        <label>Päivä & Yritys</label>
+        <div style="display:flex; gap:5px">
+            <input type="date" id="f-date" style="flex:2">
+            <select id="f-type" style="flex:1"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option></select>
         </div>
         
-        <div id="stops-container"></div>
-        <button class="mini-btn" onclick="addStop()" style="background:var(--ac); color:white; width:100%; margin-bottom:15px; height:48px; border-radius:12px;">+ LISÄÄ PYSÄHDYS (ENTER TALLENTAA CRM)</button>
-
-        <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>Loppu klo</label><input type="time" id="f-te" class="ent"></div>
-            <div style="flex:1"><label>Loppu KM</label><input type="number" id="f-ke" class="ent" inputmode="decimal"></div>
+        <label>Kilometrit</label>
+        <div style="display:flex; gap:5px">
+            <input type="number" id="f-ks" placeholder="Alku KM">
+            <input type="number" id="f-ke" placeholder="Loppu KM">
         </div>
-        <label>Yritys / Tili</label>
-        <select id="f-type" class="ent"><option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option></select>
-        
-        <button class="btn-save" onclick="tallennaPaiva()">TALLENNA AJOPÄIVÄ</button>
-        <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:10px">NÄYTÄ/PIILOTA ARKISTO</button>
-    </div>
-    <div id="history-ui" style="display:none" class="no-print"></div>
-</div>
 
-<div id="p-crm" class="page">
-    <div class="card">
-        <h3>Asiakasrekisteri</h3>
-        <input type="hidden" id="c-id">
-        <label>Nimi</label><input type="text" id="c-name">
-        <label>Osoite</label><input type="text" id="c-addr">
-        <label>Yhteyshenkilö</label><input type="text" id="c-contact">
-        <label>Puhelin</label><input type="tel" id="c-phone">
-        <label>Sähköposti</label><input type="email" id="c-email">
-        <button class="btn-save" onclick="saveCrmManual()">TALLENNA TIEDOT</button>
-    </div>
-    <div id="crm-list-container"></div>
-</div>
-
-<div id="p-report" class="page">
-    <div class="card no-print">
-        <label>Valitse Kuukausi</label>
-        <select id="rep-month" onchange="paivitaRaportti()"></select>
-        <label>Valitse Yritys</label>
-        <select id="rep-type" onchange="paivitaRaportti()">
-            <option value="Tmi">Tmi</option>
-            <option value="Oy">Oy</option>
-            <option value="Oma">Oma</option>
+        <label>Päiväraha / Korvaus</label>
+        <select id="f-allowance">
+            <option value="none">Ei päivärahaa</option>
+            <option value="osa">Osapäiväraha (>6h)</option>
+            <option value="koko">Kokopäiväraha (>10h)</option>
+            <option value="ateria">Ateriakorvaus</option>
         </select>
+
+        <div id="stops-container"></div>
+        <button onclick="addStop()" style="margin-bottom:15px; padding:10px; width:100%">+ LISÄÄ KOHDE / ASIAKAS</button>
+
+        <button class="btn" style="background:green" onclick="tallennaAjo()">TALLENNA</button>
     </div>
-    <div id="report-target"></div>
-    <button class="btn-save no-print" style="background:#000" onclick="window.print()">TALLENNA PDF / TULOSTA</button>
+</div>
+
+<div id="p-report" class="page" style="display:none">
+    <div class="report-box" id="report-target">
+        <p style="text-align:center">Valitse kuukausi ja yritys ylhäältä.</p>
+    </div>
 </div>
 
 <datalist id="crm-datalist"></datalist>
@@ -112,99 +95,33 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 let omatAjot = [], asiakkaat = [];
 
-// --- ENTER LOGIIKKA ---
-document.addEventListener('keydown', e => {
-    if(e.key === 'Enter') {
-        const active = document.activeElement;
-        if(active.tagName === 'INPUT' || active.tagName === 'SELECT') {
-            e.preventDefault();
-            const all = Array.from(document.querySelectorAll('#p-input input, #p-input select')).filter(el => el.offsetParent !== null);
-            const idx = all.indexOf(active);
-            if(idx > -1 && idx < all.length - 1) {
-                all[idx+1].focus();
-            } else if(active.classList.contains('s-addr')) {
-                // Pysähdyksen viimeinen kenttä
-                const stopRow = active.closest('.stop-row');
-                const name = stopRow.querySelector('.s-client').value;
-                const addr = active.value;
-                if(name) silentSaveCrm(name, addr);
-                if(confirm("Lisätäänkö uusi pysähdys?")) addStop();
-                else document.getElementById('f-te').focus();
-            }
-        }
-    }
-});
+// Päivärahahinnat 2024
+const HINNAT = { osa: 24.00, koko: 51.00, ateria: 12.75, km: 0.57 };
 
 function addStop(val="", addr="", time="") {
     const container = document.getElementById('stops-container');
     const div = document.createElement('div');
-    div.className = 'stop-row';
+    div.className = 'card';
+    div.style.background = "#f1f5f9";
     div.innerHTML = `
-        <span style="float:right;color:red;font-weight:bold;cursor:pointer" onclick="this.parentElement.remove()">✕</span>
-        <label>Klo</label><input type="time" class="s-time" value="${time || new Date().toLocaleTimeString('fi-FI',{hour:'2-digit',minute:'2-digit'})}">
-        <label>Asiakas</label><input type="text" class="s-client" value="${val}" list="crm-datalist">
-        <label>Osoite</label><input type="text" class="s-addr" value="${addr}">
+        <input type="text" class="s-client" value="${val}" placeholder="Asiakkaan nimi" list="crm-datalist">
+        <input type="text" class="s-addr" value="${addr}" placeholder="Osoite">
     `;
     container.appendChild(div);
-    div.querySelector('.s-client').focus();
 }
 
-function silentSaveCrm(name, addr) {
-    const ex = asiakkaat.find(c => c.name.toLowerCase() === name.toLowerCase());
-    if(!ex) db.ref('asiakkaat').push({ name, addr });
-    else if(addr && !ex.addr) db.ref('asiakkaat/'+ex.id).update({ addr });
-}
-
-function saveCrmManual() {
-    const id = document.getElementById('c-id').value;
-    const d = {
-        name: document.getElementById('c-name').value,
-        addr: document.getElementById('c-addr').value,
-        contact: document.getElementById('c-contact').value,
-        phone: document.getElementById('c-phone').value,
-        email: document.getElementById('c-email').value
-    };
-    if(!d.name) return;
-    if(id) db.ref('asiakkaat/'+id).update(d);
-    else db.ref('asiakkaat').push(d);
-    ['c-id','c-name','c-addr','c-contact','c-phone','c-email'].forEach(i=>document.getElementById(i).value="");
-}
-
-db.ref('asiakkaat').on('value', s => {
-    asiakkaat = s.val() ? Object.entries(s.val()).map(([id, v]) => ({id, ...v})) : [];
-    document.getElementById('crm-datalist').innerHTML = asiakkaat.map(c => `<option value="${c.name}">`).join('');
-    document.getElementById('crm-list-container').innerHTML = asiakkaat.map(c => `
-        <div class="card">
-            <b>${c.name}</b><br><small>${c.addr || ''} | ${c.phone || ''}</small><br>
-            <button class="mini-btn edit-btn" onclick="editCrm('${c.id}')">Muokkaa</button>
-            <button class="mini-btn del-btn" onclick="if(confirm('Poista?')) db.ref('asiakkaat/${c.id}').remove()">Poista</button>
-        </div>`).reverse().join('');
-});
-
-function editCrm(id) {
-    const c = asiakkaat.find(x=>x.id===id);
-    document.getElementById('c-id').value = c.id;
-    document.getElementById('c-name').value = c.name;
-    document.getElementById('c-addr').value = c.addr || '';
-    document.getElementById('c-contact').value = c.contact || '';
-    document.getElementById('c-phone').value = c.phone || '';
-    document.getElementById('c-email').value = c.email || '';
-    window.scrollTo(0,0);
-}
-
-function tallennaPaiva() {
+function tallennaAjo() {
     const id = document.getElementById('f-id').value || "p_" + Date.now();
-    const stops = Array.from(document.querySelectorAll('.stop-row')).map(r => ({
-        time: r.querySelector('.s-time').value,
-        client: r.querySelector('.s-client').value,
-        addr: r.querySelector('.s-addr').value
+    const stops = Array.from(document.querySelectorAll('#stops-container .card')).map(c => ({
+        client: c.querySelector('.s-client').value,
+        addr: c.querySelector('.s-addr').value
     }));
     const data = {
         id, date: document.getElementById('f-date').value,
-        ts: document.getElementById('f-ts').value, te: document.getElementById('f-te').value,
         ks: parseFloat(document.getElementById('f-ks').value) || 0,
         ke: parseFloat(document.getElementById('f-ke').value) || 0,
         type: document.getElementById('f-type').value,
+        allowance: document.getElementById('f-allowance').value,
         stops: stops
     };
     db.ref('ajot/'+id).set(data).then(() => { alert("Tallennettu!"); location.reload(); });
@@ -213,83 +130,79 @@ function tallennaPaiva() {
 function paivitaRaportti() {
     const m = document.getElementById('rep-month').value;
     const t = document.getElementById('rep-type').value;
-    if(!m) return;
-    
     const data = omatAjot.filter(a => a.date && a.date.startsWith(m) && a.type === t).sort((a,b)=>a.date.localeCompare(b.date));
-    let rows = "", total = 0;
     
+    let rows = "", tKm = 0, cOsa = 0, cKoko = 0, cAteria = 0;
+
     data.forEach(a => {
-        const diff = (a.ke - a.ks);
-        total += diff;
-        rows += `<tr style="background:#f8fafc; font-weight:bold"><td colspan="5">${a.date.split('-').reverse().join('.')} (Ajo: ${diff.toFixed(1)} km)</td></tr>`;
-        rows += `<tr><td>${a.ts}</td><td>LÄHTÖ</td><td>Mittari: ${a.ks}</td><td>-</td><td>-</td></tr>`;
-        if(a.stops) a.stops.forEach(s => {
-            rows += `<tr><td>${s.time}</td><td>KÄYNTI</td><td>${s.client}</td><td>${s.addr || '-'}</td><td>-</td></tr>`;
-        });
-        rows += `<tr><td>${a.te}</td><td>LOPETUS</td><td>Mittari: ${a.ke}</td><td>-</td><td align="right">${diff.toFixed(1)}</td></tr>`;
+        const km = a.ke - a.ks;
+        tKm += km;
+        if(a.allowance === 'osa') cOsa++;
+        if(a.allowance === 'koko') cKoko++;
+        if(a.allowance === 'ateria') cAteria++;
+
+        const kohteet = a.stops ? a.stops.map(s => `${s.client} (${s.addr})`).join(', ') : '-';
+        
+        rows += `
+            <tr>
+                <td>${a.date.split('-').reverse().join('.')}</td>
+                <td>Mittari: ${a.ks} - ${a.ke}</td>
+                <td>${kohteet}</td>
+                <td align="right">${km.toFixed(1)}</td>
+                <td>${a.allowance !== 'none' ? a.allowance : ''}</td>
+            </tr>`;
     });
 
+    const kmEur = tKm * HINNAT.km;
+    const osaEur = cOsa * HINNAT.osa;
+    const kokoEur = cKoko * HINNAT.koko;
+    const ateriaEur = cAteria * HINNAT.ateria;
+    const kokonaissumma = kmEur + osaEur + kokoEur + ateriaEur;
+
     document.getElementById('report-target').innerHTML = `
-        <div class="report-header">
-            <h2 style="margin:0">AJOPÄIVÄKIRJA</h2>
-            <div style="font-size:14px; opacity:0.8">${t} | ${m}</div>
+        <div class="rep-header">
+            <h2 style="margin:0">MATKALASKU JA AJOPÄIVÄKIRJA</h2>
+            <p>Kausi: ${m} | Yritys: ${t}</p>
         </div>
         <table>
-            <thead><tr><th>KLO</th><th>TAPAHTUMA</th><th>KUVAUS/ASIAKAS</th><th>OSOITE</th><th>KM</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="5" align="center">Ei merkintöjä valitulla suodattimella.</td></tr>'}</tbody>
+            <thead>
+                <tr><th>PVM</th><th>REITTI / MITTARI</th><th>ASIAKKAAT JA KOHTEET</th><th>KM</th><th>PÄIVÄRAHA</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
         </table>
-        <div class="total-box">KUUKAUDEN AJO YHTEENSÄ: ${total.toFixed(1)} km</div>
+        
+        <table class="summary-table">
+            <tr><td>Kilometrikorvaus (${tKm.toFixed(1)} km x ${HINNAT.km}€)</td><td align="right">${kmEur.toFixed(2)} €</td></tr>
+            ${cOsa > 0 ? `<tr><td>Osapäivärahat (${cOsa} kpl)</td><td align="right">${osaEur.toFixed(2)} €</td></tr>` : ''}
+            ${cKoko > 0 ? `<tr><td>Kokopäivärahat (${cKoko} kpl)</td><td align="right">${kokoEur.toFixed(2)} €</td></tr>` : ''}
+            ${cAteria > 0 ? `<tr><td>Ateriakorvaukset (${cAteria} kpl)</td><td align="right">${ateriaEur.toFixed(2)} €</td></tr>` : ''}
+            <tr style="font-size:14px; background:#eee"><td>MAKSETTAVA YHTEENSÄ</td><td align="right">${kokonaissumma.toFixed(2)} €</td></tr>
+        </table>
+        <div style="margin-top:50px; border-top:1px solid #000; width:200px; font-size:10px">Allekirjoitus ja nimenselvennys</div>
     `;
+}
+
+function showPage(p) {
+    document.querySelectorAll('.page').forEach(el => el.style.display = 'none');
+    document.getElementById('p-'+p).style.display = 'block';
+    document.getElementById('report-controls').style.display = p === 'report' ? 'block' : 'none';
+    if(p === 'report') paivitaRaportti();
 }
 
 db.ref('ajot').on('value', s => {
     omatAjot = s.val() ? Object.values(s.val()) : [];
     const months = [...new Set(omatAjot.filter(a=>a.date).map(a=>a.date.substring(0,7)))].sort().reverse();
-    const mSel = document.getElementById('rep-month');
-    const currentM = mSel.value;
-    mSel.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-    if(currentM && months.includes(currentM)) mSel.value = currentM;
-    
-    document.getElementById('history-ui').innerHTML = [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(a => `
-        <div class="card" style="font-size:12px">
-            <b>${a.date}</b> | ${a.type} | ${(a.ke-a.ks).toFixed(1)} km
-            <div style="margin-top:8px">
-                <button class="mini-btn edit-btn" onclick="muokkaaAjo('${a.id}')">Muokkaa</button>
-                <button class="mini-btn del-btn" onclick="if(confirm('Poista ajo?')) db.ref('ajot/${a.id}').remove()">Poista</button>
-            </div>
-        </div>`).join('');
+    document.getElementById('rep-month').innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
     paivitaRaportti();
 });
 
-function muokkaaAjo(id) {
-    const a = omatAjot.find(x=>x.id===id);
-    document.getElementById('f-id').value = a.id;
-    document.getElementById('f-date').value = a.date;
-    document.getElementById('f-ts').value = a.ts;
-    document.getElementById('f-te').value = a.te;
-    document.getElementById('f-ks').value = a.ks;
-    document.getElementById('f-ke').value = a.ke;
-    document.getElementById('f-type').value = a.type;
-    document.getElementById('stops-container').innerHTML = "";
-    if(a.stops) a.stops.forEach(s => addStop(s.client, s.addr, s.time));
-    showPage('input');
-    window.scrollTo(0,0);
-}
-
-function showPage(p) {
-    document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('p-'+p).classList.add('active');
-    document.getElementById('tab-'+p).classList.add('active');
-    if(p === 'report') paivitaRaportti();
-}
-
-function toggleArchive() {
-    const h = document.getElementById('history-ui');
-    h.style.display = h.style.display === 'none' ? 'block' : 'none';
-}
+db.ref('asiakkaat').on('value', s => {
+    asiakkaat = s.val() ? Object.values(s.val()) : [];
+    document.getElementById('crm-datalist').innerHTML = asiakkaat.map(c => `<option value="${c.name}">`).join('');
+});
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA" : "○ OFFLINE"; });
+showPage('input');
 </script>
 </body>
 </html>
