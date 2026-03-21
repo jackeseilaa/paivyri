@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.94</title>
+    <title>Päivyri v5.95</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -71,12 +71,13 @@
 
 <div id="p-crm" class="page">
     <div class="card">
-        <h3>Asiakasrekisteri</h3>
+        <h3 id="crm-title">Lisää uusi asiakas</h3>
         <input type="hidden" id="c-id">
-        <label>Nimi</label><input type="text" id="c-name">
-        <label>Osoite</label><input type="text" id="c-addr">
-        <label>Puhelin</label><input type="tel" id="c-phone">
-        <button class="btn-save" onclick="saveCrm()">TALLENNA ASIAKAS</button>
+        <label>Nimi</label><input type="text" id="c-name" placeholder="Yritys tai henkilö">
+        <label>Osoite</label><input type="text" id="c-addr" placeholder="Katuosoite, kaupunki">
+        <label>Puhelin</label><input type="tel" id="c-phone" placeholder="Puh. numero">
+        <button class="btn-save" onclick="saveCrm()">TALLENNA REKISTERIIN</button>
+        <button id="crm-cancel" class="mini-btn" style="display:none; background:var(--err); color:white; width:100%; margin-top:5px" onclick="resetCrm()">PERUUTA MUOKKAUS</button>
     </div>
     <div id="crm-list-container"></div>
 </div>
@@ -97,17 +98,14 @@
 <datalist id="crm-datalist"></datalist>
 
 <script>
-// HUOM: Käytetään alkuperäistä konfiguraatiota ilman pakollista API-avainta, 
-// jotta sivu ei mene valkoiseksi jos avainta ei ole.
 const firebaseConfig = { databaseURL: "https://paivuri-default-rtdb.europe-west1.firebasedatabase.app/" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 let omatAjot = [], asiakkaat = [];
 
-// Päivärahojen arvot 2024
 const HINNAT = { "Osapäivä": 24, "Kokopäivä": 51, "Ateria": 12.75, "km": 0.57 };
 
-// ENTER-LOGIIKKA
+// ENTER LOGIIKKA
 document.addEventListener('keydown', e => {
     if(e.key === 'Enter') {
         const active = document.activeElement;
@@ -123,11 +121,8 @@ document.addEventListener('keydown', e => {
                 const ex = asiakkaat.find(c => c.name.toLowerCase() === name.toLowerCase());
                 if(!ex) db.ref('asiakkaat').push({ name, addr });
             }
-            if(confirm("Lisätäänkö uusi pysähdys?")) {
-                addStop();
-            } else {
-                document.getElementById('f-te').focus();
-            }
+            if(confirm("Lisätäänkö uusi pysähdys?")) addStop();
+            else document.getElementById('f-te').focus();
         } else if (idx > -1 && idx < inputs.length - 1) {
             e.preventDefault();
             inputs[idx + 1].focus();
@@ -147,9 +142,54 @@ function addStop(val="", addr="", time="") {
         <label>Osoite</label><input type="text" class="s-addr" value="${addr}">
     `;
     container.appendChild(div);
-    div.querySelector('.s-client').focus();
 }
 
+// CRM LOGIIKKA
+function saveCrm() {
+    const id = document.getElementById('c-id').value;
+    const name = document.getElementById('c-name').value;
+    const addr = document.getElementById('c-addr').value;
+    const phone = document.getElementById('c-phone').value;
+    
+    if(!name) return alert("Nimi on pakollinen!");
+
+    const data = { name, addr, phone };
+    
+    if(id) {
+        db.ref('asiakkaat/' + id).update(data).then(() => {
+            alert("Asiakas päivitetty!");
+            resetCrm();
+        });
+    } else {
+        db.ref('asiakkaat').push(data).then(() => {
+            alert("Asiakas tallennettu!");
+            resetCrm();
+        });
+    }
+}
+
+function editCrm(id) {
+    const c = asiakkaat.find(x => x.id === id);
+    if(!c) return;
+    document.getElementById('c-id').value = c.id;
+    document.getElementById('c-name').value = c.name;
+    document.getElementById('c-addr').value = c.addr || '';
+    document.getElementById('c-phone').value = c.phone || '';
+    document.getElementById('crm-title').innerText = "Muokkaa asiakasta";
+    document.getElementById('crm-cancel').style.display = "block";
+    window.scrollTo(0,0);
+}
+
+function resetCrm() {
+    document.getElementById('c-id').value = "";
+    document.getElementById('c-name').value = "";
+    document.getElementById('c-addr').value = "";
+    document.getElementById('c-phone').value = "";
+    document.getElementById('crm-title').innerText = "Lisää uusi asiakas";
+    document.getElementById('crm-cancel').style.display = "none";
+}
+
+// AJOT
 function tallennaAjo() {
     const id = document.getElementById('f-id').value || "p_" + Date.now();
     const stops = Array.from(document.querySelectorAll('.stop-row')).map(r => ({
@@ -177,7 +217,6 @@ function paivitaRaportti() {
     
     let rows = "", tKm = 0, cOsa = 0, cKoko = 0, cAteria = 0;
     data.forEach(a => {
-        // Kaverisi Math.max parannus
         const dKm = Math.max(0, a.ke - a.ks); 
         tKm += dKm;
         if(a.allowance === 'Osapäivä') cOsa++;
@@ -211,28 +250,18 @@ function paivitaRaportti() {
     `;
 }
 
-function saveCrm() {
-    const id = document.getElementById('c-id').value;
-    const d = { name: document.getElementById('c-name').value, addr: document.getElementById('c-addr').value, phone: document.getElementById('c-phone').value };
-    if(!d.name) return;
-    if(id) db.ref('asiakkaat/'+id).update(d); else db.ref('asiakkaat').push(d);
-    alert("Asiakas tallennettu!");
-    resetCrm();
-}
-
-function resetCrm() {
-    ['c-id','c-name','c-addr','c-phone'].forEach(i=>document.getElementById(i).value="");
-}
-
+// DATA-KUUNTELIJAT
 db.ref('asiakkaat').on('value', s => {
     asiakkaat = s.val() ? Object.entries(s.val()).map(([id, v]) => ({id, ...v})) : [];
     document.getElementById('crm-datalist').innerHTML = asiakkaat.map(c => `<option value="${c.name}">`).join('');
     document.getElementById('crm-list-container').innerHTML = asiakkaat.map(c => `
         <div class="card">
-            <b>${c.name}</b><br>${c.addr || ''}
+            <div style="font-weight:800; font-size:16px">${c.name}</div>
+            <div style="font-size:12px; color:#64748b">${c.addr || 'Ei osoitetta'}</div>
+            <div style="font-size:12px; color:#64748b">${c.phone || ''}</div>
             <div style="margin-top:10px">
-                <button class="mini-btn" style="background:var(--ac);color:white" onclick="editCrm('${c.id}')">Muokkaa</button>
-                <button class="mini-btn" style="background:var(--err);color:white" onclick="if(confirm('Poista?')) db.ref('asiakkaat/${c.id}').remove()">Poista</button>
+                <button class="mini-btn" style="background:var(--ac); color:white" onclick="editCrm('${c.id}')">MUOKKAA</button>
+                <button class="mini-btn" style="background:var(--err); color:white" onclick="if(confirm('Poistetaanko asiakas?')) db.ref('asiakkaat/${c.id}').remove()">POISTA</button>
             </div>
         </div>`).reverse().join('');
 });
@@ -246,21 +275,12 @@ db.ref('ajot').on('value', s => {
         <div class="card">
             <b>${a.date}</b> | ${a.type} | ${(a.ke-a.ks).toFixed(1)} km
             <div style="margin-top:10px">
-                <button class="mini-btn" style="background:var(--ac);color:white" onclick="editAjo('${a.id}')">Muokkaa</button>
-                <button class="mini-btn" style="background:var(--err);color:white" onclick="if(confirm('Poista?')) db.ref('ajot/${a.id}').remove()">Poista</button>
+                <button class="mini-btn" style="background:var(--ac); color:white" onclick="editAjo('${a.id}')">MUOKKAA</button>
+                <button class="mini-btn" style="background:var(--err); color:white" onclick="if(confirm('Poistetaanko ajo?')) db.ref('ajot/${a.id}').remove()">POISTA</button>
             </div>
         </div>`).join('');
     paivitaRaportti();
 });
-
-function editCrm(id) {
-    const c = asiakkaat.find(x=>x.id===id);
-    document.getElementById('c-id').value = c.id;
-    document.getElementById('c-name').value = c.name;
-    document.getElementById('c-addr').value = c.addr || '';
-    document.getElementById('c-phone').value = c.phone || '';
-    showPage('crm');
-}
 
 function editAjo(id) {
     const a = omatAjot.find(x=>x.id===id);
