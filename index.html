@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v100.0 - JUHLAVERSIO</title>
+    <title>Päivyri v100.1 - FIXED</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
@@ -19,23 +19,21 @@
         .card { background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; }
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
         input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; font-weight: 600; box-sizing: border-box; margin-bottom: 10px; }
-        input:focus { border-color: var(--ac); outline: none; background: #f0f7ff; }
         .btn-save { background: var(--success); color: white; border: none; padding: 18px; border-radius: 14px; width: 100%; font-weight: 800; cursor: pointer; font-size: 16px; }
         .mini-btn { padding: 10px 14px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; margin: 5px 2px; }
-        .stop-row { background: #f1f5f9; padding: 15px; border-radius: 14px; margin-bottom: 10px; border-left: 6px solid var(--ac); }
-        .report-table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; border: 1px solid #000; }
+        .stop-row { background: #f1f5f9; padding: 15px; border-radius: 14px; margin-bottom: 10px; border-left: 6px solid var(--ac); position: relative; }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; border: 1px solid #000; margin-top: 10px; }
         .report-table th, .report-table td { border: 1px solid #000; padding: 8px; text-align: left; }
         .summary-box { margin-top: 15px; border: 2px solid #000; padding: 15px; font-weight: bold; background: #eee; line-height: 1.6; }
         .view-toggle { display: flex; gap: 5px; margin-bottom: 15px; }
         .v-btn { flex: 1; padding: 10px; font-size: 10px; font-weight: 800; border: 2px solid #e2e8f0; border-radius: 8px; background: white; cursor: pointer; }
-        .v-btn.active { background: var(--ac); color: white; border-color: var(--ac); }
-        .contact-link { color: var(--ac); text-decoration: none; font-weight: 800; border-bottom: 1px solid #eee; }
+        .v-btn.active { background: var(--ac); color: white; }
         @media print { .no-print { display: none !important; } .page { display: block !important; } }
     </style>
 </head>
 <body>
 
-<div id="sync-status" class="status-bar">ODOTETAAN YHTEYTTÄ...</div>
+<div id="sync-status" class="status-bar">YHDISTETÄÄN...</div>
 
 <div class="tabs no-print">
     <div id="tab-input" class="tab active" onclick="showPage('input')">Syöte</div>
@@ -48,44 +46,31 @@
         <button id="v-suppea" class="v-btn active" onclick="setView('suppea')">SUPPEA</button>
         <button id="v-laaja" class="v-btn" onclick="setView('laaja')">LAAJA (AUTO-AIKA)</button>
     </div>
-
     <div class="card">
         <input type="hidden" id="f-id">
         <label>Päivämäärä</label><input type="date" id="f-date" class="ent">
-        
         <div id="laaja-fields" style="display:none">
             <div style="display:flex; gap:10px">
                 <div style="flex:1"><label>Alku klo</label><input type="time" id="f-ts" class="ent" onchange="laskePvraha()"></div>
-                <div style="flex:1"><label>Alku KM</label><input type="number" id="f-ks" class="ent" inputmode="decimal"></div>
+                <div style="flex:1"><label>Alku KM</label><input type="number" id="f-ks" class="ent"></div>
             </div>
         </div>
-
         <div id="stops-container"></div>
-        <button class="mini-btn" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:45px; border-radius:12px; margin-bottom:10px;">+ LISÄÄ PYSÄHDYS</button>
-
-        <div style="display:flex; gap:10px">
+        <button class="mini-btn" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:45px;">+ LISÄÄ PYSÄHDYS</button>
+        <div style="display:flex; gap:10px; margin-top:10px">
             <div id="laaja-te-container" style="display:none; flex:1"><label>Loppu klo</label><input type="time" id="f-te" class="ent" onchange="laskePvraha()"></div>
-            <div style="flex:1"><label>Loppu KM</label><input type="number" id="f-ke" class="ent" inputmode="decimal"></div>
+            <div style="flex:1"><label>Loppu KM</label><input type="number" id="f-ke" class="ent"></div>
         </div>
-
         <div style="display:flex; gap:10px">
-            <div style="flex:1"><label>Päiväraha</label>
-                <select id="f-allowance" class="ent">
-                    <option value="-">-</option>
-                    <option value="Osapäivä">Osapäivä</option>
-                    <option value="Kokopäivä">Kokopäivä</option>
-                    <option value="Ateria">Ateria</option>
-                </select>
-            </div>
-            <div style="flex:1"><label>Yritys</label>
-                <select id="f-type" class="ent">
-                    <option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option>
-                </select>
-            </div>
+            <div style="flex:1"><label>Päiväraha</label><select id="f-allowance" class="ent">
+                <option value="-">-</option><option value="Osapäivä">Osapäivä</option><option value="Kokopäivä">Kokopäivä</option><option value="Ateria">Ateria</option>
+            </select></div>
+            <div style="flex:1"><label>Yritys</label><select id="f-type" class="ent">
+                <option value="Tmi">Tmi</option><option value="Oy">Oy</option><option value="Oma">Oma</option>
+            </select></div>
         </div>
-
         <button class="btn-save" onclick="tallennaAjo()">TALLENNA AJOPÄIVÄ</button>
-        <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:10px">ARKISTO (MUOKKAA/POISTA)</button>
+        <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:10px">ARKISTO</button>
     </div>
     <div id="history-ui" style="display:none" class="no-print"></div>
 </div>
@@ -99,7 +84,7 @@
         <label>Puhelin</label><input type="tel" id="c-phone" class="c-ent">
         <label>Sähköposti</label><input type="email" id="c-email" class="c-ent">
         <button class="btn-save" onclick="saveCrm()">TALLENNA ASIAKAS</button>
-        <button id="crm-cancel" class="mini-btn" style="display:none; background:var(--err); color:white; width:100%; margin-top:5px" onclick="resetCrm()">PERUUTA</button>
+        <button id="crm-cancel" class="mini-btn" style="display:none; background:var(--err); color:white; width:100%;" onclick="resetCrm()">PERUUTA</button>
     </div>
     <div id="crm-list-container"></div>
 </div>
@@ -126,105 +111,71 @@ const db = firebase.database();
 let omatAjot = [], asiakkaat = [];
 const HINNAT = { "Osapäivä": 24, "Kokopäivä": 51, "Ateria": 12.75, "km": 0.57 };
 
-// ENTER LOGIIKKA - GLOBAALI
+// ENTER LOGIIKKA
 document.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-        const active = document.activeElement;
-        
-        // CRM Enter-logiikka
-        if (active.classList.contains('c-ent')) {
+        const a = document.activeElement;
+        if (a.classList.contains('c-ent')) {
             e.preventDefault();
-            const cInputs = Array.from(document.querySelectorAll('.c-ent'));
-            const idx = cInputs.indexOf(active);
-            if (idx < cInputs.length - 1) cInputs[idx + 1].focus();
-            else saveCrm();
-        }
-        
-        // Syöte Enter-logiikka
-        else if (active.classList.contains('ent') || active.classList.contains('s-ent')) {
+            const inputs = Array.from(document.querySelectorAll('.c-ent'));
+            const i = inputs.indexOf(a);
+            if (i < inputs.length - 1) inputs[i+1].focus(); else saveCrm();
+        } else if (a.classList.contains('ent') || a.classList.contains('s-ent')) {
             e.preventDefault();
-            if (active.classList.contains('s-addr')) {
-                if(confirm("Lisätäänkö uusi pysähdys?")) {
-                    addStop();
-                    setTimeout(() => {
-                        const allStops = document.querySelectorAll('.s-time');
-                        allStops[allStops.length-1].focus();
-                    }, 50);
-                } else {
-                    document.getElementById('f-ke').focus();
-                }
+            if (a.classList.contains('s-addr')) {
+                if(confirm("Lisää pysähdys?")) addStop(); else document.getElementById('f-ke').focus();
             } else {
                 const all = Array.from(document.querySelectorAll('.ent, .s-ent')).filter(el => el.offsetParent !== null);
-                const idx = all.indexOf(active);
-                if (idx < all.length - 1) all[idx+1].focus();
+                const i = all.indexOf(a);
+                if (i < all.length - 1) all[i+1].focus();
             }
         }
     }
 });
 
-function setView(mode) {
+function setView(m) {
     document.querySelectorAll('.v-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('v-' + mode).classList.add('active');
-    document.getElementById('laaja-fields').style.display = (mode === 'laaja') ? 'block' : 'none';
-    document.getElementById('laaja-te-container').style.display = (mode === 'laaja') ? 'block' : 'none';
+    document.getElementById('v-'+m).classList.add('active');
+    document.getElementById('laaja-fields').style.display = m==='laaja'?'block':'none';
+    document.getElementById('laaja-te-container').style.display = m==='laaja'?'block':'none';
 }
 
 function laskePvraha() {
-    const ts = document.getElementById('f-ts').value;
-    const te = document.getElementById('f-te').value;
-    if(!ts || !te) return;
-    let hrs = (new Date("2000-01-01 " + te) - new Date("2000-01-01 " + ts)) / (1000*60*60);
-    if(hrs < 0) hrs += 24;
+    const s = document.getElementById('f-ts').value, e = document.getElementById('f-te').value;
+    if(!s || !e) return;
+    let h = (new Date("2000-01-01 "+e) - new Date("2000-01-01 "+s))/(1000*60*60);
+    if(h < 0) h += 24;
     const sel = document.getElementById('f-allowance');
-    if(hrs >= 10) sel.value = "Kokopäivä";
-    else if(hrs >= 6) sel.value = "Osapäivä";
-    else sel.value = "-";
+    if(h >= 10) sel.value = "Kokopäivä"; else if(h >= 6) sel.value = "Osapäivä"; else sel.value = "-";
 }
 
 function addStop(val="", addr="", time="") {
     const div = document.createElement('div');
     div.className = 'stop-row card';
-    div.innerHTML = `
-        <span style="float:right;color:red;font-weight:bold;cursor:pointer" onclick="this.parentElement.remove()">✕</span>
-        <label>Klo</label><input type="time" class="s-time s-ent" value="${time || ''}">
+    div.innerHTML = `<span style="float:right;color:red;font-weight:bold;cursor:pointer" onclick="this.parentElement.remove()">✕</span>
+        <label>Klo</label><input type="time" class="s-time s-ent" value="${time}">
         <label>Asiakas</label><input type="text" class="s-client s-ent" value="${val}" list="crm-datalist">
-        <label>Osoite</label><input type="text" class="s-addr s-ent" value="${addr}">
-    `;
+        <label>Osoite</label><input type="text" class="s-addr s-ent" value="${addr}">`;
     document.getElementById('stops-container').appendChild(div);
 }
 
-// CRM - VARMA TALLENNUS
+// CRM - VARMISTETTU TALLENNUS (v100.1)
 function saveCrm() {
     const id = document.getElementById('c-id').value;
     const name = document.getElementById('c-name').value.trim();
-    if(!name) return alert("Nimi on pakollinen!");
+    if(!name) return alert("Nimi pakollinen!");
 
     const data = {
         name: name,
-        addr: document.getElementById('c-addr').value.trim(),
-        phone: document.getElementById('c-phone').value.trim(),
-        email: document.getElementById('c-email').value.trim()
+        addr: document.getElementById('c-addr').value.trim() || "",
+        phone: document.getElementById('c-phone').value.trim() || "",
+        email: document.getElementById('c-email').value.trim() || ""
     };
 
-    const targetRef = id ? db.ref('asiakkaat/' + id) : db.ref('asiakkaat').push();
-    targetRef.set(data).then(() => {
-        alert("Asiakas tallennettu onnistuneesti!");
-        resetCrm();
-    }).catch(e => alert("Virhe tallennuksessa: " + e.message));
-}
-
-function editCrm(id) {
-    const c = asiakkaat.find(x => x.id === id);
-    if(!c) return;
-    document.getElementById('c-id').value = c.id;
-    document.getElementById('c-name').value = c.name;
-    document.getElementById('c-addr').value = c.addr || '';
-    document.getElementById('c-phone').value = c.phone || '';
-    document.getElementById('c-email').value = c.email || '';
-    document.getElementById('crm-title').innerText = "Muokkaa asiakasta";
-    document.getElementById('crm-cancel').style.display = "block";
-    window.scrollTo({top: 0, behavior: 'smooth'});
-    document.getElementById('c-name').focus();
+    const ref = id ? db.ref('asiakkaat/'+id) : db.ref('asiakkaat').push();
+    ref.set(data)
+        .then(() => { alert("Asiakas tallennettu!"); resetCrm(); })
+        .catch(e => alert("VIRHE: " + e.message));
 }
 
 function resetCrm() {
@@ -238,18 +189,25 @@ db.ref('asiakkaat').on('value', s => {
     document.getElementById('crm-datalist').innerHTML = asiakkaat.map(c => `<option value="${c.name}">`).join('');
     document.getElementById('crm-list-container').innerHTML = asiakkaat.map(c => `
         <div class="card">
-            <div style="font-size:18px; font-weight:800; color:var(--ac)">${c.name}</div>
-            <div style="margin:5px 0; font-size:13px">${c.addr || '---'}</div>
-            <div style="display:flex; gap:15px; font-size:12px; margin-top:8px">
-                <a href="tel:${c.phone}" class="contact-link">📞 ${c.phone || 'Puh'}</a>
-                <a href="mailto:${c.email}" class="contact-link">📧 ${c.email || 'Email'}</a>
-            </div>
-            <div style="margin-top:12px; border-top:1px solid #eee; pt:10px">
-                <button class="mini-btn" style="background:var(--ac); color:white" onclick="editCrm('${c.id}')">MUOKKAA</button>
-                <button class="mini-btn" style="background:var(--err); color:white" onclick="if(confirm('Poistetaanko asiakas ${c.name}?')) db.ref('asiakkaat/${c.id}').remove()">POISTA</button>
+            <b>${c.name}</b><br>${c.addr}<br>${c.phone} | ${c.email}
+            <div style="margin-top:10px">
+                <button class="mini-btn" style="background:var(--ac);color:white" onclick="editCrm('${c.id}')">MUOKKAA</button>
+                <button class="mini-btn" style="background:var(--err);color:white" onclick="if(confirm('Poistetaanko?')) db.ref('asiakkaat/${c.id}').remove()">POISTA</button>
             </div>
         </div>`).reverse().join('');
 });
+
+function editCrm(id) {
+    const c = asiakkaat.find(x => x.id === id);
+    document.getElementById('c-id').value = c.id;
+    document.getElementById('c-name').value = c.name;
+    document.getElementById('c-addr').value = c.addr;
+    document.getElementById('c-phone').value = c.phone;
+    document.getElementById('c-email').value = c.email;
+    document.getElementById('crm-title').innerText = "Muokkaa asiakasta";
+    document.getElementById('crm-cancel').style.display = "block";
+    showPage('crm');
+}
 
 function tallennaAjo() {
     const id = document.getElementById('f-id').value || "p_" + Date.now();
@@ -264,29 +222,34 @@ function tallennaAjo() {
             time: r.querySelector('.s-time').value, client: r.querySelector('.s-client').value, addr: r.querySelector('.s-addr').value
         }))
     };
-    db.ref('ajot/'+id).set(data).then(() => { alert("Ajopäivä tallennettu!"); location.reload(); });
+    db.ref('ajot/'+id).set(data).then(() => { alert("Tallennettu!"); location.reload(); });
 }
 
+// RAPORTIN LASKENTA KORJATTU (v100.1)
 function paivitaRaportti() {
     const m = document.getElementById('rep-month').value;
     const t = document.getElementById('rep-type').value;
     const data = omatAjot.filter(a => a.date && a.date.startsWith(m) && a.type === t).sort((a,b)=>a.date.localeCompare(b.date));
-    let rows = "", tKm = 0, cOsa = 0, cKoko = 0, cAteria = 0;
+    let rows = "", tKm = 0, tEur = 0, cOsa = 0, cKoko = 0, cAteria = 0;
+
     data.forEach(a => {
-        const dKm = Math.max(0, a.ke - a.ks); tKm += dKm;
-        if(a.allowance==='Osapäivä') cOsa++; else if(a.allowance==='Kokopäivä') cKoko++; else if(a.allowance==='Ateria') cAteria++;
-        const k = a.stops ? a.stops.map(s => `${s.time} ${s.client}`).join(', ') : '-';
-        rows += `<tr><td>${a.date.split('-').reverse().join('.')}</td><td>${k}</td><td>${a.ks}-${a.ke}</td><td>${dKm.toFixed(1)}</td><td>${a.allowance!=='-'?a.allowance:''}</td></tr>`;
+        const dKm = Math.max(0, a.ke - a.ks);
+        let dEur = dKm * HINNAT.km;
+        if(a.allowance === 'Osapäivä') { dEur += HINNAT.Osapäivä; cOsa++; }
+        else if(a.allowance === 'Kokopäivä') { dEur += HINNAT.Kokopäivä; cKoko++; }
+        else if(a.allowance === 'Ateria') { dEur += HINNAT.Ateria; cAteria++; }
+        
+        tKm += dKm; tEur += dEur;
+        const k = a.stops ? a.stops.map(s => s.client).join(', ') : '-';
+        rows += `<tr><td>${a.date.split('-').reverse().join('.')}</td><td>${k}</td><td>${dKm.toFixed(1)}</td><td>${a.allowance}</td><td>${dEur.toFixed(2)} €</td></tr>`;
     });
-    const eurKm = tKm*HINNAT.km, eurOsa = cOsa*HINNAT.Osapäivä, eurKoko = cKoko*HINNAT.Kokopäivä, eurAteria = cAteria*HINNAT.Ateria;
+
     document.getElementById('report-target').innerHTML = `
-        <h2 style="text-align:center">AJOPÄIVÄKIRJA: ${t}</h2>
-        <h4 style="text-align:center; margin-top:-10px">${m}</h4>
-        <table class="report-table"><thead><tr><th>PVM</th><th>KOHTEET</th><th>MITTARI</th><th>KM</th><th>KORVAUS</th></tr></thead><tbody>${rows}</tbody></table>
+        <h3>RAPORTTI: ${t} (${m})</h3>
+        <table class="report-table"><thead><tr><th>PVM</th><th>ASIAKKAAT</th><th>KM</th><th>KORVAUS</th><th>YHT (€)</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="summary-box">
-            KILOMETRIT: ${tKm.toFixed(1)} km = ${eurKm.toFixed(2)} €<br>
-            PÄIVÄRAHAT: Osapäivä ${cOsa} kpl, Kokopäivä ${cKoko} kpl, Ateria ${cAteria} kpl<br>
-            <hr><strong>YHTEENSÄ MAKSETTAVAA: ${(eurKm+eurOsa+eurKoko+eurAteria).toFixed(2)} €</strong>
+            KM: ${tKm.toFixed(1)} km | Osapäivä: ${cOsa} | Kokopäivä: ${cKoko} | Ateria: ${cAteria}<br>
+            <hr><strong>YHTEENSÄ: ${tEur.toFixed(2)} €</strong>
         </div>`;
 }
 
@@ -294,12 +257,12 @@ db.ref('ajot').on('value', s => {
     omatAjot = s.val() ? Object.values(s.val()) : [];
     const months = [...new Set(omatAjot.map(a=>a.date?.substring(0,7)))].filter(Boolean).sort().reverse();
     document.getElementById('rep-month').innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-    document.getElementById('history-ui').innerHTML = [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,15).map(a => `
+    document.getElementById('history-ui').innerHTML = [...omatAjot].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(a => `
         <div class="card">
             <b>${a.date}</b> | ${a.type} | ${(a.ke-a.ks).toFixed(1)} km
             <div style="margin-top:10px">
                 <button class="mini-btn" style="background:var(--ac);color:white" onclick="editAjo('${a.id}')">MUOKKAA</button>
-                <button class="mini-btn" style="background:var(--err);color:white" onclick="if(confirm('Poistetaanko ajo?')) db.ref('ajot/${a.id}').remove()">POISTA</button>
+                <button class="mini-btn" style="background:var(--err);color:white" onclick="if(confirm('Poistetaanko?')) db.ref('ajot/${a.id}').remove()">POISTA</button>
             </div>
         </div>`).join('');
     paivitaRaportti();
@@ -319,7 +282,6 @@ function editAjo(id) {
     if(a.stops) a.stops.forEach(s => addStop(s.client, s.addr, s.time));
     showPage('input');
     setView(a.ts ? 'laaja' : 'suppea');
-    window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 function showPage(p) {
@@ -334,7 +296,7 @@ function toggleArchive() {
 }
 
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v100.0)" : "○ OFFLINE-TILA"; });
+db.ref(".info/connected").on("value", s => { document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v100.1)" : "○ OFFLINE"; });
 </script>
 </body>
 </html>
