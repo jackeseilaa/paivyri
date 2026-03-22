@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.5</title>
+    <title>Päivyri v5.6</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --ac: #2563eb; --success: #10b981; --err: #ef4444; }
@@ -125,7 +126,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page">
-    <h1>Päivyri v5.5</h1>
+    <h1>Päivyri v5.6</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -151,10 +152,36 @@
 
     <!-- ===== SYÖTE ===== -->
     <div id="p-input" class="page active">
-        <button class="mini-btn no-print" onclick="nollaaLomake()"
-            style="background:var(--ac); color:white; width:100%; margin-bottom:12px; height:44px; border-radius:12px;">
-            + UUSI TYHJÄ MERKINTÄ
-        </button>
+        <div style="display:flex; gap:10px; margin-bottom:12px;" class="no-print">
+            <button class="mini-btn" onclick="nollaaLomake()"
+                style="background:var(--ac); color:white; flex:1; height:44px; border-radius:12px;">
+                + UUSI TYHJÄ MERKINTÄ
+            </button>
+            <button class="mini-btn" onclick="document.getElementById('excel-input').click()"
+                style="background:#f1f5f9; color:#0f172a; flex:1; height:44px; border-radius:12px; border:2px dashed #cbd5e1;">
+                📥 TUO EXCEL
+            </button>
+        </div>
+        <input type="file" id="excel-input" accept=".xlsx,.xls" style="display:none" onchange="luoExcel(this)">
+
+        <!-- TUONTI-ESIKATSELU MODAALI -->
+        <div id="import-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(15,23,42,0.9); z-index:4000; overflow-y:auto; padding:20px;">
+            <div style="background:white; border-radius:20px; max-width:700px; margin:0 auto; padding:24px;">
+                <h2 style="margin:0 0 4px;">📥 Tuo Excel-tiedosto</h2>
+                <p id="import-info" style="color:#64748b; font-size:13px; margin:0 0 16px;"></p>
+                <div id="import-preview" style="overflow-x:auto; margin-bottom:16px;"></div>
+                <div id="import-errors" style="margin-bottom:12px;"></div>
+                <div style="display:flex; gap:10px;">
+                    <button id="import-confirm-btn" class="btn-save" onclick="vahvistaImport()"
+                        style="flex:1;">✅ TALLENNA KAIKKI FIREBASEEN</button>
+                    <button class="mini-btn" onclick="suljeImport()"
+                        style="flex:1; background:#f1f5f9; height:56px; border-radius:14px; font-size:13px;">
+                        PERUUTA
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="card">
             <input type="hidden" id="f-id">
 
@@ -365,7 +392,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.5)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.6)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -1064,6 +1091,203 @@ function laskePvraha() {
 // =============================================
 // NAVIGOINTI
 // =============================================
+// =============================================
+// EXCEL-TUONTI
+// =============================================
+let importData = [];
+
+function luoExcel(input) {
+    const file = input.files[0];
+    if (!file) return;
+    // Nollaa input jotta saman tiedoston voi ladata uudelleen
+    input.value = '';
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+
+            // Etsi AJOT-välilehti
+            const sheetName = wb.SheetNames.find(n => n === 'AJOT') || wb.SheetNames[0];
+            const ws = wb.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+            // Etsi otsikkorivi (rivi jossa on "pvm")
+            let headerRow = -1;
+            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                if (rows[i].some(c => String(c).toLowerCase().trim().startsWith('pvm'))) {
+                    headerRow = i;
+                    break;
+                }
+            }
+            if (headerRow === -1) {
+                alert('Ei löydy otsikkoriviä. Varmista että käytät Päivyri-tuontimallia.');
+                return;
+            }
+
+            const headers = rows[headerRow].map(h => String(h).toLowerCase().trim()
+                .replace(' *','').replace(/\s+/g,'_'));
+
+            // Lue datarivit — ohita tyhjät ja esimerkkidata
+            importData = [];
+            const virheet = [];
+
+            for (let i = headerRow + 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.every(c => c === '' || c === null || c === undefined)) continue;
+
+                const obj = {};
+                headers.forEach((h, ci) => { obj[h] = row[ci] ?? ''; });
+
+                // Päivämäärä — voi tulla Date-objektina tai stringinä
+                let pvm = obj['pvm'] || '';
+                if (pvm instanceof Date) {
+                    pvm = pvm.toISOString().split('T')[0];
+                } else {
+                    pvm = String(pvm).trim();
+                    // Tue myös PP.KK.VVVV muoto
+                    if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(pvm)) {
+                        const [d, m, y] = pvm.split('.');
+                        pvm = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                    }
+                }
+
+                // Validointi
+                if (!pvm || !/^\d{4}-\d{2}-\d{2}$/.test(pvm)) {
+                    virheet.push(`Rivi ${i+1}: Päivämäärä "${obj['pvm']}" ei kelpaa (pitää olla VVVV-KK-PP)`);
+                    continue;
+                }
+
+                const tyyppi = String(obj['tyyppi'] || obj['type'] || '').trim();
+                if (!['Tmi','Oy','Oma'].includes(tyyppi)) {
+                    virheet.push(`Rivi ${i+1}: Tyyppi "${tyyppi}" ei kelpaa (Tmi/Oy/Oma)`);
+                    continue;
+                }
+
+                // Päiväraha
+                const pvr = String(obj['paivaraha'] || obj['allowance'] || '').trim();
+                const pvOk = ['Osapäivä','Kokopäivä','Ateria','-',''].includes(pvr);
+                const allowance = pvOk ? (pvr || '-') : '-';
+
+                // Pysähdykset — muunna pilkkuerotellusta listaksi
+                const pysStr = String(obj['pysahdykset'] || obj['stops'] || '').trim();
+                const stops = pysStr
+                    ? pysStr.split(',').map(s => ({ client: s.trim() })).filter(s => s.client)
+                    : [];
+
+                importData.push({
+                    date:      pvm,
+                    type:      tyyppi,
+                    ks:        parseFloat(obj['alku_km'] || obj['ks'] || 0) || 0,
+                    ke:        parseFloat(obj['loppu_km'] || obj['ke'] || 0) || 0,
+                    ts:        String(obj['alku_klo'] || obj['ts'] || '').trim(),
+                    te:        String(obj['loppu_klo'] || obj['te'] || '').trim(),
+                    allowance: allowance,
+                    stops:     stops
+                });
+            }
+
+            // Näytä esikatselu
+            naytaImportEsikatselu(virheet, sheetName);
+
+        } catch(err) {
+            alert('Tiedoston lukeminen epäonnistui: ' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function naytaImportEsikatselu(virheet, sheetName) {
+    document.getElementById('import-info').innerText =
+        `Tiedosto: ${sheetName}-välilehti  |  Hyväksyttäviä rivejä: ${importData.length}  |  Ohitettuja virherivejä: ${virheet.length}`;
+
+    // Esikatselu-taulukko (max 10 riviä)
+    const naytettavat = importData.slice(0, 10);
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    html += '<thead><tr style="background:#f1f5f9;">';
+    ['PVM','TYYPPI','ALKU KM','LOPPU KM','ALKU KLO','LOPPU KLO','PÄIVÄRAHA','PYSÄHDYKSET'].forEach(h => {
+        html += `<th style="padding:7px 8px;text-align:left;border:1px solid #e2e8f0;font-size:10px;">${h}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    naytettavat.forEach((a, i) => {
+        const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const reitti = a.stops.map(s => s.client).join(', ') || '–';
+        html += `<tr style="background:${bg}">
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.date}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.type}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.ks||'–'}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.ke||'–'}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.ts||'–'}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.te||'–'}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.allowance !== '-' ? a.allowance : '–'}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${reitti}</td>
+        </tr>`;
+    });
+    if (importData.length > 10) {
+        html += `<tr><td colspan="8" style="padding:8px;text-align:center;color:#64748b;font-size:11px;">
+            ... ja ${importData.length - 10} riviä lisää</td></tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('import-preview').innerHTML = html;
+
+    // Virheilmoitukset
+    if (virheet.length > 0) {
+        document.getElementById('import-errors').innerHTML =
+            `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:12px;color:#991b1b;">
+                <b>⚠ ${virheet.length} riviä ohitettu:</b><br>
+                ${virheet.slice(0,5).map(v => '• ' + v).join('<br>')}
+                ${virheet.length > 5 ? `<br>... ja ${virheet.length-5} muuta` : ''}
+            </div>`;
+    } else {
+        document.getElementById('import-errors').innerHTML = '';
+    }
+
+    if (importData.length === 0) {
+        document.getElementById('import-confirm-btn').disabled = true;
+        document.getElementById('import-confirm-btn').innerText = '⚠ Ei tuotavaa dataa';
+    } else {
+        document.getElementById('import-confirm-btn').disabled = false;
+        document.getElementById('import-confirm-btn').innerText =
+            `✅ TALLENNA ${importData.length} AJOA FIREBASEEN`;
+    }
+
+    document.getElementById('import-modal').style.display = 'block';
+}
+
+async function vahvistaImport() {
+    if (!importData.length) return;
+    const btn = document.getElementById('import-confirm-btn');
+    btn.disabled = true;
+    btn.innerText = 'Tallennetaan...';
+
+    const uid = currentUser.uid;
+    let ok = 0, fail = 0;
+
+    for (const ajo of importData) {
+        try {
+            const ref = db.ref('users/' + uid + '/ajot').push();
+            const id = ref.key;
+            await ref.set({ id, ...ajo });
+            ok++;
+            btn.innerText = `Tallennetaan... ${ok}/${importData.length}`;
+        } catch(e) {
+            fail++;
+        }
+    }
+
+    suljeImport();
+    importData = [];
+    alert(`✅ Tuonti valmis!
+
+Tallennettu: ${ok} ajoa
+${fail > 0 ? '⚠ Epäonnistui: ' + fail + ' ajoa' : ''}`);
+}
+
+function suljeImport() {
+    document.getElementById('import-modal').style.display = 'none';
+    importData = [];
+}
+
 function showPage(p) {
     document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
     document.getElementById('p-' + p).classList.add('active');
