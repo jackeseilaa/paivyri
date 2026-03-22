@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v3.6</title>
+    <title>Päivyri v3.7</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -20,17 +20,18 @@
         .tab.active { color: var(--ac); border-bottom: 4px solid var(--ac); background: #f1f5f9; }
         .page { display: none; padding: 12px; max-width: 900px; margin: 0 auto; }
         .page.active { display: block; }
-        .card { background: #fff; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; position: relative; }
+        .card { background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; position: relative; overflow: hidden; }
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-top: 12px; margin-bottom: 4px; text-transform: uppercase; }
         input, select { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; font-weight: 600; box-sizing: border-box; background: #fff; }
         .btn-save { background: var(--success); color: white; border: none; padding: 18px; border-radius: 14px; width: 100%; font-weight: 800; cursor: pointer; font-size: 16px; margin-top: 20px; }
-        .mini-btn { padding: 10px 14px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; }
-        .del-btn { background: var(--err); color: white; padding: 10px 14px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; }
+        .mini-btn { padding: 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; flex: 1; }
+        .del-btn { background: var(--err); color: white; padding: 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; flex: 1; }
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
         .stop-row { background: #f1f5f9; padding: 15px; border-radius: 14px; margin-bottom: 15px; border-left: 6px solid var(--ac); position: relative; }
         .report-table { width: 100%; border-collapse: collapse; font-size: 10px; background: white; margin-top: 15px; }
         .report-table th, .report-table td { border: 1px solid #000; padding: 6px; text-align: left; vertical-align: top; }
-        #confirm-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:3000; align-items:center; justify-content:center; }
-        .modal-box { background:white; padding:30px; border-radius:20px; width:80%; max-width:400px; text-align:center; }
+        #confirm-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; align-items:center; justify-content:center; padding: 20px; box-sizing: border-box; }
+        .modal-box { background:white; padding:25px; border-radius:20px; width:100%; max-width:400px; text-align:center; }
         @media print { .no-print, .tabs, .status-bar, .btn-save, #history-ui, .mini-btn, .del-btn { display: none !important; } .page { display: none !important; } #p-report { display: block !important; } }
     </style>
 </head>
@@ -38,15 +39,15 @@
 
 <div id="confirm-modal">
     <div class="modal-box">
-        <h3>Tallennetaanko ajo?</h3>
-        <p>Kaikki tiedot näyttävät olevan kunnossa.</p>
-        <button class="btn-save" onclick="tallennaAjo()" style="margin-top:0">KYLLÄ, TALLENNA</button>
-        <button class="mini-btn" onclick="suljeModal()" style="margin-top:15px; background:#ddd; width:100%; height:45px;">MUOKKAA VIELÄ</button>
+        <h2 style="margin-top:0">Tallenna ajo?</h2>
+        <p>Varmista että tiedot ovat oikein.</p>
+        <button class="btn-save" onclick="tallennaAjo()" style="margin-top:10px">KYLLÄ, TALLENNA</button>
+        <button class="mini-btn" onclick="suljeModal()" style="margin-top:15px; background:#e2e8f0; width:100%; color: #000; height:50px;">MUOKKAA VIELÄ</button>
     </div>
 </div>
 
 <div id="auth-page">
-    <h1>Päivyri v3.6</h1>
+    <h1>Päivyri v3.7</h1>
     <button class="login-btn" onclick="login()">KIRJAUDU GOOGLE-TUNNUKSILLA</button>
 </div>
 
@@ -82,7 +83,7 @@
             <div id="work-fields">
                 <label>3. PÄIVÄN KÄYNNIT</label>
                 <div id="stops-container"></div>
-                <button id="add-stop-btn" class="mini-btn e-nav" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:50px; margin-top:10px;">+ LISÄÄ ASIAKASKÄYNTI</button>
+                <button id="add-stop-btn" class="mini-btn e-nav" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:55px; margin-top:10px;">+ LISÄÄ ASIAKASKÄYNTI</button>
             </div>
 
             <label>4. PALUU: Kilometrit & Aika</label>
@@ -100,7 +101,7 @@
             </select>
 
             <button id="save-btn" class="btn-save" onclick="tallennaAjo()">TALLENNA MERKINTÄ</button>
-            <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:20px; height:45px">NÄYTÄ HISTORIA</button>
+            <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:20px; height:50px">HISTORIA (MUOKKAA / POISTA)</button>
         </div>
         <div id="history-ui" style="display:none" class="no-print"></div>
     </div>
@@ -151,7 +152,6 @@ const HINNAT = { "Osapäivä": 24, "Kokopäivä": 51, "Ateria": 12.75, "km": 0.5
 
 function esc(s) { return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
 function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-function logout() { if(confirm("Kirjaudutaanko ulos?")) auth.signOut().then(() => location.reload()); }
 
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -178,21 +178,16 @@ function alustaDatanKuuntelu() {
     });
 }
 
-// ENTER-LOGIIKKA KORJATTU
 document.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
         if (e.target.classList.contains('e-nav')) {
             e.preventDefault();
             const all = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null);
             const idx = all.indexOf(e.target);
-            
-            // Jos ollaan loppuajassa (f-te), avataan varmistus
             if (e.target.id === 'f-te') {
                 document.getElementById('confirm-modal').style.display = 'flex';
                 return;
             }
-            
-            // Muuten siirrytään seuraavaan
             if (idx < all.length - 1) all[idx+1].focus();
         }
     }
@@ -202,8 +197,8 @@ function addStop(val="", addr="") {
     const div = document.createElement('div');
     div.className = 'stop-row';
     div.innerHTML = `
-        <span style="position:absolute; right:10px; top:10px; color:red; cursor:pointer" onclick="this.parentElement.remove()">✕</span>
-        <label>Yritys <button class="mini-btn" style="padding:2px 6px; font-size:8px; background:var(--success); color:white" onclick="pikaAsiakas(this)">+ UUSI</button></label>
+        <span style="position:absolute; right:10px; top:10px; color:red; font-size: 20px; font-weight: 800;" onclick="this.parentElement.remove()">✕</span>
+        <label>Yritys <button class="mini-btn" style="padding:4px 8px; font-size:9px; background:var(--success); color:white; width:auto; height:auto; display:inline-block" onclick="pikaAsiakas(this)">+ UUSI</button></label>
         <input type="text" class="s-client e-nav" value="${esc(val)}" list="crm-datalist" onchange="autoFillAddr(this)">
         <label>Osoite</label><input type="text" class="s-addr e-nav" value="${esc(addr)}">`;
     document.getElementById('stops-container').appendChild(div);
@@ -227,14 +222,13 @@ function nollaaLomake() {
     document.getElementById('f-ks').value = document.getElementById('f-ke').value; 
     document.getElementById('f-ke').value = ""; 
     document.getElementById('stops-container').innerHTML = ""; 
-    document.getElementById('f-date').focus();
 }
 
 function saveCrm() {
     const name = document.getElementById('c-name').value; if(!name) return;
     const ref = db.ref('users/' + currentUser.uid + '/asiakkaat');
     const id = document.getElementById('c-id').value || ref.push().key;
-    db.ref('users/' + currentUser.uid + '/asiakkaat/' + id).set({ id, name, addr: document.getElementById('c-addr').value, ytun: document.getElementById('c-ytun').value }).then(() => { alert("Asiakas tallennettu!"); resetCrm(); });
+    db.ref('users/' + currentUser.uid + '/asiakkaat/' + id).set({ id, name, addr: document.getElementById('c-addr').value, ytun: document.getElementById('c-ytun').value }).then(() => { alert("Yritys tallennettu!"); resetCrm(); });
 }
 
 function pikaAsiakas(btn) {
@@ -262,29 +256,29 @@ function paivitaRaportti() {
         tKm += km; tEur += total;
         html += `<tr><td>${a.date}</td><td>${(a.stops||[]).map(s=>s.client).join('->')}</td><td>${km}</td><td>${(km*0.55).toFixed(2)}</td><td>${pvr.toFixed(2)}</td><td>${total.toFixed(2)}</td></tr>`;
     });
-    html += `</tbody></table><div class="summary-box">YHTEENSÄ: ${tKm.toFixed(1)} km | ${tEur.toFixed(2)} €</div>`;
-    document.getElementById('report-target').innerHTML = data.length > 0 ? html : "<p>Ei ajoja.</p>";
+    html += `</tbody></table><div style="font-weight:800; border:2px solid #000; padding:10px; margin-top:10px;">YHTEENSÄ: ${tKm.toFixed(1)} km | ${tEur.toFixed(2)} €</div>`;
+    document.getElementById('report-target').innerHTML = data.length > 0 ? html : "<p>Ei ajoja valitulle kaudelle.</p>";
 }
 
-// CRM-LISTA: LISÄTTY POISTA JA MUOKKAA
 function paivitaCrmLista() { 
     document.getElementById('crm-list-container').innerHTML = asiakkaat.map(c => `
         <div class="card">
-            <b>${esc(c.name)}</b><br><small>${esc(c.addr)}</small>
-            <div style="margin-top:10px">
+            <div style="font-weight:800; font-size:16px;">${esc(c.name)}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">${esc(c.addr)}</div>
+            <div class="btn-group">
                 <button onclick="editCrm('${c.id}')" class="mini-btn" style="background:var(--ac); color:white">MUOKKAA</button>
                 <button onclick="if(confirm('Poistetaanko yritys?')) db.ref('users/'+currentUser.uid+'/asiakkaat/${c.id}').remove()" class="del-btn">POISTA</button>
             </div>
         </div>`).join(''); 
 }
 
-// ARKISTO: LISÄTTY POISTA JA MUOKKAA
 function paivitaArkisto() { 
     const sorted = [...omatAjot].sort((a,b) => b.date.localeCompare(a.date)); 
     document.getElementById('history-ui').innerHTML = sorted.slice(0, 15).map(a => `
         <div class="card">
-            <b>${a.date}</b>: ${(a.ke-a.ks).toFixed(1)} km 
-            <div style="margin-top:10px">
+            <div style="font-weight:800;">${a.date} | ${(a.ke-a.ks).toFixed(1)} km</div>
+            <div style="font-size:11px; color:#64748b; margin-top:4px;">${a.ts}-${a.te} | ${a.type} | ${(a.stops||[]).map(s=>s.client).join('→')}</div>
+            <div class="btn-group">
                 <button onclick="editAjo('${a.id}')" class="mini-btn" style="background:var(--ac); color:white">MUOKKAA</button>
                 <button onclick="if(confirm('Poistetaanko tämä ajo?')) db.ref('users/'+currentUser.uid+'/ajot/${a.id}').remove()" class="del-btn">POISTA</button>
             </div>
@@ -302,7 +296,7 @@ function laskePvrahaAutomaatti() { const s = document.getElementById('f-ts').val
 const now = new Date();
 document.getElementById('f-date').value = now.toISOString().split('T')[0];
 document.getElementById('rep-month-filter').value = now.toISOString().substring(0,7);
-db.ref(".info/connected").on("value", s => { if(currentUser) document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v3.6)" : "○ KATKOS"; });
+db.ref(".info/connected").on("value", s => { if(currentUser) document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v3.7)" : "○ KATKOS"; });
 </script>
 </body>
 </html>
