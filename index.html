@@ -277,9 +277,26 @@ function esc(s) {
 // =============================================
 // KIRJAUTUMINEN
 // =============================================
+let loginInProgress = false;
+
 function login() {
+    if (loginInProgress) return;  // Estää useamman popup-kutsun
+    loginInProgress = true;
+    const btn = document.querySelector('#auth-page button');
+    if (btn) { btn.disabled = true; btn.innerText = 'KIRJAUDUTAAN...'; }
+
     auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-        .catch(err => alert('Kirjautumisvirhe: ' + err.message));
+        .catch(err => {
+            // cancelled-popup-request = uusi popup avattiin ennen kuin edellinen sulkeutui
+            if (err.code === 'auth/cancelled-popup-request') return;
+            // popup-closed-by-user = käyttäjä sulki popupin itse — ei virhe
+            if (err.code === 'auth/popup-closed-by-user') return;
+            alert('Kirjautumisvirhe: ' + err.message);
+        })
+        .finally(() => {
+            loginInProgress = false;
+            if (btn) { btn.disabled = false; btn.innerText = 'KIRJAUDU GOOGLELLA'; }
+        });
 }
 
 function logout() {
