@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.7</title>
+    <title>Päivyri v5.9</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -317,6 +317,11 @@
                 NÄYTÄ LISÄÄ
             </button>
         </div>
+        <!-- Vie Exceliin -->
+        <button onclick="vieArkistoExceliin()" class="btn-dark no-print"
+            style="margin-top:10px; background:#166534;">
+            📤 VIE KAIKKI EXCELIIN (.xlsx)
+        </button>
     </div>
 
     <!-- ===== RAPORTIT ===== -->
@@ -325,7 +330,9 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <div>
                     <label>Kuukausi</label>
-                    <input type="month" id="rep-month" onchange="paivitaRaportti()">
+                    <select id="rep-month" onchange="paivitaRaportti()">
+                        <option value="">— valitse kuukausi —</option>
+                    </select>
                 </div>
                 <div>
                     <label>Yhtiö</label>
@@ -444,12 +451,13 @@ function alustaData() {
 
     db.ref('users/' + uid + '/ajot').on('value', s => {
         omatAjot = s.val() ? Object.values(s.val()) : [];
+        alustaRepKuukaudet();
         paivitaHistoria();
         paivitaRaportti();
         if (document.getElementById('p-arkisto')?.classList.contains('active')) {
             renderArkisto();
         } else {
-            arkistoAlustaKuukaudet();  // Pidä kuukausisuodatin ajantasalla
+            arkistoAlustaKuukaudet();
         }
     });
 
@@ -462,7 +470,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.7)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.9)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -478,7 +486,7 @@ function asetaOletukset() {
     const hhmm = n.getHours().toString().padStart(2,'0') + ':' + n.getMinutes().toString().padStart(2,'0');
     document.getElementById('f-ts').value = hhmm;
     document.getElementById('f-te').value = hhmm;
-    document.getElementById('rep-month').value = n.toISOString().substring(0, 7);
+    // rep-month populoidaan alustaRepKuukaudet():ssa datan saavuttua
 }
 
 // =============================================
@@ -803,8 +811,26 @@ function nollaaLomake() {
 // HISTORIA (syöte-sivun alla)
 // =============================================
 function paivitaHistoria() {
-    const sorted = [...omatAjot].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
-    document.getElementById('history-list').innerHTML = sorted.map(a => {
+    const sorted = [...omatAjot].sort((a, b) => b.date.localeCompare(a.date));
+
+    // Luonnokset erikseen — ne näytetään aina
+    const luonnokset = sorted.filter(a => !!a.luonnos);
+    // Viimeisin tallennettu (ei luonnos)
+    const viimeisin = sorted.filter(a => !a.luonnos).slice(0, 1);
+    // Näytettävät = luonnokset + viimeisin tallennettu
+    const naytettavat = [...luonnokset, ...viimeisin]
+        .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    const arkLinkki = luonnokset.length === 0 && sorted.filter(a=>!a.luonnos).length > 1
+        ? `<div style="text-align:center; padding:10px 0 4px;">
+            <button onclick="showPage('arkisto')" class="mini-btn"
+                style="background:none; color:var(--ac); font-size:11px; padding:6px 12px;">
+                📋 Kaikki ajot arkistossa →
+            </button>
+           </div>`
+        : '';
+
+    document.getElementById('history-list').innerHTML = naytettavat.map(a => {
         const km = parseFloat(a.ke || 0) - parseFloat(a.ks || 0);
         const reitti = (a.stops || []).map(s => esc(s.client)).filter(Boolean).join(' → ') || '–';
         const onLuonnos = !!a.luonnos;
@@ -826,7 +852,7 @@ function paivitaHistoria() {
                     style="background:var(--err);color:white">✕</button>
             </div>
         </div>`;
-    }).join('');
+    }).join('') + arkLinkki;
 }
 
 function vieKalenteriin(id) {
@@ -979,6 +1005,26 @@ function poistaCrm(id) {
 // =============================================
 // RAPORTTI
 // =============================================
+function alustaRepKuukaudet() {
+    const sel = document.getElementById('rep-month');
+    if (!sel) return;
+    const current = sel.value;
+    const months = [...new Set(omatAjot.map(a => (a.date||'').substring(0,7)))]
+        .filter(Boolean).sort().reverse();
+    const nimet = ['','Tammi','Helmi','Maalis','Huhti','Touko','Kesä',
+                   'Heinä','Elo','Syys','Loka','Marras','Joulu'];
+    sel.innerHTML = '<option value="">— valitse kuukausi —</option>' +
+        months.map(m => {
+            const [y, mo] = m.split('-');
+            const label = nimet[parseInt(mo)] + 'kuu ' + y;
+            return `<option value="${m}" ${m===current?'selected':''}>${label}</option>`;
+        }).join('');
+    // Valitse uusin automaattisesti jos ei ole valittu
+    if (!current && months.length > 0) {
+        sel.value = months[0];
+    }
+}
+
 function paivitaRaportti() {
     const m = document.getElementById('rep-month').value;
     const t = document.getElementById('rep-type').value;
@@ -1545,6 +1591,117 @@ function poistaArkAjo(id) {
     if (!confirm(`Poistetaanko ajo ${pvmFi} (${a.type})?`)) return;
     db.ref('users/' + currentUser.uid + '/ajot/' + id).remove()
         .catch(err => alert('Poisto epäonnistui: ' + err.message));
+}
+
+// =============================================
+// EXCEL-VIENTI — koko arkisto
+// =============================================
+function vieArkistoExceliin() {
+    if (!omatAjot.length) return alert('Ei ajoja vietäväksi.');
+
+    // Hae aktiiviset suodattimet — viemme sen mitä käyttäjä näkee
+    const month  = document.getElementById('ark-month')?.value  || '';
+    const tyyppi = document.getElementById('ark-type')?.value   || '';
+    const haku   = (document.getElementById('ark-search')?.value || '').toLowerCase();
+
+    let data = [...omatAjot]
+        .filter(a => !a.luonnos)   // Jätetään luonnokset pois viennistä
+        .sort((a,b) => (a.date||'').localeCompare(b.date||''));
+
+    if (month)  data = data.filter(a => (a.date||'').startsWith(month));
+    if (tyyppi) data = data.filter(a => a.type === tyyppi);
+    if (haku)   data = data.filter(a => {
+        const r = (a.stops||[]).map(s=>s.client).join(' ').toLowerCase();
+        return (a.date||'').includes(haku) || r.includes(haku);
+    });
+
+    if (!data.length) return alert('Ei ajoja valituilla suodattimilla.');
+
+    const wb = XLSX.utils.book_new();
+
+    // ── AJOT-välilehti ──────────────────────────────────────
+    const nimet = ['','Tammi','Helmi','Maalis','Huhti','Touko','Kesä',
+                   'Heinä','Elo','Syys','Loka','Marras','Joulu'];
+    const nyt = new Date();
+    const tiedostoKk = month
+        ? (() => { const [y,m] = month.split('-'); return nimet[parseInt(m)]+'kuu_'+y; })()
+        : 'kaikki';
+
+    // Otsikkorivi (kone-luettava — tuonti tunnistaa nämä)
+    const rows = [
+        ['pvm *', 'tyyppi *', 'alku_km', 'loppu_km', 'alku_klo', 'loppu_klo', 'paivaraha', 'pysahdykset']
+    ];
+
+    data.forEach(a => {
+        const reitti = (a.stops||[]).map(s=>s.client).filter(Boolean).join(', ');
+        rows.push([
+            a.date    || '',
+            a.type    || '',
+            a.ks > 0  ? a.ks : '',
+            a.ke > 0  ? a.ke : '',
+            a.ts      || '',
+            a.te      || '',
+            (a.allowance && a.allowance !== '-') ? a.allowance : '',
+            reitti
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Sarakeleveydet
+    ws['!cols'] = [
+        {wch:13}, {wch:9}, {wch:10}, {wch:10},
+        {wch:9},  {wch:9}, {wch:12}, {wch:55}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'AJOT');
+
+    // ── YHTEENVETO-välilehti ────────────────────────────────
+    const tKm = data.reduce((s,a) =>
+        s + Math.max(0, parseFloat(a.ke||0) - parseFloat(a.ks||0)), 0);
+    const korvData = data.filter(a => a.type !== 'Oma');
+    const tEur = korvData.reduce((s,a) => {
+        const km = Math.max(0, parseFloat(a.ke||0) - parseFloat(a.ks||0));
+        let k = km * HINNAT.km;
+        if (a.allowance==='Osapäivä')  k += HINNAT['Osapäivä'];
+        if (a.allowance==='Kokopäivä') k += HINNAT['Kokopäivä'];
+        if (a.allowance==='Ateria')    k += HINNAT['Ateria'];
+        return s + k;
+    }, 0);
+    const cOsa  = data.filter(a => a.allowance==='Osapäivä').length;
+    const cKoko = data.filter(a => a.allowance==='Kokopäivä').length;
+    const cAter = data.filter(a => a.allowance==='Ateria').length;
+
+    const yhtRows = [
+        ['YHTEENVETO', ''],
+        ['Viety', nyt.toLocaleDateString('fi-FI') + ' ' + nyt.toLocaleTimeString('fi-FI', {hour:'2-digit',minute:'2-digit'})],
+        ['Käyttäjä', currentUser?.email || ''],
+        ['Suodatin kuukausi', month || 'kaikki'],
+        ['Suodatin tyyppi', tyyppi || 'kaikki'],
+        ['', ''],
+        ['Ajoja yhteensä', data.length],
+        ['— joista Tmi', data.filter(a=>a.type==='Tmi').length],
+        ['— joista Oy',  data.filter(a=>a.type==='Oy').length],
+        ['— joista Oma', data.filter(a=>a.type==='Oma').length],
+        ['', ''],
+        ['KM yhteensä', parseFloat(tKm.toFixed(1))],
+        ['KM Tmi+Oy (korvattavat)', parseFloat(korvData.reduce((s,a)=>s+Math.max(0,parseFloat(a.ke||0)-parseFloat(a.ks||0)),0).toFixed(1))],
+        ['', ''],
+        ['Km-korvaus ' + HINNAT.km.toFixed(2).replace('.',',') + ' €/km', parseFloat((korvData.reduce((s,a)=>s+Math.max(0,parseFloat(a.ke||0)-parseFloat(a.ks||0)),0)*HINNAT.km).toFixed(2))],
+        ['Osapäivärahoja', cOsa],
+        ['Kokopäivärahoja', cKoko],
+        ['Ateriakorvauksia', cAter],
+        ['', ''],
+        ['KORVAUKSET YHTEENSÄ', parseFloat(tEur.toFixed(2))],
+    ];
+    const wsY = XLSX.utils.aoa_to_sheet(yhtRows);
+    wsY['!cols'] = [{wch:30}, {wch:20}];
+    XLSX.utils.book_append_sheet(wb, wsY, 'YHTEENVETO');
+
+    // ── Tallenna tiedosto ───────────────────────────────────
+    const pvm = nyt.toISOString().split('T')[0];
+    const nimi = `Paivyri_arkisto_${tiedostoKk}_${pvm}.xlsx`;
+    XLSX.writeFile(wb, nimi);
 }
 
 function showPage(p) {
