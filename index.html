@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.14</title>
+    <title>Päivyri v5.15</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -555,7 +555,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.14)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.15)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -1566,28 +1566,52 @@ function luoExcel(input) {
     reader.readAsArrayBuffer(file);
 }
 
-function naytaImportEsikatselu(virheet, sheetName) {
-    document.getElementById('import-info').innerText =
-        `Tiedosto: ${sheetName}-välilehti  |  Hyväksyttäviä rivejä: ${importData.length}  |  Ohitettuja virherivejä: ${virheet.length}`;
+// Duplikaatin tunnistusavain: pvm + tyyppi + alku_km
+// Riittävän yksilöllinen tunnistamaan saman ajon
+function dupAvain(a) {
+    return `${a.date}|${a.type}|${a.ks}`;
+}
 
-    // Esikatselu-taulukko (max 10 riviä)
+function naytaImportEsikatselu(virheet, sheetName) {
+    // ── Duplikaattitarkistus ─────────────────────────────────
+    const olemassaAvaimet = new Set(omatAjot.map(a => dupAvain(a)));
+    let uudet = [], duplikaatit = [];
+    importData.forEach(a => {
+        if (olemassaAvaimet.has(dupAvain(a))) {
+            duplikaatit.push(a);
+        } else {
+            uudet.push(a);
+        }
+    });
+
+    // Tallenna vain uudet tuontiin
+    importData = uudet;
+
+    // Info-rivi
+    let infoTeksti = `Tiedosto: ${sheetName}  |  Uusia ajoja: ${uudet.length}`;
+    if (duplikaatit.length > 0) infoTeksti += `  |  Duplikaatteja ohitettu: ${duplikaatit.length}`;
+    if (virheet.length > 0)     infoTeksti += `  |  Virherivejä ohitettu: ${virheet.length}`;
+    document.getElementById('import-info').innerText = infoTeksti;
+
+    // ── Esikatselu-taulukko ──────────────────────────────────
     const naytettavat = importData.slice(0, 10);
     let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
     html += '<thead><tr style="background:#f1f5f9;">';
-    ['PVM','TYYPPI','ALKU KM','LOPPU KM','ALKU KLO','LOPPU KLO','PÄIVÄRAHA','PYSÄHDYKSET'].forEach(h => {
+    ['','PVM','TYYPPI','ALKU KM','LOPPU KM','KLO','PÄIVÄRAHA','PYSÄHDYKSET'].forEach(h => {
         html += `<th style="padding:7px 8px;text-align:left;border:1px solid #e2e8f0;font-size:10px;">${h}</th>`;
     });
     html += '</tr></thead><tbody>';
     naytettavat.forEach((a, i) => {
         const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
         const reitti = a.stops.map(s => s.client).join(', ') || '–';
+        const klo = (a.ts && a.te) ? `${a.ts}–${a.te}` : '–';
         html += `<tr style="background:${bg}">
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;color:#10b981;font-size:10px;">✓ uusi</td>
             <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.date}</td>
             <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.type}</td>
             <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.ks||'–'}</td>
             <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.ke||'–'}</td>
-            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.ts||'–'}</td>
-            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.te||'–'}</td>
+            <td style="padding:6px 8px;border:1px solid #e2e8f0;">${klo}</td>
             <td style="padding:6px 8px;border:1px solid #e2e8f0;">${a.allowance !== '-' ? a.allowance : '–'}</td>
             <td style="padding:6px 8px;border:1px solid #e2e8f0;">${reitti}</td>
         </tr>`;
@@ -1597,13 +1621,29 @@ function naytaImportEsikatselu(virheet, sheetName) {
             ... ja ${importData.length - 10} riviä lisää</td></tr>`;
     }
     html += '</tbody></table>';
+
+    // ── Duplikaattilista ─────────────────────────────────────
+    if (duplikaatit.length > 0) {
+        html += `<div style="margin-top:10px; background:#fffbeb; border:1px solid #fde68a;
+            border-radius:10px; padding:12px; font-size:11px;">
+            <b style="color:#92400e;">⚠ ${duplikaatit.length} duplikaattia ohitettu</b>
+            <div style="color:#78350f; margin-top:6px;">
+            ${duplikaatit.slice(0,5).map(a =>
+                `• ${a.date} | ${a.type} | KM ${a.ks||'–'} — löytyy jo Firebasesta`
+            ).join('<br>')}
+            ${duplikaatit.length > 5 ? `<br>... ja ${duplikaatit.length-5} muuta` : ''}
+            </div>
+        </div>`;
+    }
+
     document.getElementById('import-preview').innerHTML = html;
 
-    // Virheilmoitukset
+    // ── Virhe-lista ──────────────────────────────────────────
     if (virheet.length > 0) {
         document.getElementById('import-errors').innerHTML =
-            `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:12px;color:#991b1b;">
-                <b>⚠ ${virheet.length} riviä ohitettu:</b><br>
+            `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;
+                padding:12px;font-size:12px;color:#991b1b;margin-top:8px;">
+                <b>⚠ ${virheet.length} riviä ohitettu (muotovirhe):</b><br>
                 ${virheet.slice(0,5).map(v => '• ' + v).join('<br>')}
                 ${virheet.length > 5 ? `<br>... ja ${virheet.length-5} muuta` : ''}
             </div>`;
@@ -1611,13 +1651,17 @@ function naytaImportEsikatselu(virheet, sheetName) {
         document.getElementById('import-errors').innerHTML = '';
     }
 
+    // ── Napin teksti ─────────────────────────────────────────
     if (importData.length === 0) {
         document.getElementById('import-confirm-btn').disabled = true;
-        document.getElementById('import-confirm-btn').innerText = '⚠ Ei tuotavaa dataa';
+        document.getElementById('import-confirm-btn').innerText =
+            duplikaatit.length > 0
+                ? `⚠ Kaikki ${duplikaatit.length} ajoa ovat jo Firebasessa`
+                : '⚠ Ei tuotavaa dataa';
     } else {
         document.getElementById('import-confirm-btn').disabled = false;
         document.getElementById('import-confirm-btn').innerText =
-            `✅ TALLENNA ${importData.length} AJOA FIREBASEEN`;
+            `✅ TALLENNA ${importData.length} UUTTA AJOA FIREBASEEN`;
     }
 
     document.getElementById('import-modal').style.display = 'block';
@@ -1632,11 +1676,22 @@ async function vahvistaImport() {
     const uid = currentUser.uid;
     let ok = 0, fail = 0;
 
+    // Tarkista vielä kerran juuri ennen tallennusta — dataa on voinut tulla välissä
+    const olemassaAvaimet = new Set(omatAjot.map(a => dupAvain(a)));
+
     for (const ajo of importData) {
+        // Viimeinen duplikaattivarmistus
+        if (olemassaAvaimet.has(dupAvain(ajo))) {
+            fail++;  // Ohitetaan hiljaisesti — ei virhe sinänsä
+            continue;
+        }
         try {
             const ref = db.ref('users/' + uid + '/ajot').push();
             const id = ref.key;
             await ref.set({ id, ...ajo });
+            // Lisää juuri tallennettu myös välimuistisettiin estämään saman ajon
+            // uudelleentuonnin jos samaa tiedostoa yritetään tuoda nopeasti uudelleen
+            olemassaAvaimet.add(dupAvain(ajo));
             ok++;
             btn.innerText = `Tallennetaan... ${ok}/${importData.length}`;
         } catch(e) {
@@ -1646,10 +1701,11 @@ async function vahvistaImport() {
 
     suljeImport();
     importData = [];
+    const failTeksti = fail > 0 ? `
+⚠ Ohitettu (duplikaatti/virhe): ${fail} kpl` : '';
     alert(`✅ Tuonti valmis!
 
-Tallennettu: ${ok} ajoa
-${fail > 0 ? '⚠ Epäonnistui: ' + fail + ' ajoa' : ''}`);
+Tallennettu: ${ok} uutta ajoa${failTeksti}`);
 }
 
 // =============================================
@@ -1686,7 +1742,7 @@ function vieJsonVarmuuskopio() {
     const payload = {
         _varmuuskopio_pvm: nyt,
         _kayttaja: currentUser?.email || '',
-        _versio: 'Paivyri v5.14',
+        _versio: 'Paivyri v5.15',
         ajot:      Object.fromEntries(omatAjot.map(a => [a.id, a])),
         asiakkaat: Object.fromEntries(asiakkaat.map(c => [c.id, c]))
     };
@@ -1745,7 +1801,7 @@ function vieExcelVarmuuskopio() {
     const metaRows = [
         ['Varmuuskopio päivä',    nyt],
         ['Käyttäjä',             currentUser?.email || ''],
-        ['Versio',               'Paivyri v5.14'],
+        ['Versio',               'Paivyri v5.15'],
         ['Ajoja yhteensä',       omatAjot.filter(a=>!a.luonnos).length],
         ['Luonnoksia',           omatAjot.filter(a=>!!a.luonnos).length],
         ['Yrityksiä',            asiakkaat.length],
