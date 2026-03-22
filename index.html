@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.4</title>
+    <title>Päivyri v5.5</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -88,6 +88,10 @@
         .rep-stat .val { font-size: 22px; font-weight: 800; color: var(--ac); }
         .rep-stat .lbl { font-size: 10px; color: #64748b; font-weight: 800; margin-top: 4px; }
 
+        /* AUTOSAVE */
+        .autosave-flash { animation: flashGreen 1s ease; }
+        @keyframes flashGreen { 0%,100% { background: var(--card); } 50% { background: #f0fdf4; } }
+
         /* AUTH PAGE */
         #auth-page { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 30px; text-align: center; }
         #auth-page h1 { font-size: 32px; margin-bottom: 8px; }
@@ -121,7 +125,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page">
-    <h1>Päivyri v5.4</h1>
+    <h1>Päivyri v5.5</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -130,7 +134,10 @@
 
 <!-- SOVELLUS -->
 <div id="app-ui" style="display:none">
-    <div id="sync-status" class="status-bar no-print">● Yhdistetään...</div>
+    <div class="status-bar no-print" style="display:flex;justify-content:space-between;align-items:center;padding:4px 12px;">
+        <span id="sync-status">● Yhdistetään...</span>
+        <span id="autosave-status" style="font-size:9px;color:#94a3b8;"></span>
+    </div>
     <div class="user-bar no-print">
         <span id="user-display">–</span>
         <button class="logout-btn" onclick="logout()">KIRJAUDU ULOS</button>
@@ -358,8 +365,11 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.4)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.5)' : '○ YHTEYS KATKENNUT';
     });
+
+    // Käynnistä autosave-kuuntelijat
+    lisaaAutosaveKuuntelijat();
 }
 
 // =============================================
@@ -563,8 +573,13 @@ function tallennaAjo() {
                     .filter(s => s.client)
     };
 
+    // Poista luonnos-merkintä lopullisesta tallennuksesta
+    delete data.luonnos;
+
     ajoRef.set(data)
         .then(() => {
+            clearTimeout(autosaveTimer);
+            document.getElementById('autosave-status').innerText = '';
             suljeModal();
             btn.disabled = false;
             nollaaLomake();
@@ -576,10 +591,108 @@ function tallennaAjo() {
 }
 
 // =============================================
+// AUTOSAVE — 15 sekunnin inaktiviteetin jälkeen
+// =============================================
+let autosaveTimer = null;
+let autosaveEnabled = false;  // Aktivoituu kun lomakkeella on jotain syötettynä
+
+function lomakkeellaOnSisaltoa() {
+    // Tarkista onko lomakkeella mitään tallennettavaa
+    const ks = document.getElementById('f-ks').value;
+    const ke = document.getElementById('f-ke').value;
+    const ts = document.getElementById('f-ts').value;
+    const stops = document.querySelectorAll('.stop-row input[type=text]');
+    const stopsHasContent = Array.from(stops).some(i => i.value.trim());
+    return !!(ks || ke || ts || stopsHasContent);
+}
+
+function resetAutosaveTimer() {
+    // Älä autosaveta jos modaali on auki tai ei olla syöte-sivulla
+    if (document.getElementById('confirm-modal').style.display === 'flex') return;
+    if (!document.getElementById('p-input').classList.contains('active')) return;
+    if (!lomakkeellaOnSisaltoa()) return;
+
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+        autoTallenna();
+    }, 15000);  // 15 sekuntia
+}
+
+function autoTallenna() {
+    if (!currentUser) return;
+    if (!lomakkeellaOnSisaltoa()) return;
+    // Älä tallenna jos modaali on auki
+    if (document.getElementById('confirm-modal').style.display === 'flex') return;
+
+    const uid = currentUser.uid;
+    const existingId = document.getElementById('f-id').value;
+    const ajoRef = existingId
+        ? db.ref('users/' + uid + '/ajot/' + existingId)
+        : db.ref('users/' + uid + '/ajot').push();
+    const id = existingId || ajoRef.key;
+
+    const data = {
+        id,
+        date:      document.getElementById('f-date').value,
+        type:      document.getElementById('f-type').value,
+        ks:        parseFloat(document.getElementById('f-ks').value) || 0,
+        ke:        parseFloat(document.getElementById('f-ke').value) || 0,
+        ts:        document.getElementById('f-ts').value,
+        te:        document.getElementById('f-te').value,
+        allowance: document.getElementById('f-allowance').value,
+        stops: Array.from(document.querySelectorAll('.stop-row input[type=text]'))
+                    .map(i => ({ client: i.value.trim() }))
+                    .filter(s => s.client),
+        luonnos: true  // Merkitään luonnokseksi
+    };
+
+    // Tallenna f-id jotta jatkotallennus menee saman päälle
+    if (!existingId) {
+        document.getElementById('f-id').value = id;
+    }
+
+    ajoRef.set(data)
+        .then(() => {
+            // Näytä autosave-indikaattori
+            const el = document.getElementById('autosave-status');
+            el.innerText = '💾 Luonnos tallennettu ' + new Date().toLocaleTimeString('fi-FI', {hour:'2-digit',minute:'2-digit'});
+            // Flash-efekti kortille
+            const card = document.querySelector('#p-input .card');
+            if (card) {
+                card.classList.remove('autosave-flash');
+                void card.offsetWidth;  // Pakota reflow
+                card.classList.add('autosave-flash');
+            }
+            // Päivitä historia näyttämään luonnos
+            paivitaHistoria();
+        })
+        .catch(() => {
+            // Epäonnistui hiljaisesti — ei alertia autosavesta
+            document.getElementById('autosave-status').innerText = '⚠ Luonnosta ei tallennettu';
+        });
+}
+
+// Kuuntele kaikkia syöttötapahtumia syöte-sivulla
+function lisaaAutosaveKuuntelijat() {
+    const kentat = ['f-date','f-type','f-ks','f-ke','f-ts','f-te','f-allowance'];
+    kentat.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', resetAutosaveTimer);
+            el.addEventListener('input', resetAutosaveTimer);
+        }
+    });
+    // Myös stops-container muutoksille
+    document.getElementById('stops-container').addEventListener('input', resetAutosaveTimer);
+}
+
+// =============================================
 // NOLLAA LOMAKE
 // =============================================
 function nollaaLomake() {
+    clearTimeout(autosaveTimer);
     document.getElementById('f-id').value = '';
+    document.getElementById('autosave-status').innerText = '';
     // Siirrä loppu-KM uudeksi alku-KM:ksi
     const ke = document.getElementById('f-ke').value;
     document.getElementById('f-ks').value = ke || '';
@@ -597,17 +710,21 @@ function paivitaHistoria() {
     document.getElementById('history-list').innerHTML = sorted.map(a => {
         const km = parseFloat(a.ke || 0) - parseFloat(a.ks || 0);
         const reitti = (a.stops || []).map(s => esc(s.client)).filter(Boolean).join(' → ') || '–';
+        const onLuonnos = !!a.luonnos;
         return `
-        <div class="card history-item">
+        <div class="card history-item" style="${onLuonnos ? 'border:1px dashed #f59e0b; background:#fffbeb;' : ''}">
             <div class="info">
-                <b>${esc(a.date)} | ${esc(a.type)}</b>
-                <small>${Math.max(0, km).toFixed(1)} km | ${esc(a.allowance)} | ${reitti}</small>
+                <b>${onLuonnos ? '✏️ ' : ''}${esc(a.date)} | ${esc(a.type)}</b>
+                <small>
+                    ${onLuonnos ? '<span style="color:#f59e0b;font-weight:800;">LUONNOS</span> · ' : ''}
+                    ${Math.max(0, km).toFixed(1)} km | ${esc(a.allowance)} | ${reitti}
+                </small>
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button onclick="editAjo('${esc(a.id)}')" class="mini-btn"
                     style="background:var(--ac);color:white">Muokkaa</button>
-                <button onclick="vieKalenteriin('${esc(a.id)}')" class="mini-btn"
-                    style="background:#f1f5f9;color:#0f172a;">📅 Kalenteri</button>
+                ${!onLuonnos ? `<button onclick="vieKalenteriin('${esc(a.id)}')" class="mini-btn"
+                    style="background:#f1f5f9;color:#0f172a;">📅 Kalenteri</button>` : ''}
                 <button onclick="poistaAjo('${esc(a.id)}')" class="mini-btn"
                     style="background:var(--err);color:white">✕</button>
             </div>
