@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.9</title>
+    <title>Päivyri v5.10</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -116,6 +116,24 @@
             border-bottom: 1px solid #f8fafc; }
         .ark-detail-row:last-child { border-bottom: none; }
         .ark-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+        /* CRM REKISTERI KORTIT */
+        .crm-card { background: var(--card); border-radius: 12px; border: 1px solid #e2e8f0;
+            margin-bottom: 8px; overflow: hidden; }
+        .crm-card-header { display: flex; justify-content: space-between; align-items: center;
+            padding: 13px 14px; cursor: pointer; gap: 10px; }
+        .crm-card-header:active { background: #f8fafc; }
+        .crm-card-name { font-size: 13px; font-weight: 800; color: var(--text); }
+        .crm-card-sub  { font-size: 11px; color: #64748b; margin-top: 2px; }
+        .crm-card-details { display: none; padding: 0 14px 13px; border-top: 1px solid #f1f5f9;
+            font-size: 12px; }
+        .crm-card-details.open { display: block; }
+        .crm-det-row { display: flex; justify-content: space-between; padding: 5px 0;
+            border-bottom: 1px solid #f8fafc; gap: 10px; }
+        .crm-det-row:last-child { border-bottom: none; }
+        .crm-det-row span { color: #64748b; flex-shrink: 0; }
+        .crm-det-row b { text-align: right; word-break: break-word; }
+        .crm-det-actions { display: flex; gap: 8px; margin-top: 12px; }
 
         /* AUTH PAGE */
         #auth-page { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 30px; text-align: center; }
@@ -272,10 +290,22 @@
             </button>
         </div>
 
-        <div class="card">
-            <input type="text" id="crm-search" placeholder="🔍 Hae yritystä..." onkeyup="paivitaCrmLista()"
-                style="margin-bottom:5px;">
-            <div id="crm-list-container"></div>
+        <!-- Avaa rekisteri -nappi -->
+        <button onclick="toggleCrmRekisteri()" id="crm-rekisteri-btn" class="mini-btn"
+            style="background:#f1f5f9; color:#0f172a; width:100%; height:44px;
+                   border-radius:12px; border:2px solid #e2e8f0; margin-bottom:0; font-size:12px;">
+            📋 NÄYTÄ YRITYSREKISTERI (0 yritystä)
+        </button>
+
+        <!-- Rekisteripaneeli — piilotettu oletuksena -->
+        <div id="crm-rekisteri-paneeli" style="display:none; margin-top:12px;">
+            <div class="card" style="padding:12px;">
+                <input type="text" id="crm-search" placeholder="🔍 Hae nimellä, Y-tunnuksella tai osoitteella..."
+                    onkeyup="paivitaCrmLista()" style="margin-bottom:8px;">
+                <div id="crm-summary"
+                    style="font-size:11px; color:#64748b; margin-bottom:8px; padding: 0 2px;"></div>
+                <div id="crm-list-container"></div>
+            </div>
         </div>
     </div>
 
@@ -470,7 +500,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.9)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.10)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -944,37 +974,95 @@ function resetCrm() {
     document.getElementById('c-notes').value  = '';
     document.getElementById('crm-form-title').innerText = 'Uusi asiakas';
     document.getElementById('crm-cancel-btn').style.display = 'none';
+    paivitaCrmLista();  // Päivitä napin teksti
 }
 
 // =============================================
 // CRM — Lista
 // =============================================
 function paivitaCrmLista() {
-    const search = (document.getElementById('crm-search').value || '').toLowerCase();
+    const search = (document.getElementById('crm-search')?.value || '').toLowerCase();
     const filtered = asiakkaat.filter(c =>
-        (c.name || '').toLowerCase().includes(search) ||
-        (c.ytun || '').toLowerCase().includes(search) ||
-        (c.addr || '').toLowerCase().includes(search)
-    );
-    document.getElementById('crm-list-container').innerHTML = filtered.length === 0
-        ? '<p style="color:#94a3b8; text-align:center; padding:20px;">Ei tuloksia</p>'
-        : filtered.map(c => `
-            <div class="crm-item">
-                <div class="crm-info">
-                    <b>${esc(c.name)}</b>
-                    <small>
-                        ${c.ytun ? esc(c.ytun) + ' | ' : ''}${esc(c.addr || '–')}<br>
-                        ${esc(c.person || '')}${c.person && c.phone ? ' | ' : ''}${esc(c.phone || '')}<br>
-                        ${esc(c.email || '')}
-                    </small>
+        (c.name   || '').toLowerCase().includes(search) ||
+        (c.ytun   || '').toLowerCase().includes(search) ||
+        (c.addr   || '').toLowerCase().includes(search) ||
+        (c.person || '').toLowerCase().includes(search) ||
+        (c.phone  || '').toLowerCase().includes(search) ||
+        (c.email  || '').toLowerCase().includes(search)
+    ).sort((a,b) => (a.name||'').localeCompare(b.name||'', 'fi'));
+
+    // Päivitä napin teksti
+    const btn = document.getElementById('crm-rekisteri-btn');
+    if (btn) {
+        const paneeli = document.getElementById('crm-rekisteri-paneeli');
+        const auki = paneeli?.style.display !== 'none';
+        btn.innerText = (auki ? '▲ PIILOTA' : '📋 NÄYTÄ') +
+            ' YRITYSREKISTERI (' + asiakkaat.length + ' yritystä)';
+    }
+
+    // Yhteenvetorivi
+    const summary = document.getElementById('crm-summary');
+    if (summary) {
+        summary.innerText = filtered.length === asiakkaat.length
+            ? asiakkaat.length + ' yritystä rekisterissä'
+            : filtered.length + ' / ' + asiakkaat.length + ' yritystä (suodatettu)';
+    }
+
+    const container = document.getElementById('crm-list-container');
+    if (!container) return;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:20px;">Ei tuloksia</p>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(c => `
+        <div class="crm-card" id="crmc-${esc(c.id)}">
+            <div class="crm-card-header" onclick="toggleCrmKortti('${esc(c.id)}')">
+                <div style="flex:1; min-width:0;">
+                    <div class="crm-card-name">${esc(c.name)}</div>
+                    <div class="crm-card-sub">
+                        ${c.ytun ? esc(c.ytun) + '  ·  ' : ''}${esc(c.addr || '–')}
+                    </div>
                 </div>
-                <div class="crm-actions">
+                <span style="color:#94a3b8; font-size:18px; flex-shrink:0;">›</span>
+            </div>
+            <div class="crm-card-details" id="crmd-${esc(c.id)}">
+                ${c.ytun   ? `<div class="crm-det-row"><span>Y-tunnus</span><b>${esc(c.ytun)}</b></div>` : ''}
+                ${c.addr   ? `<div class="crm-det-row"><span>Osoite</span><b>${esc(c.addr)}</b></div>` : ''}
+                ${c.person ? `<div class="crm-det-row"><span>Yhteyshenkilö</span><b>${esc(c.person)}</b></div>` : ''}
+                ${c.phone  ? `<div class="crm-det-row"><span>Puhelin</span><b><a href="tel:${esc(c.phone)}" style="color:var(--ac);text-decoration:none;">${esc(c.phone)}</a></b></div>` : ''}
+                ${c.email  ? `<div class="crm-det-row"><span>Sähköposti</span><b><a href="mailto:${esc(c.email)}" style="color:var(--ac);text-decoration:none;">${esc(c.email)}</a></b></div>` : ''}
+                ${c.notes  ? `<div class="crm-det-row"><span>Muistiinpanot</span><b style="white-space:pre-wrap">${esc(c.notes)}</b></div>` : ''}
+                <div class="crm-det-actions">
                     <button onclick="editCrm('${esc(c.id)}')" class="mini-btn"
-                        style="background:var(--ac);color:white">Muokkaa</button>
+                        style="background:var(--ac);color:white;flex:1;">✏ Muokkaa</button>
                     <button onclick="poistaCrm('${esc(c.id)}')" class="mini-btn"
-                        style="background:var(--err);color:white">Poista</button>
+                        style="background:var(--err);color:white;">✕ Poista</button>
                 </div>
-            </div>`).join('');
+            </div>
+        </div>`).join('');
+}
+
+function toggleCrmRekisteri() {
+    const paneeli = document.getElementById('crm-rekisteri-paneeli');
+    const auki = paneeli.style.display !== 'none';
+    paneeli.style.display = auki ? 'none' : 'block';
+    paivitaCrmLista();  // Päivittää myös napin tekstin
+    if (!auki) {
+        // Fokusoitu hakukenttään kun avataan
+        setTimeout(() => document.getElementById('crm-search')?.focus(), 100);
+    }
+}
+
+function toggleCrmKortti(id) {
+    const det = document.getElementById('crmd-' + id);
+    if (!det) return;
+    // Sulje muut
+    document.querySelectorAll('.crm-card-details.open').forEach(d => {
+        if (d !== det) d.classList.remove('open');
+    });
+    det.classList.toggle('open');
 }
 
 function editCrm(id) {
@@ -988,8 +1076,11 @@ function editCrm(id) {
     document.getElementById('c-email').value  = c.email  || '';
     document.getElementById('c-phone').value  = c.phone  || '';
     document.getElementById('c-notes').value  = c.notes  || '';
-    document.getElementById('crm-form-title').innerText = 'Muokkaa asiakasta';
+    document.getElementById('crm-form-title').innerText = 'Muokkaa: ' + c.name;
     document.getElementById('crm-cancel-btn').style.display = 'block';
+    // Piilota rekisteripaneeli kun siirrytään muokkaamaan
+    const p = document.getElementById('crm-rekisteri-paneeli');
+    if (p) p.style.display = 'none';
     showPage('crm');
     window.scrollTo(0, 0);
 }
