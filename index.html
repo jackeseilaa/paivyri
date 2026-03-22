@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.1</title>
+    <title>Päivyri v5.2</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -86,8 +86,12 @@
             .no-print, .tabs, .status-bar, .user-bar, #confirm-modal { display: none !important; }
             .page { display: none !important; }
             #p-report { display: block !important; width: 100%; padding: 0; }
-            .card { border: none; box-shadow: none; padding: 0; }
-            body { background: white; padding: 0; }
+            .card { border: none; box-shadow: none; padding: 5px 0; }
+            body { background: white; padding: 0; font-size: 11px; }
+            .report-table { font-size: 10px; }
+            .report-table th, .report-table td { padding: 6px 5px; }
+            .summary-box { border-radius: 0; border: 2px solid #000; }
+            @page { margin: 15mm; }
         }
     </style>
 </head>
@@ -105,7 +109,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page">
-    <h1>Päivyri v5.0</h1>
+    <h1>Päivyri v5.2</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -342,7 +346,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.1)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.2)' : '○ YHTEYS KATKENNUT';
     });
 }
 
@@ -370,21 +374,38 @@ document.addEventListener('keydown', e => {
         tallennaAjo();
         return;
     }
+
     // 2. Syöte-sivu
     if (document.getElementById('p-input').classList.contains('active')) {
+        // Pysähdys-kentässä Enter lisää uuden pysähdyksen
+        if (e.target.classList.contains('e-nav') && e.target.closest('.stop-row')) {
+            e.preventDefault();
+            addStop();
+            return;
+        }
+        // Loppu-aika: Enter avaa vahvistusmodaalin
         if (e.target.id === 'f-te') { e.preventDefault(); avaaVarmistus(); return; }
+        // Muissa kentissä: siirry seuraavaan
         const nav = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null);
         const idx = nav.indexOf(e.target);
         if (idx > -1 && idx < nav.length - 1) { e.preventDefault(); nav[idx + 1].focus(); }
     }
-    // 3. CRM-sivu
+
+    // 3. CRM-sivu — textarea ohitetaan (rivinvaihto sallittu)
     if (document.getElementById('p-crm').classList.contains('active')) {
+        if (e.target.tagName === 'TEXTAREA') return;  // Anna rivinvaihdon toimia
         if (e.target.classList.contains('c-nav')) {
-            const nav = Array.from(document.querySelectorAll('.c-nav'));
+            const nav = Array.from(document.querySelectorAll('.c-nav')).filter(el => el.tagName !== 'TEXTAREA');
             const idx = nav.indexOf(e.target);
             if (idx === nav.length - 1) { e.preventDefault(); saveCrm(); }
             else { e.preventDefault(); nav[idx + 1].focus(); }
         }
+    }
+
+    // 4. Raportti-sivu — Enter päivittää raportin
+    if (document.getElementById('p-report').classList.contains('active')) {
+        e.preventDefault();
+        paivitaRaportti();
     }
 });
 
@@ -667,10 +688,16 @@ function paivitaRaportti() {
         return;
     }
 
+    // Muotoile kuukausi suomeksi tulostusta varten
+    const [vuosi, kkNum] = m.split('-');
+    const kuukaudet = ['','Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+                       'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+    const kuukausiTeksti = kuukaudet[parseInt(kkNum)] + ' ' + vuosi;
+
     let rows = '';
     let tKm = 0, tEur = 0, cOsa = 0, cKoko = 0, cAteria = 0;
 
-    data.forEach(a => {
+    data.forEach((a, i) => {
         const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
         let korvaus = km * HINNAT.km;
         if (a.allowance === 'Osapäivä')  { korvaus += HINNAT['Osapäivä'];  cOsa++; }
@@ -679,48 +706,115 @@ function paivitaRaportti() {
         tKm  += km;
         tEur += korvaus;
 
-        const reitti = (a.stops || []).map(s => esc(s.client)).filter(Boolean).join(' → ') || 'Suora ajo';
+        // Päivämäärä suomalaisessa muodossa
+        const pvmOsat = (a.date || '').split('-');
+        const pvmFi = pvmOsat.length === 3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : esc(a.date);
+
+        // Reitti — verottaja vaatii lähtö- ja kohdepaikat
+        const pysahdykset = (a.stops || []).map(s => esc(s.client)).filter(Boolean);
+        const reitti = pysahdykset.length > 0 ? pysahdykset.join(' → ') : 'Ei kirjattu';
+
+        // Aika
+        const aika = (a.ts && a.te) ? esc(a.ts) + '–' + esc(a.te) : '–';
+
+        // Päiväraha-teksti
+        const pvTeksti = (a.allowance && a.allowance !== '-') ? esc(a.allowance) : '';
+
         rows += `
-            <tr>
-                <td>${esc(a.date)}<br><small style="color:#94a3b8">${esc(a.ts||'')}-${esc(a.te||'')}</small></td>
-                <td><b>${esc(a.type)}</b><br>${reitti}</td>
-                <td style="color:#64748b">${a.ks}–${a.ke}</td>
-                <td><b>${km.toFixed(1)}</b></td>
-                <td>${esc(a.allowance !== '-' ? a.allowance : '')}</td>
-                <td><b>${korvaus.toFixed(2)}</b></td>
+            <tr style="${i % 2 === 1 ? 'background:#fafafa' : ''}">
+                <td style="white-space:nowrap"><b>${pvmFi}</b><br><small style="color:#94a3b8">${aika}</small></td>
+                <td>${reitti}</td>
+                <td style="white-space:nowrap;color:#64748b">${a.ks || 0}&nbsp;→&nbsp;${a.ke || 0}</td>
+                <td style="text-align:right"><b>${km.toFixed(1)}</b></td>
+                <td style="font-size:10px">${pvTeksti}</td>
+                <td style="text-align:right"><b>${korvaus.toFixed(2)}</b></td>
             </tr>`;
     });
 
     const kmEur = (tKm * HINNAT.km).toFixed(2);
     const pvEur = (tEur - parseFloat(kmEur)).toFixed(2);
+    const kmKorvausStr = HINNAT.km.toFixed(2).replace('.', ',');
+    const nimitiedot = currentUser ? esc(currentUser.email) : '';
 
     document.getElementById('report-target').innerHTML = `
-        <div style="text-align:center; margin-bottom:10px;" class="no-print">
-            <h2 style="margin:0;">AJOPÄIVÄKIRJA: ${esc(t)}</h2>
-            <p style="color:#64748b; margin:4px 0 0;">${esc(m)} | ${HINNAT.km.toFixed(2).replace('.', ',')} €/km</p>
+        <!-- TULOSTUS-OTSIKKO (näkyy printissä) -->
+        <div style="margin-bottom:15px; padding-bottom:12px; border-bottom:2px solid #0f172a;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                <div>
+                    <div style="font-size:18px; font-weight:800;">AJOPÄIVÄKIRJA</div>
+                    <div style="font-size:13px; color:#475569; margin-top:2px;">
+                        ${kuukausiTeksti} — ${t !== 'Kaikki' ? esc(t) : 'Kaikki yhtiöt'}
+                    </div>
+                </div>
+                <div style="text-align:right; font-size:11px; color:#64748b; line-height:1.8;">
+                    <div>${nimitiedot}</div>
+                    <div>Kilometrikorvaus: ${kmKorvausStr} €/km (Verohallinto 2026)</div>
+                    <div>Tulostettu: ${new Date().toLocaleDateString('fi-FI')}</div>
+                </div>
+            </div>
         </div>
+
+        <!-- PIKAYHTEENVETO RUUDULLA (ei tulostu) -->
         <div class="rep-grid no-print">
             <div class="rep-stat"><div class="val">${tKm.toFixed(1)}</div><div class="lbl">KM YHTEENSÄ</div></div>
             <div class="rep-stat"><div class="val">${tEur.toFixed(2)} €</div><div class="lbl">KORVAUKSET YHT.</div></div>
         </div>
+
+        <!-- PÄÄASIALLINEN TAULUKKO -->
         <table class="report-table">
             <thead>
                 <tr>
-                    <th>PVM / KLO</th>
-                    <th>REITTI</th>
-                    <th>MITTARI</th>
-                    <th>KM</th>
-                    <th>PÄIVÄRAHA</th>
-                    <th>EUR</th>
+                    <th style="width:90px">PÄIVÄMÄÄRÄ<br>KLO</th>
+                    <th>AJON TARKOITUS / REITTI</th>
+                    <th style="width:95px">MITTARI<br>ALKU → LOPPU</th>
+                    <th style="width:45px;text-align:right">KM</th>
+                    <th style="width:75px">PÄIVÄRAHA</th>
+                    <th style="width:55px;text-align:right">EUR</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
+            <!-- YHTEENSÄRIVI TAULUKON SISÄLLÄ -->
+            <tfoot>
+                <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #0f172a;">
+                    <td colspan="3" style="font-size:11px;">YHTEENSÄ ${data.length} ajoa</td>
+                    <td style="text-align:right">${tKm.toFixed(1)}</td>
+                    <td style="font-size:10px;">
+                        ${cOsa > 0 ? 'Osa ' + cOsa + ' kpl' : ''}
+                        ${cKoko > 0 ? 'Koko ' + cKoko + ' kpl' : ''}
+                        ${cAteria > 0 ? 'Ateria ' + cAteria + ' kpl' : ''}
+                    </td>
+                    <td style="text-align:right">${tEur.toFixed(2)}</td>
+                </tr>
+            </tfoot>
         </table>
-        <div class="summary-box">
-            KM: ${tKm.toFixed(1)} km × ${HINNAT.km.toFixed(2).replace('.', ',')} €/km = ${kmEur} €<br>
-            Päivärahat: Osapäivä ${cOsa} kpl | Kokopäivä ${cKoko} kpl | Ateria ${cAteria} kpl = ${pvEur} €<br>
-            <hr style="margin:10px 0; border-color:#e2e8f0;">
-            <strong>MAKSETTAVAA YHTEENSÄ: ${tEur.toFixed(2)} €</strong>
+
+        <!-- YHTEENVETOLAATIKKO -->
+        <div class="summary-box" style="margin-top:20px;">
+            <table style="width:100%; font-size:12px; border:none; margin:0;">
+                <tr>
+                    <td style="border:none; padding:4px 0;">Kilometrikorvaus:</td>
+                    <td style="border:none; padding:4px 0; text-align:right;">
+                        ${tKm.toFixed(1)} km × ${kmKorvausStr} €/km
+                    </td>
+                    <td style="border:none; padding:4px 0; text-align:right; width:80px;">
+                        <b>${kmEur} €</b>
+                    </td>
+                </tr>
+                ${cOsa > 0 ? `<tr><td style="border:none;padding:4px 0;">Osapäiväraha (${cOsa} × ${HINNAT['Osapäivä'].toFixed(2).replace('.',',')} €):</td><td style="border:none;padding:4px 0;text-align:right;">–</td><td style="border:none;padding:4px 0;text-align:right;width:80px;"><b>${(cOsa * HINNAT['Osapäivä']).toFixed(2)} €</b></td></tr>` : ''}
+                ${cKoko > 0 ? `<tr><td style="border:none;padding:4px 0;">Kokopäiväraha (${cKoko} × ${HINNAT['Kokopäivä'].toFixed(2).replace('.',',')} €):</td><td style="border:none;padding:4px 0;text-align:right;">–</td><td style="border:none;padding:4px 0;text-align:right;width:80px;"><b>${(cKoko * HINNAT['Kokopäivä']).toFixed(2)} €</b></td></tr>` : ''}
+                ${cAteria > 0 ? `<tr><td style="border:none;padding:4px 0;">Ateriakorvaus (${cAteria} × ${HINNAT['Ateria'].toFixed(2).replace('.',',')} €):</td><td style="border:none;padding:4px 0;text-align:right;">–</td><td style="border:none;padding:4px 0;text-align:right;width:80px;"><b>${(cAteria * HINNAT['Ateria']).toFixed(2)} €</b></td></tr>` : ''}
+                <tr style="border-top:2px solid #0f172a;">
+                    <td style="border:none;padding:8px 0 0;font-size:14px;" colspan="2">
+                        <strong>MAKSETTAVAA YHTEENSÄ</strong>
+                    </td>
+                    <td style="border:none;padding:8px 0 0;text-align:right;width:80px;">
+                        <strong style="font-size:16px;">${tEur.toFixed(2)} €</strong>
+                    </td>
+                </tr>
+            </table>
+            <div style="margin-top:15px; padding-top:12px; border-top:1px solid #e2e8f0; font-size:10px; color:#94a3b8;">
+                Allekirjoitus: _________________________ &nbsp;&nbsp; Päiväys: _________________
+            </div>
         </div>`;
 }
 
