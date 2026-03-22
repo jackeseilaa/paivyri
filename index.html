@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v3.1</title>
+    <title>Päivyri v3.2</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -18,7 +18,7 @@
         .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 27px; z-index: 1000; }
         .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 11px; text-transform: uppercase; }
         .tab.active { color: var(--ac); border-bottom: 4px solid var(--ac); background: #f1f5f9; }
-        .page { display: none; padding: 12px; max-width: 800px; margin: 0 auto; }
+        .page { display: none; padding: 12px; max-width: 900px; margin: 0 auto; }
         .page.active { display: block; }
         .card { background: #fff; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; position: relative; }
         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-top: 12px; margin-bottom: 4px; text-transform: uppercase; }
@@ -36,7 +36,7 @@
 <body>
 
 <div id="auth-page">
-    <h1>Päivyri v3.1</h1>
+    <h1>Päivyri v3.2</h1>
     <p>Kirjaudu Google-tunnuksilla jatkaaksesi</p>
     <button class="login-btn" onclick="login()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
@@ -101,12 +101,12 @@
         <div class="card">
             <h3>Yritysrekisteri</h3>
             <input type="hidden" id="c-id">
-            <label>Yrityksen nimi *</label><input type="text" id="c-name">
-            <label>Y-tunnus</label><input type="text" id="c-ytun">
-            <label>Osoite</label><input type="text" id="c-addr">
-            <label>Yhteyshenkilö</label><input type="text" id="c-person">
-            <label>Sähköposti</label><input type="email" id="c-email">
-            <label>Puhelin</label><input type="tel" id="c-phone">
+            <label>Yrityksen nimi *</label><input type="text" id="c-name" class="c-nav">
+            <label>Y-tunnus</label><input type="text" id="c-ytun" class="c-nav">
+            <label>Osoite</label><input type="text" id="c-addr" class="c-nav">
+            <label>Yhteyshenkilö</label><input type="text" id="c-person" class="c-nav">
+            <label>Sähköposti</label><input type="email" id="c-email" class="c-nav">
+            <label>Puhelin</label><input type="tel" id="c-phone" class="c-nav">
             <button id="crm-save-btn" class="btn-save" onclick="saveCrm()">TALLENNA YRITYSTIEDOT</button>
         </div>
         <div id="crm-list-container"></div>
@@ -134,7 +134,6 @@
 <datalist id="crm-datalist"></datalist>
 
 <script>
-// --- KONFIGURAATIO ---
 const firebaseConfig = {
   apiKey: "AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",
   authDomain: "paivuri.firebaseapp.com",
@@ -145,7 +144,6 @@ const firebaseConfig = {
   appId: "1:602861240385:web:f215c3b44388ddfe9346c0"
 };
 
-// Alustus
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
@@ -156,7 +154,6 @@ const HINNAT = { "Osapäivä": 24, "Kokopäivä": 51, "Ateria": 12.75, "km": 0.5
 
 function esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-// --- KIRJAUTUMINEN ---
 function login() {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => alert("Kirjautumisvirhe: " + err.message));
@@ -177,7 +174,6 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// --- DATA ---
 function alustaDatanKuuntelu() {
     const upath = 'users/' + currentUser.uid;
     db.ref(upath + '/asiakkaat').on('value', s => {
@@ -210,24 +206,27 @@ function saveCrm() {
     db.ref('users/' + currentUser.uid + '/asiakkaat/' + id).set(data).then(() => { alert("Asiakas tallennettu!"); resetCrm(); }).catch(e => alert("Virhe CRM: " + e.message));
 }
 
-function pikaAsiakas(btn) {
-    const n = prompt("Yrityksen nimi:"); if(!n) return;
-    const a = prompt("Osoite:") || "";
-    const ref = db.ref('users/' + currentUser.uid + '/asiakkaat').push();
-    ref.set({ id: ref.key, name: n.trim(), addr: a.trim() }).then(() => {
-        const row = btn.closest('.stop-row');
-        row.querySelector('.s-client').value = n;
-        row.querySelector('.s-addr').value = a;
-    }).catch(e => alert("Pika-asennus epäonnistui: " + e.message));
-}
-
-// --- APUFUNKTIOT ---
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('e-nav')) { e.preventDefault(); const all = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null); const idx = all.indexOf(e.target); if (idx < all.length - 1) all[idx+1].focus(); else tallennaAjo(); } });
+// ENTER-logiikka molempiin lomakkeisiin
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        if (e.target.classList.contains('e-nav')) {
+            e.preventDefault();
+            const all = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null);
+            const idx = all.indexOf(e.target);
+            if (idx < all.length - 1) all[idx+1].focus(); else tallennaAjo();
+        } else if (e.target.classList.contains('c-nav')) {
+            e.preventDefault();
+            const all = Array.from(document.querySelectorAll('.c-nav')).filter(el => el.offsetParent !== null);
+            const idx = all.indexOf(e.target);
+            if (idx < all.length - 1) all[idx+1].focus(); else saveCrm();
+        }
+    }
+});
 
 function addStop(val="", addr="") {
     const div = document.createElement('div');
     div.className = 'stop-row';
-    div.innerHTML = `<span style="position:absolute; right:10px; top:10px; color:red; cursor:pointer" onclick="this.parentElement.remove()">✕</span><label>Yritys <button class="mini-btn" style="padding:2px 6px; font-size:8px; background:#10b981; color:white" onclick="pikaAsiakas(this)">+ UUSI</button></label><input type="text" class="s-client e-nav" value="${esc(val)}" list="crm-datalist" onchange="autoFillAddr(this)"><label>Osoite</label><input type="text" class="s-addr e-nav" value="${esc(addr)}">`;
+    div.innerHTML = `<span style="position:absolute; right:10px; top:10px; color:red; cursor:pointer" onclick="this.parentElement.remove()">✕</span><label>Yritys</label><input type="text" class="s-client e-nav" value="${esc(val)}" list="crm-datalist" onchange="autoFillAddr(this)"><label>Osoite</label><input type="text" class="s-addr e-nav" value="${esc(addr)}">`;
     document.getElementById('stops-container').appendChild(div);
 }
 
@@ -238,17 +237,36 @@ function paivitaRaportti() {
     let data = omatAjot.filter(a => a.date?.startsWith(m));
     if(t !== "Kaikki") data = data.filter(a => a.type === t);
     data.sort((a,b) => a.date.localeCompare(b.date));
-    let html = `<div style="text-align:center;"><h2>AJOPÄIVÄKIRJA ${m}</h2><p>Yhtiö: ${t} | 0,55 €/km</p></div><table class="report-table"><thead><tr><th>PVM</th><th>REITTI/TARKOITUS</th><th>MITTARI</th><th>KM</th><th>€</th></tr></thead><tbody>`;
+    
+    let html = `<div style="text-align:center;"><h2>AJOPÄIVÄKIRJA ${m}</h2><p>Yhtiö: ${t} | 0,55 €/km</p></div><table class="report-table"><thead><tr><th>PVM</th><th>REITTI/TARKOITUS</th><th>MITTARI</th><th>KM</th><th>KM €</th><th>PVRAHA €</th><th>YHT €</th></tr></thead><tbody>`;
     let tKm = 0, tEur = 0;
-    data.forEach(a => { const km = Math.max(0, (parseFloat(a.ke||0) - parseFloat(a.ks||0))); const reitti = (a.stops || []).map(s => esc(s.client)).join(' -> '); const korvaus = (km * HINNAT.km) + (HINNAT[a.allowance] || 0); tKm += km; tEur += korvaus; html += `<tr><td>${esc(a.date)}<br>${esc(a.ts)}-${esc(a.te)}</td><td><b>${esc(a.type)}:</b> ${reitti || 'Suora ajo'}</td><td>${a.ks}-${a.ke}</td><td>${km.toFixed(1)}</td><td>${korvaus.toFixed(2)}</td></tr>`; });
-    html += `</tbody></table><div class="summary-box">YHTEENSÄ: ${tKm.toFixed(1)} km | KORVAUKSET: ${tEur.toFixed(2)} €</div>`;
+    
+    data.forEach(a => {
+        const km = Math.max(0, (parseFloat(a.ke||0) - parseFloat(a.ks||0)));
+        const reitti = (a.stops || []).map(s => esc(s.client)).join(' -> ');
+        const kmEur = km * HINNAT.km;
+        const pvrEur = HINNAT[a.allowance] || 0;
+        const riviYht = kmEur + pvrEur;
+        
+        tKm += km; tEur += riviYht;
+        
+        html += `<tr>
+            <td>${esc(a.date)}<br>${esc(a.ts)}-${esc(a.te)}</td>
+            <td><b>${esc(a.type)}:</b> ${reitti || 'Suora ajo'}</td>
+            <td>${a.ks}-${a.ke}</td>
+            <td>${km.toFixed(1)}</td>
+            <td>${kmEur.toFixed(2)}</td>
+            <td>${pvrEur.toFixed(2)}</td>
+            <td>${riviYht.toFixed(2)}</td>
+        </tr>`;
+    });
+    
+    html += `</tbody></table><div class="summary-box">YHTEENSÄ: ${tKm.toFixed(1)} km | KORVAUKSET YHTEENSÄ: ${tEur.toFixed(2)} €</div>`;
     document.getElementById('report-target').innerHTML = data.length > 0 ? html : "<p>Ei ajoja.</p>";
 }
 
 function paivitaCrmLista() { document.getElementById('crm-list-container').innerHTML = asiakkaat.map(c => `<div class="card"><b>${esc(c.name)}</b><br><small>${esc(c.addr)}</small><div style="margin-top:10px"><button onclick="editCrm('${c.id}')" class="mini-btn" style="background:var(--ac);color:white">MUOKKAA</button><button onclick="if(confirm('Poista?')) db.ref('users/'+currentUser.uid+'/asiakkaat/${c.id}').remove()" class="del-btn">POISTA</button></div></div>`).join(''); }
-
 function paivitaArkisto() { const sorted = [...omatAjot].sort((a,b) => b.date.localeCompare(a.date)); document.getElementById('history-ui').innerHTML = sorted.slice(0, 15).map(a => `<div class="card"><b>${esc(a.date)}</b> | ${(parseFloat(a.ke||0)-parseFloat(a.ks||0)).toFixed(1)} km<div style="margin-top:10px"><button onclick="editAjo('${a.id}')" class="mini-btn" style="background:var(--ac);color:white">MUOKKAA</button><button onclick="if(confirm('Poista?')) db.ref('users/'+currentUser.uid+'/ajot/${a.id}').remove()" class="del-btn">POISTA</button></div></div>`).join(''); }
-
 function editCrm(id) { const c = asiakkaat.find(x => x.id === id); document.getElementById('c-id').value = c.id; document.getElementById('c-name').value = c.name; document.getElementById('c-ytun').value = c.ytun||""; document.getElementById('c-addr').value = c.addr||""; document.getElementById('c-person').value = c.person||""; document.getElementById('c-email').value = c.email||""; document.getElementById('c-phone').value = c.phone||""; showPage('crm'); }
 function editAjo(id) { const a = omatAjot.find(x=>x.id===id); document.getElementById('f-id').value = a.id; document.getElementById('f-date').value = a.date; document.getElementById('f-ks').value = a.ks; document.getElementById('f-ke').value = a.ke; document.getElementById('f-ts').value = a.ts; document.getElementById('f-te').value = a.te; document.getElementById('f-type').value = a.type; document.getElementById('f-allowance').value = a.allowance; document.getElementById('stops-container').innerHTML = ""; if(a.stops) a.stops.forEach(s => addStop(s.client, s.addr)); showPage('input'); }
 function nollaaLomake() { document.getElementById('f-id').value = ""; document.getElementById('f-ks').value = document.getElementById('f-ke').value; document.getElementById('f-ke').value = ""; document.getElementById('stops-container').innerHTML = ""; }
@@ -261,7 +279,7 @@ function laskePvrahaAutomaatti() { const s = document.getElementById('f-ts').val
 const now = new Date();
 document.getElementById('f-date').value = now.toISOString().split('T')[0];
 document.getElementById('rep-month-filter').value = now.toISOString().substring(0,7);
-db.ref(".info/connected").on("value", s => { if(currentUser) document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v3.1)" : "○ KATKOS"; });
+db.ref(".info/connected").on("value", s => { if(currentUser) document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v3.2)" : "○ KATKOS"; });
 </script>
 </body>
 </html>
