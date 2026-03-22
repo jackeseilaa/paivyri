@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.10</title>
+    <title>Päivyri v5.11</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -183,7 +183,65 @@
     </div>
     <div class="user-bar no-print">
         <span id="user-display">–</span>
-        <button class="logout-btn" onclick="logout()">KIRJAUDU ULOS</button>
+        <div style="display:flex; gap:4px; align-items:center;">
+            <button class="logout-btn" onclick="avaaVarmuuskopio()"
+                style="color:#059669;">💾 VARMUUSKOPIO</button>
+            <button class="logout-btn" onclick="logout()">KIRJAUDU ULOS</button>
+        </div>
+    </div>
+
+    <!-- VARMUUSKOPIO-MODAALI -->
+    <div id="backup-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(15,23,42,0.9); z-index:4000; overflow-y:auto; padding:20px;">
+        <div style="background:white; border-radius:20px; max-width:500px; margin:0 auto; padding:24px;">
+            <h2 style="margin:0 0 6px;">💾 Varmuuskopio</h2>
+            <p style="color:#64748b; font-size:13px; margin:0 0 20px;">
+                Lataa kaikki data talteen. Suositellaan kerran kuukaudessa.
+            </p>
+
+            <!-- Tilasto -->
+            <div id="backup-stats"
+                style="background:#f8fafc; border-radius:12px; padding:14px; margin-bottom:20px;
+                       font-size:12px; line-height:2; color:#475569;">
+            </div>
+
+            <!-- Vaihtoehdot -->
+            <div style="display:flex; flex-direction:column; gap:10px;">
+
+                <button onclick="vieJsonVarmuuskopio()" class="btn-save"
+                    style="background:#166534; font-size:14px;">
+                    📄 Lataa Firebase JSON
+                    <div style="font-size:10px; font-weight:400; margin-top:2px; opacity:0.85;">
+                        Täydellinen varmuuskopio — palauttaa kaiken datan Firebase Consoleen
+                    </div>
+                </button>
+
+                <button onclick="vieExcelVarmuuskopio()" class="btn-save"
+                    style="background:#1d4ed8; font-size:14px;">
+                    📊 Lataa Excel-varmuuskopio
+                    <div style="font-size:10px; font-weight:400; margin-top:2px; opacity:0.85;">
+                        Ajopäiväkirja + yritysrekisteri kahdessa välilehdessä
+                    </div>
+                </button>
+
+                <button onclick="vieMolemmat()" class="btn-save"
+                    style="background:#0f172a; font-size:14px;">
+                    📦 Lataa molemmat
+                    <div style="font-size:10px; font-weight:400; margin-top:2px; opacity:0.85;">
+                        JSON + Excel — suositellaan kuukausittaiseen varmuuskopioon
+                    </div>
+                </button>
+
+            </div>
+
+            <div id="backup-status" style="margin-top:12px; font-size:12px; color:#059669; min-height:18px;
+                text-align:center;"></div>
+
+            <button onclick="suljeVarmuuskopio()" class="mini-btn"
+                style="width:100%; margin-top:14px; background:#f1f5f9; height:44px; border-radius:12px;">
+                SULJE
+            </button>
+        </div>
     </div>
 
     <div class="tabs no-print">
@@ -500,7 +558,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.10)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.11)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -1527,6 +1585,120 @@ async function vahvistaImport() {
 
 Tallennettu: ${ok} ajoa
 ${fail > 0 ? '⚠ Epäonnistui: ' + fail + ' ajoa' : ''}`);
+}
+
+// =============================================
+// VARMUUSKOPIO
+// =============================================
+function avaaVarmuuskopio() {
+    // Laske tilastot
+    const ajojaYht  = omatAjot.filter(a => !a.luonnos).length;
+    const luonnoksia = omatAjot.filter(a => !!a.luonnos).length;
+    const yrityksia  = asiakkaat.length;
+    const kuukaudet  = [...new Set(omatAjot.map(a => (a.date||'').substring(0,7)))].filter(Boolean);
+    const vanhin = kuukaudet.length ? kuukaudet.sort()[0] : '–';
+    const uusin  = kuukaudet.length ? kuukaudet.sort().reverse()[0] : '–';
+    const nyt = new Date().toLocaleDateString('fi-FI') + ' ' +
+                new Date().toLocaleTimeString('fi-FI', {hour:'2-digit', minute:'2-digit'});
+
+    document.getElementById('backup-stats').innerHTML =
+        `<b>📅 Ajoja:</b> ${ajojaYht} kpl` +
+        (luonnoksia ? `  <span style="color:#f59e0b">(+ ${luonnoksia} luonnosta)</span>` : '') + '<br>' +
+        `<b>🏢 Yrityksiä:</b> ${yrityksia} kpl<br>` +
+        `<b>📆 Ajanjakso:</b> ${vanhin} – ${uusin}<br>` +
+        `<b>🕐 Nyt:</b> ${nyt}`;
+
+    document.getElementById('backup-status').innerText = '';
+    document.getElementById('backup-modal').style.display = 'block';
+}
+
+function suljeVarmuuskopio() {
+    document.getElementById('backup-modal').style.display = 'none';
+}
+
+function vieJsonVarmuuskopio() {
+    const nyt = new Date().toISOString().split('T')[0];
+    const payload = {
+        _varmuuskopio_pvm: nyt,
+        _kayttaja: currentUser?.email || '',
+        _versio: 'Paivyri v5.11',
+        ajot:      Object.fromEntries(omatAjot.map(a => [a.id, a])),
+        asiakkaat: Object.fromEntries(asiakkaat.map(c => [c.id, c]))
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `Paivyri_varmuuskopio_${nyt}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById('backup-status').innerText = '✅ JSON ladattu!';
+}
+
+function vieExcelVarmuuskopio() {
+    const nyt  = new Date().toISOString().split('T')[0];
+    const wb   = XLSX.utils.book_new();
+
+    // ── AJOT-välilehti ──
+    const ajoRows = [
+        ['pvm *','tyyppi *','alku_km','loppu_km','alku_klo','loppu_klo','paivaraha','pysahdykset','luonnos']
+    ];
+    [...omatAjot]
+        .sort((a,b) => (a.date||'').localeCompare(b.date||''))
+        .forEach(a => {
+            ajoRows.push([
+                a.date     || '',
+                a.type     || '',
+                a.ks > 0   ? a.ks : '',
+                a.ke > 0   ? a.ke : '',
+                a.ts       || '',
+                a.te       || '',
+                (a.allowance && a.allowance !== '-') ? a.allowance : '',
+                (a.stops||[]).map(s=>s.client).filter(Boolean).join(', '),
+                a.luonnos  ? 'kyllä' : ''
+            ]);
+        });
+    const wsA = XLSX.utils.aoa_to_sheet(ajoRows);
+    wsA['!cols'] = [{wch:13},{wch:9},{wch:10},{wch:10},{wch:9},{wch:9},{wch:12},{wch:50},{wch:9}];
+    XLSX.utils.book_append_sheet(wb, wsA, 'AJOT');
+
+    // ── YRITYKSET-välilehti ──
+    const crmRows = [
+        ['id','name','ytun','addr','person','email','phone','notes']
+    ];
+    [...asiakkaat]
+        .sort((a,b) => (a.name||'').localeCompare(b.name||'', 'fi'))
+        .forEach(c => {
+            crmRows.push([c.id||'', c.name||'', c.ytun||'', c.addr||'',
+                          c.person||'', c.email||'', c.phone||'', c.notes||'']);
+        });
+    const wsC = XLSX.utils.aoa_to_sheet(crmRows);
+    wsC['!cols'] = [{wch:22},{wch:30},{wch:12},{wch:35},{wch:20},{wch:28},{wch:14},{wch:35}];
+    XLSX.utils.book_append_sheet(wb, wsC, 'YRITYKSET');
+
+    // ── META-välilehti ──
+    const metaRows = [
+        ['Varmuuskopio päivä',    nyt],
+        ['Käyttäjä',             currentUser?.email || ''],
+        ['Versio',               'Paivyri v5.11'],
+        ['Ajoja yhteensä',       omatAjot.filter(a=>!a.luonnos).length],
+        ['Luonnoksia',           omatAjot.filter(a=>!!a.luonnos).length],
+        ['Yrityksiä',            asiakkaat.length],
+    ];
+    const wsM = XLSX.utils.aoa_to_sheet(metaRows);
+    wsM['!cols'] = [{wch:25},{wch:35}];
+    XLSX.utils.book_append_sheet(wb, wsM, 'META');
+
+    XLSX.writeFile(wb, `Paivyri_varmuuskopio_${nyt}.xlsx`);
+    document.getElementById('backup-status').innerText = '✅ Excel ladattu!';
+}
+
+function vieMolemmat() {
+    vieJsonVarmuuskopio();
+    setTimeout(() => {
+        vieExcelVarmuuskopio();
+        document.getElementById('backup-status').innerText = '✅ Molemmat ladattu!';
+    }, 500);
 }
 
 function suljeImport() {
