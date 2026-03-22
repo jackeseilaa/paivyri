@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.13</title>
+    <title>Päivyri v5.14</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -555,7 +555,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.13)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.14)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -568,10 +568,14 @@ function alustaData() {
 function asetaOletukset() {
     const n = new Date();
     document.getElementById('f-date').value = n.toISOString().split('T')[0];
-    const hhmm = n.getHours().toString().padStart(2,'0') + ':' + n.getMinutes().toString().padStart(2,'0');
-    document.getElementById('f-ts').value = hhmm;
-    document.getElementById('f-te').value = hhmm;
+    // f-ts asetetaan vasta kun alku-KM syötetään (Enter f-ks:ssä)
+    // f-te asetetaan oletuksena samaksi kuin f-ts kun se täytetään
     // rep-month populoidaan alustaRepKuukaudet():ssa datan saavuttua
+}
+
+function nykyinenAika() {
+    const n = new Date();
+    return n.getHours().toString().padStart(2,'0') + ':' + n.getMinutes().toString().padStart(2,'0');
 }
 
 // =============================================
@@ -597,6 +601,23 @@ document.addEventListener('keydown', e => {
         }
         // Loppu-aika: Enter avaa vahvistusmodaalin
         if (e.target.id === 'f-te') { e.preventDefault(); avaaVarmistus(); return; }
+
+        // Alku-KM: Enter asettaa aloituskellon tähän hetkeen (jos tyhjä) ja siirtyy siihen
+        if (e.target.id === 'f-ks') {
+            e.preventDefault();
+            const tsKentta = document.getElementById('f-ts');
+            if (!tsKentta.value) {
+                // Kenttä tyhjä — täytä nykyisellä ajalla
+                tsKentta.value = nykyinenAika();
+                // Aseta myös f-te samaksi oletuksena jos sekin tyhjä
+                const teKentta = document.getElementById('f-te');
+                if (!teKentta.value) teKentta.value = tsKentta.value;
+            }
+            tsKentta.focus();
+            tsKentta.select();
+            return;
+        }
+
         // Muissa kentissä: siirry seuraavaan
         const nav = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null);
         const idx = nav.indexOf(e.target);
@@ -884,6 +905,8 @@ function nollaaLomake() {
     document.getElementById('f-id').value = '';
     document.getElementById('autosave-status').innerText = '';
     document.getElementById('f-ke').value = '';
+    document.getElementById('f-ts').value = '';
+    document.getElementById('f-te').value = '';
     document.getElementById('stops-container').innerHTML = '';
     document.getElementById('f-allowance').value = '-';
     // Hae viimeksi tallennetun ajon loppu-KM alku-KM:ksi
@@ -1663,7 +1686,7 @@ function vieJsonVarmuuskopio() {
     const payload = {
         _varmuuskopio_pvm: nyt,
         _kayttaja: currentUser?.email || '',
-        _versio: 'Paivyri v5.13',
+        _versio: 'Paivyri v5.14',
         ajot:      Object.fromEntries(omatAjot.map(a => [a.id, a])),
         asiakkaat: Object.fromEntries(asiakkaat.map(c => [c.id, c]))
     };
@@ -1722,7 +1745,7 @@ function vieExcelVarmuuskopio() {
     const metaRows = [
         ['Varmuuskopio päivä',    nyt],
         ['Käyttäjä',             currentUser?.email || ''],
-        ['Versio',               'Paivyri v5.13'],
+        ['Versio',               'Paivyri v5.14'],
         ['Ajoja yhteensä',       omatAjot.filter(a=>!a.luonnos).length],
         ['Luonnoksia',           omatAjot.filter(a=>!!a.luonnos).length],
         ['Yrityksiä',            asiakkaat.length],
