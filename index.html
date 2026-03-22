@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.12</title>
+    <title>Päivyri v5.13</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -418,10 +418,11 @@
                 <div>
                     <label>Yhtiö</label>
                     <select id="rep-type" onchange="paivitaRaportti()">
-                        <option value="Kaikki">Kaikki</option>
+                        <option value="TmiOy" selected>Tmi + Oy (työajot)</option>
                         <option value="Tmi">Tmi</option>
                         <option value="Oy">Oy</option>
-                        <option value="Oma">Oma</option>
+                        <option value="Kaikki">Kaikki (sis. Oma)</option>
+                        <option value="Oma">Oma erikseen</option>
                     </select>
                 </div>
             </div>
@@ -535,6 +536,8 @@ function alustaData() {
         alustaRepKuukaudet();
         paivitaHistoria();
         paivitaRaportti();
+        // Päivitä alku-KM jos lomake on tyhjä (ei muokata olemassa olevaa)
+        if (!document.getElementById('f-id').value) peritaAlkuKm();
         // Päivitä arkistopaneeli jos se on auki
         if (document.getElementById('crm-arkisto-paneeli')?.style.display !== 'none') {
             renderArkisto();
@@ -552,7 +555,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.12)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.13)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -880,13 +883,43 @@ function nollaaLomake() {
     clearTimeout(autosaveTimer);
     document.getElementById('f-id').value = '';
     document.getElementById('autosave-status').innerText = '';
-    // Siirrä loppu-KM uudeksi alku-KM:ksi
-    const ke = document.getElementById('f-ke').value;
-    document.getElementById('f-ks').value = ke || '';
     document.getElementById('f-ke').value = '';
     document.getElementById('stops-container').innerHTML = '';
     document.getElementById('f-allowance').value = '-';
+    // Hae viimeksi tallennetun ajon loppu-KM alku-KM:ksi
+    peritaAlkuKm();
     asetaOletukset();
+}
+
+function peritaAlkuKm() {
+    // Etsi viimeisin tallennettu ajo (ei luonnos), järjestä päivämäärän mukaan
+    const tallennetut = omatAjot
+        .filter(a => !a.luonnos && a.ke > 0)
+        .sort((a, b) => {
+            // Järjestä ensin päivämäärän, sitten tallennusajan mukaan (id on timestamp-pohjainen)
+            const dataCmp = (b.date||'').localeCompare(a.date||'');
+            if (dataCmp !== 0) return dataCmp;
+            return (b.id||'').localeCompare(a.id||'');
+        });
+
+    const viimeisin = tallennetut[0];
+    const ksKentta = document.getElementById('f-ks');
+
+    if (viimeisin && viimeisin.ke > 0) {
+        ksKentta.value = viimeisin.ke;
+        // Näytä pieni vihje mistä arvo tuli
+        ksKentta.title = `Peritty: ${viimeisin.date} loppu-KM ${viimeisin.ke}`;
+        // Korosta kenttä hetkeksi
+        ksKentta.style.borderColor = '#10b981';
+        ksKentta.style.background  = '#f0fdf4';
+        setTimeout(() => {
+            ksKentta.style.borderColor = '';
+            ksKentta.style.background  = '';
+        }, 2000);
+    } else {
+        ksKentta.value = '';
+        ksKentta.title = '';
+    }
 }
 
 // =============================================
@@ -1188,7 +1221,8 @@ function paivitaRaportti() {
     if (!m) return;
 
     let data = omatAjot.filter(a => a.date?.startsWith(m));
-    if (t !== 'Kaikki') data = data.filter(a => a.type === t);
+    if (t === 'TmiOy')       data = data.filter(a => a.type === 'Tmi' || a.type === 'Oy');
+    else if (t !== 'Kaikki') data = data.filter(a => a.type === t);
     data.sort((a, b) => a.date.localeCompare(b.date));
 
     if (data.length === 0) {
@@ -1264,7 +1298,7 @@ function paivitaRaportti() {
                 <div>
                     <div style="font-size:18px; font-weight:800;">AJOPÄIVÄKIRJA</div>
                     <div style="font-size:13px; color:#475569; margin-top:2px;">
-                        ${kuukausiTeksti} — ${t !== 'Kaikki' ? esc(t) : 'Kaikki yhtiöt'}
+                        ${kuukausiTeksti} — ${ t==='TmiOy' ? 'Tmi + Oy (työajot)' : t!=='Kaikki' ? esc(t) : 'Kaikki yhtiöt' }
                     </div>
                 </div>
                 <div style="text-align:right; font-size:11px; color:#64748b; line-height:1.8;">
@@ -1629,7 +1663,7 @@ function vieJsonVarmuuskopio() {
     const payload = {
         _varmuuskopio_pvm: nyt,
         _kayttaja: currentUser?.email || '',
-        _versio: 'Paivyri v5.12',
+        _versio: 'Paivyri v5.13',
         ajot:      Object.fromEntries(omatAjot.map(a => [a.id, a])),
         asiakkaat: Object.fromEntries(asiakkaat.map(c => [c.id, c]))
     };
@@ -1688,7 +1722,7 @@ function vieExcelVarmuuskopio() {
     const metaRows = [
         ['Varmuuskopio päivä',    nyt],
         ['Käyttäjä',             currentUser?.email || ''],
-        ['Versio',               'Paivyri v5.12'],
+        ['Versio',               'Paivyri v5.13'],
         ['Ajoja yhteensä',       omatAjot.filter(a=>!a.luonnos).length],
         ['Luonnoksia',           omatAjot.filter(a=>!!a.luonnos).length],
         ['Yrityksiä',            asiakkaat.length],
@@ -1754,7 +1788,8 @@ function renderArkisto() {
     let data = [...omatAjot].sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
     if (month)  data = data.filter(a => (a.date||'').startsWith(month));
-    if (tyyppi) data = data.filter(a => a.type === tyyppi);
+    if (tyyppi === 'TmiOy')       data = data.filter(a => a.type === 'Tmi' || a.type === 'Oy');
+    else if (tyyppi) data = data.filter(a => a.type === tyyppi);
     if (haku)   data = data.filter(a => {
         const reitti = (a.stops||[]).map(s=>s.client).join(' ').toLowerCase();
         return (a.date||'').includes(haku) || reitti.includes(haku) || (a.type||'').toLowerCase().includes(haku);
@@ -1885,7 +1920,8 @@ function vieArkistoExceliin() {
         .sort((a,b) => (a.date||'').localeCompare(b.date||''));
 
     if (month)  data = data.filter(a => (a.date||'').startsWith(month));
-    if (tyyppi) data = data.filter(a => a.type === tyyppi);
+    if (tyyppi === 'TmiOy')       data = data.filter(a => a.type === 'Tmi' || a.type === 'Oy');
+    else if (tyyppi) data = data.filter(a => a.type === tyyppi);
     if (haku)   data = data.filter(a => {
         const r = (a.stops||[]).map(s=>s.client).join(' ').toLowerCase();
         return (a.date||'').includes(haku) || r.includes(haku);
