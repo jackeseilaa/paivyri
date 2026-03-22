@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.3</title>
+    <title>Päivyri v5.4</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -121,7 +121,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page">
-    <h1>Päivyri v5.3</h1>
+    <h1>Päivyri v5.4</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -358,7 +358,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.3)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.4)' : '○ YHTEYS KATKENNUT';
     });
 }
 
@@ -628,7 +628,7 @@ function vieKalenteriin(id) {
         'Reitti: ' + reitti +
         '\nMittari: ' + (a.ks || 0) + '-' + (a.ke || 0) +
         '\nPäiväraha: ' + (a.allowance || '-') +
-        '\nKorvaus: ' + (km * HINNAT.km + (HINNAT[a.allowance] || 0)).toFixed(2) + ' €'
+        '\nKorvaus: ' + (a.type === 'Oma' ? 'yksityisajo, ei korvattava' : (km * HINNAT.km + (HINNAT[a.allowance] || 0)).toFixed(2) + ' €')
     );
     const url = 'https://www.google.com/calendar/render?action=TEMPLATE'
         + '&text=' + title
@@ -791,12 +791,18 @@ function paivitaRaportti() {
 
     data.forEach((a, i) => {
         const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
-        let korvaus = km * HINNAT.km;
-        if (a.allowance === 'Osapäivä')  { korvaus += HINNAT['Osapäivä'];  cOsa++; }
-        if (a.allowance === 'Kokopäivä') { korvaus += HINNAT['Kokopäivä']; cKoko++; }
-        if (a.allowance === 'Ateria')    { korvaus += HINNAT['Ateria'];     cAteria++; }
+        const onOmaAjo = a.type === 'Oma';
+
+        // Oma-ajolle EI lasketa korvauksia — yksityisajo, vain seuranta
+        let korvaus = 0;
+        if (!onOmaAjo) {
+            korvaus = km * HINNAT.km;
+            if (a.allowance === 'Osapäivä')  { korvaus += HINNAT['Osapäivä'];  cOsa++; }
+            if (a.allowance === 'Kokopäivä') { korvaus += HINNAT['Kokopäivä']; cKoko++; }
+            if (a.allowance === 'Ateria')    { korvaus += HINNAT['Ateria'];     cAteria++; }
+        }
         tKm  += km;
-        tEur += korvaus;
+        if (!onOmaAjo) tEur += korvaus;
 
         // Päivämäärä suomalaisessa muodossa
         const pvmOsat = (a.date || '').split('-');
@@ -810,16 +816,22 @@ function paivitaRaportti() {
         const aika = (a.ts && a.te) ? esc(a.ts) + '–' + esc(a.te) : '–';
 
         // Päiväraha-teksti
-        const pvTeksti = (a.allowance && a.allowance !== '-') ? esc(a.allowance) : '';
+        const pvTeksti = (!onOmaAjo && a.allowance && a.allowance !== '-') ? esc(a.allowance) : '';
+
+        // Oma-ajo merkitään harmaaksi taustaväriksi
+        const rowBg = onOmaAjo ? '#f8fafc' : (i % 2 === 1 ? '#fafafa' : '');
+        const korvausTeksti = onOmaAjo
+            ? '<span style="color:#94a3b8;font-size:10px;">yksityisajo</span>'
+            : '<b>' + korvaus.toFixed(2) + '</b>';
 
         rows += `
-            <tr style="${i % 2 === 1 ? 'background:#fafafa' : ''}">
+            <tr style="background:${rowBg}">
                 <td style="white-space:nowrap"><b>${pvmFi}</b><br><small style="color:#94a3b8">${aika}</small></td>
-                <td>${reitti}</td>
+                <td>${onOmaAjo ? '<span style="color:#94a3b8">●</span> ' : ''}${reitti}</td>
                 <td style="white-space:nowrap;color:#64748b">${a.ks || 0}&nbsp;→&nbsp;${a.ke || 0}</td>
                 <td style="text-align:right"><b>${km.toFixed(1)}</b></td>
                 <td style="font-size:10px">${pvTeksti}</td>
-                <td style="text-align:right"><b>${korvaus.toFixed(2)}</b></td>
+                <td style="text-align:right">${korvausTeksti}</td>
             </tr>`;
     });
 
@@ -868,7 +880,12 @@ function paivitaRaportti() {
             <!-- YHTEENSÄRIVI TAULUKON SISÄLLÄ -->
             <tfoot>
                 <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #0f172a;">
-                    <td colspan="3" style="font-size:11px;">YHTEENSÄ ${data.length} ajoa</td>
+                    <td colspan="3" style="font-size:11px;">
+                        YHTEENSÄ ${data.length} ajoa
+                        ${data.filter(a => a.type === 'Oma').length > 0
+                            ? '<br><span style="font-weight:400;color:#94a3b8;font-size:10px;">(sis. ' + data.filter(a => a.type === 'Oma').length + ' yksityisajoa, ei korvattavia)</span>'
+                            : ''}
+                    </td>
                     <td style="text-align:right">${tKm.toFixed(1)}</td>
                     <td style="font-size:10px;">
                         ${cOsa > 0 ? 'Osa ' + cOsa + ' kpl' : ''}
