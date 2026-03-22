@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v3.2</title>
+    <title>Päivyri v3.3</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -36,7 +36,7 @@
 <body>
 
 <div id="auth-page">
-    <h1>Päivyri v3.2</h1>
+    <h1>Päivyri v3.3</h1>
     <p>Kirjaudu Google-tunnuksilla jatkaaksesi</p>
     <button class="login-btn" onclick="login()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
@@ -60,37 +60,43 @@
     <div id="p-input" class="page active">
         <div class="card">
             <input type="hidden" id="f-id">
-            <label>Ajon tyyppi</label>
-            <select id="f-type" onchange="toggleQuickMode()" class="e-nav">
-                <option value="Tmi">Tmi (Työajo)</option>
-                <option value="Oy">Oy (Työajo)</option>
-                <option value="Oma">Oma (Pika-ajo)</option>
-            </select>
-            <label>Päivämäärä ja Alku KM</label>
+            
+            <label>Kilometrit (Alku & Loppu)</label>
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="f-ks" placeholder="Alku KM" class="e-nav" style="flex:1">
+                <input type="number" id="f-ke" placeholder="Loppu KM" class="e-nav" style="flex:1">
+            </div>
+
+            <label>Kellonajat (Alku & Loppu)</label>
+            <div style="display:flex; gap:10px">
+                <div style="flex:1"><input type="time" id="f-ts" class="e-nav" onchange="laskePvrahaAutomaatti()"></div>
+                <div style="flex:1"><input type="time" id="f-te" class="e-nav" onchange="laskePvrahaAutomaatti()"></div>
+            </div>
+
+            <label>Päivämäärä & Tyyppi</label>
             <div style="display:flex; gap:10px;">
                 <input type="date" id="f-date" class="e-nav" style="flex:1.5">
-                <input type="number" id="f-ks" placeholder="Alku KM" class="e-nav" style="flex:1">
+                <select id="f-type" onchange="toggleQuickMode()" class="e-nav" style="flex:1">
+                    <option value="Tmi">Tmi</option>
+                    <option value="Oy">Oy</option>
+                    <option value="Oma">Oma</option>
+                </select>
             </div>
-            <div style="display:flex; gap:10px">
-                <div style="flex:1"><label>Alku klo</label><input type="time" id="f-ts" class="e-nav" onchange="laskePvrahaAutomaatti()"></div>
-                <div style="flex:1"><label>Loppu klo</label><input type="time" id="f-te" class="e-nav" onchange="laskePvrahaAutomaatti()"></div>
-            </div>
+
             <div id="work-fields">
                 <label>Asiakaskäynnit</label>
                 <div id="stops-container"></div>
-                <button class="mini-btn" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:45px;">+ LISÄÄ ASIAKASKÄYNTI</button>
+                <button class="mini-btn" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:45px; margin-top:10px;">+ LISÄÄ ASIAKASKÄYNTI</button>
             </div>
-            <div style="display:flex; gap:10px">
-                <div style="flex:1"><label>Loppu KM</label><input type="number" id="f-ke" placeholder="Loppu KM" class="e-nav"></div>
-                <div style="flex:1"><label>Päiväraha</label>
-                    <select id="f-allowance" class="e-nav">
-                        <option value="-">-</option>
-                        <option value="Osapäivä">Osapäivä</option>
-                        <option value="Kokopäivä">Kokopäivä</option>
-                        <option value="Ateria">Ateria</option>
-                    </select>
-                </div>
-            </div>
+
+            <label>Päiväraha (Automaattinen)</label>
+            <select id="f-allowance" class="e-nav">
+                <option value="-">-</option>
+                <option value="Osapäivä">Osapäivä</option>
+                <option value="Kokopäivä">Kokopäivä</option>
+                <option value="Ateria">Ateria</option>
+            </select>
+
             <button id="save-btn" class="btn-save" onclick="tallennaAjo()">TALLENNA MERKINTÄ</button>
             <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:20px; height:45px">NÄYTÄ HISTORIA</button>
         </div>
@@ -114,17 +120,15 @@
 
     <div id="p-report" class="page">
         <div class="no-print card">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div><label>Kuukausi</label><input type="month" id="rep-month-filter" onchange="paivitaRaportti()"></div>
-                <div><label>Yhtiö</label>
-                    <select id="rep-type-filter" onchange="paivitaRaportti()">
-                        <option value="Kaikki">Kaikki</option>
-                        <option value="Tmi">Tmi</option>
-                        <option value="Oy">Oy</option>
-                        <option value="Oma">Oma</option>
-                    </select>
-                </div>
-            </div>
+            <label>Kuukausi</label>
+            <input type="month" id="rep-month-filter" onchange="paivitaRaportti()" style="margin-bottom:15px;">
+            <label>Yhtiö</label>
+            <select id="rep-type-filter" onchange="paivitaRaportti()">
+                <option value="Kaikki">Kaikki</option>
+                <option value="Tmi">Tmi</option>
+                <option value="Oy">Oy</option>
+                <option value="Oma">Oma</option>
+            </select>
         </div>
         <div id="report-target"></div>
         <button class="btn-save no-print" style="background:#000;" onclick="window.print()">TULOSTA / ARKISTOI (PDF)</button>
@@ -206,7 +210,17 @@ function saveCrm() {
     db.ref('users/' + currentUser.uid + '/asiakkaat/' + id).set(data).then(() => { alert("Asiakas tallennettu!"); resetCrm(); }).catch(e => alert("Virhe CRM: " + e.message));
 }
 
-// ENTER-logiikka molempiin lomakkeisiin
+function pikaAsiakas(btn) {
+    const n = prompt("Yrityksen nimi:"); if(!n) return;
+    const a = prompt("Osoite:") || "";
+    const ref = db.ref('users/' + currentUser.uid + '/asiakkaat').push();
+    ref.set({ id: ref.key, name: n.trim(), addr: a.trim() }).then(() => {
+        const row = btn.closest('.stop-row');
+        row.querySelector('.s-client').value = n;
+        row.querySelector('.s-addr').value = a;
+    }).catch(e => alert("Virhe pikatallennuksessa: " + e.message));
+}
+
 document.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
         if (e.target.classList.contains('e-nav')) {
@@ -226,7 +240,11 @@ document.addEventListener('keydown', e => {
 function addStop(val="", addr="") {
     const div = document.createElement('div');
     div.className = 'stop-row';
-    div.innerHTML = `<span style="position:absolute; right:10px; top:10px; color:red; cursor:pointer" onclick="this.parentElement.remove()">✕</span><label>Yritys</label><input type="text" class="s-client e-nav" value="${esc(val)}" list="crm-datalist" onchange="autoFillAddr(this)"><label>Osoite</label><input type="text" class="s-addr e-nav" value="${esc(addr)}">`;
+    div.innerHTML = `
+        <span style="position:absolute; right:10px; top:10px; color:red; cursor:pointer" onclick="this.parentElement.remove()">✕</span>
+        <label>Yritys <button class="mini-btn" style="padding:2px 6px; font-size:8px; background:var(--success); color:white" onclick="pikaAsiakas(this)">+ UUSI</button></label>
+        <input type="text" class="s-client e-nav" value="${esc(val)}" list="crm-datalist" onchange="autoFillAddr(this)">
+        <label>Osoite</label><input type="text" class="s-addr e-nav" value="${esc(addr)}">`;
     document.getElementById('stops-container').appendChild(div);
 }
 
@@ -247,18 +265,8 @@ function paivitaRaportti() {
         const kmEur = km * HINNAT.km;
         const pvrEur = HINNAT[a.allowance] || 0;
         const riviYht = kmEur + pvrEur;
-        
         tKm += km; tEur += riviYht;
-        
-        html += `<tr>
-            <td>${esc(a.date)}<br>${esc(a.ts)}-${esc(a.te)}</td>
-            <td><b>${esc(a.type)}:</b> ${reitti || 'Suora ajo'}</td>
-            <td>${a.ks}-${a.ke}</td>
-            <td>${km.toFixed(1)}</td>
-            <td>${kmEur.toFixed(2)}</td>
-            <td>${pvrEur.toFixed(2)}</td>
-            <td>${riviYht.toFixed(2)}</td>
-        </tr>`;
+        html += `<tr><td>${esc(a.date)}<br>${esc(a.ts)}-${esc(a.te)}</td><td><b>${esc(a.type)}:</b> ${reitti || 'Suora ajo'}</td><td>${a.ks}-${a.ke}</td><td>${km.toFixed(1)}</td><td>${kmEur.toFixed(2)}</td><td>${pvrEur.toFixed(2)}</td><td>${riviYht.toFixed(2)}</td></tr>`;
     });
     
     html += `</tbody></table><div class="summary-box">YHTEENSÄ: ${tKm.toFixed(1)} km | KORVAUKSET YHTEENSÄ: ${tEur.toFixed(2)} €</div>`;
@@ -279,7 +287,7 @@ function laskePvrahaAutomaatti() { const s = document.getElementById('f-ts').val
 const now = new Date();
 document.getElementById('f-date').value = now.toISOString().split('T')[0];
 document.getElementById('rep-month-filter').value = now.toISOString().substring(0,7);
-db.ref(".info/connected").on("value", s => { if(currentUser) document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v3.2)" : "○ KATKOS"; });
+db.ref(".info/connected").on("value", s => { if(currentUser) document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v3.3)" : "○ KATKOS"; });
 </script>
 </body>
 </html>
