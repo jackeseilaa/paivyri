@@ -1,236 +1,66 @@
-<!DOCTYPE html>
-<html lang="fi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v3.8</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root { --bg: #f8fafc; --text: #0f172a; --ac: #2563eb; --success: #10b981; --err: #ef4444; }
-        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
-        #auth-page { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; padding: 20px; }
-        .login-btn { background: #fff; border: 1px solid #ddd; padding: 15px 25px; border-radius: 10px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #app-ui { display: none; }
-        .status-bar { font-size: 10px; text-align: center; padding: 6px; font-weight: 800; background: #fff; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 2000; }
-        .tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; position: sticky; top: 27px; z-index: 1000; }
-        .tab { flex: 1; padding: 16px; text-align: center; font-weight: 800; cursor: pointer; color: #64748b; font-size: 11px; text-transform: uppercase; }
-        .tab.active { color: var(--ac); border-bottom: 4px solid var(--ac); background: #f1f5f9; }
-        .page { display: none; padding: 12px; max-width: 900px; margin: 0 auto; }
-        .page.active { display: block; }
-        .card { background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; position: relative; overflow: hidden; }
-        label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-top: 12px; margin-bottom: 4px; text-transform: uppercase; }
-        input, select { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; font-weight: 600; box-sizing: border-box; background: #fff; }
-        .btn-save { background: var(--success); color: white; border: none; padding: 18px; border-radius: 14px; width: 100%; font-weight: 800; cursor: pointer; font-size: 16px; margin-top: 20px; }
-        .mini-btn { padding: 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; flex: 1; }
-        .del-btn { background: var(--err); color: white; padding: 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; flex: 1; }
-        .btn-group { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
-        .stop-row { background: #f1f5f9; padding: 15px; border-radius: 14px; margin-bottom: 15px; border-left: 6px solid var(--ac); position: relative; }
-        #confirm-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; align-items:center; justify-content:center; padding: 20px; box-sizing: border-box; }
-        .modal-box { background:white; padding:25px; border-radius:20px; width:100%; max-width:400px; text-align:center; }
-        @media print { .no-print, .tabs, .status-bar, .btn-save, #history-ui, .mini-btn, .del-btn { display: none !important; } .page { display: none !important; } #p-report { display: block !important; } }
-    </style>
-</head>
-<body>
-
-<div id="confirm-modal">
-    <div class="modal-box">
-        <h2 style="margin-top:0">Tallenna ajo?</h2>
-        <p>Paina <b>ENTER</b> tallentaaksesi tai klikkaa nappia.</p>
-        <button id="modal-confirm-btn" class="btn-save" onclick="tallennaAjo()" style="margin-top:10px">TALLENNA (ENTER)</button>
-        <button class="mini-btn" onclick="suljeModal()" style="margin-top:15px; background:#e2e8f0; width:100%; color: #000; height:50px;">MUOKKAA VIELÄ</button>
-    </div>
-</div>
-
-<div id="auth-page">
-    <h1>Päivyri v3.8</h1>
-    <button class="login-btn" onclick="login()">KIRJAUDU GOOGLE-TUNNUKSILLA</button>
-</div>
-
-<div id="app-ui">
-    <div id="sync-status" class="status-bar">Ladataan...</div>
-    
-    <div class="tabs no-print">
-        <div id="tab-input" class="tab active" onclick="showPage('input')">Syöte</div>
-        <div id="tab-crm" class="tab" onclick="showPage('crm')">Yritykset</div>
-        <div id="tab-report" class="tab" onclick="showPage('report')">Raportit</div>
-    </div>
-
-    <div id="p-input" class="page active">
-        <div class="card">
-            <input type="hidden" id="f-id">
-            
-            <label>1. Päivämäärä & Ajon tyyppi</label>
-            <div style="display:flex; gap:10px;">
-                <input type="date" id="f-date" class="e-nav" style="flex:1.5">
-                <select id="f-type" onchange="toggleQuickMode()" class="e-nav" style="flex:1">
-                    <option value="Tmi">Tmi</option>
-                    <option value="Oy">Oy</option>
-                    <option value="Oma">Oma</option>
-                </select>
-            </div>
-
-            <label>2. LÄHTÖ: Kilometrit & Aika</label>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="f-ks" placeholder="Alku KM" class="e-nav" style="flex:1">
-                <input type="time" id="f-ts" class="e-nav" style="flex:1">
-            </div>
-
-            <div id="work-fields">
-                <label>3. PÄIVÄN KÄYNNIT</label>
-                <div id="stops-container"></div>
-                <button id="add-stop-btn" class="mini-btn e-nav" onclick="addStop()" style="background:var(--ac); color:white; width:100%; height:55px; margin-top:10px;">+ LISÄÄ ASIAKASKÄYNTI</button>
-            </div>
-
-            <label>4. PALUU: Kilometrit & Aika</label>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="f-ke" placeholder="Loppu KM" class="e-nav" style="flex:1">
-                <input type="time" id="f-te" class="e-nav" style="flex:1">
-            </div>
-            
-            <label>Päiväraha</label>
-            <select id="f-allowance" class="e-nav">
-                <option value="-">-</option>
-                <option value="Osapäivä">Osapäivä</option>
-                <option value="Kokopäivä">Kokopäivä</option>
-                <option value="Ateria">Ateria</option>
-            </select>
-
-            <button id="save-btn" class="btn-save" onclick="avaaVarmistus()">TALLENNA MERKINTÄ</button>
-            <button class="mini-btn no-print" onclick="toggleArchive()" style="background:#64748b; color:white; width:100%; margin-top:20px; height:50px">HISTORIA</button>
-        </div>
-        <div id="history-ui" style="display:none" class="no-print"></div>
-    </div>
-
-    <div id="p-crm" class="page">... (CRM-sisältö) ...</div>
-    <div id="p-report" class="page">... (Raportti-sisältö) ...</div>
-</div>
-
 <script>
-// Firebase konfiguraatio ennallaan...
-const firebaseConfig = { apiKey: "AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc", authDomain: "paivuri.firebaseapp.com", databaseURL: "https://paivuri-default-rtdb.europe-west1.firebasedatabase.app", projectId: "paivuri", storageBucket: "paivuri.firebasestorage.app", messagingSenderId: "602861240385", appId: "1:602861240385:web:f215c3b44388ddfe9346c0" };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-let currentUser = null, omatAjot = [], asiakkaat = [];
-const HINNAT = { "Osapäivä": 24, "Kokopäivä": 51, "Ateria": 12.75, "km": 0.55 };
+// ... (Firebase ja muut samat kuin ennen) ...
 
-function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+const teInput = document.getElementById('f-te');
+const saveBtn = document.getElementById('save-btn');
 
-auth.onAuthStateChanged(user => {
-    if (user) { currentUser = user; document.getElementById('auth-page').style.display = 'none'; document.getElementById('app-ui').style.display = 'block'; alustaDatanKuuntelu(); }
-    else { document.getElementById('auth-page').style.display = 'flex'; document.getElementById('app-ui').style.display = 'none'; }
+// 1. SEURATAAN KELLONAIKAA REAALIAJASSA
+teInput.addEventListener('input', (e) => {
+    laskePvrahaAutomaatti();
+    
+    // Jos aika on syötetty (esim. 14:00), poistetaan "lukitus"
+    if (teInput.value && teInput.value.length >= 5) {
+        saveBtn.classList.add('btn-ready');
+        saveBtn.style.background = "#10b981"; // Vihreä valmiustila
+        
+        // TÄRKEÄ: Siirretään fokus pois kellosta napille
+        // Tämä sulkee selaimen oman kellovalitsimen ja valmistelee Enterin
+        setTimeout(() => {
+            saveBtn.focus();
+        }, 100);
+    }
 });
 
-// PARANNETTU ENTER- JA AIKASYÖTTÖLOGIIKKA
+// 2. AGGRESSIIVINEN ENTER-KUUNTELIJA
 document.addEventListener('keydown', e => {
-    // Jos varmistusikkuna on auki ja painetaan Enter
-    if (e.key === 'Enter' && document.getElementById('confirm-modal').style.display === 'flex') {
-        e.preventDefault();
-        tallennaAjo();
-        return;
-    }
-
-    if (e.key === 'Enter' && e.target.classList.contains('e-nav')) {
-        e.preventDefault();
-        const all = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null);
-        const idx = all.indexOf(e.target);
-        
-        if (e.target.id === 'f-te') {
+    if (e.key === 'Enter') {
+        // Jos ollaan tallennusnapilla tai loppuajassa -> avaa modal
+        if (document.activeElement === saveBtn || document.activeElement === teInput) {
+            e.preventDefault();
             avaaVarmistus();
             return;
         }
-        
-        if (idx < all.length - 1) all[idx+1].focus();
+
+        // Jos modal on jo auki -> Tallenna oikeasti
+        if (document.getElementById('confirm-modal').style.display === 'flex') {
+            e.preventDefault();
+            tallennaAjo();
+            return;
+        }
+
+        // Normaali hyppely kentästä toiseen
+        if (e.target.classList.contains('e-nav')) {
+            e.preventDefault();
+            const all = Array.from(document.querySelectorAll('.e-nav')).filter(el => el.offsetParent !== null);
+            const idx = all.indexOf(e.target);
+            if (idx < all.length - 1) {
+                all[idx+1].focus();
+            }
+        }
     }
 });
 
-// Kuunnellaan loppuaikaa: Kun se muuttuu, lasketaan päiväraha automaattisesti
-document.getElementById('f-te').addEventListener('input', laskePvrahaAutomaatti);
-
 function avaaVarmistus() {
-    laskePvrahaAutomaatti();
+    if (!teInput.value) {
+        teInput.focus();
+        return;
+    }
     document.getElementById('confirm-modal').style.display = 'flex';
-    // Pieni viive jotta focus tarttuu mobiilissa
-    setTimeout(() => document.getElementById('modal-confirm-btn').focus(), 100);
+    // Pakotetaan fokus modalin napille
+    setTimeout(() => {
+        document.getElementById('modal-confirm-btn').focus();
+    }, 200);
 }
 
-function suljeModal() { document.getElementById('confirm-modal').style.display = 'none'; }
-
-function tallennaAjo() {
-    suljeModal();
-    const ref = db.ref('users/' + currentUser.uid + '/ajot');
-    const id = document.getElementById('f-id').value || ref.push().key;
-    const data = { 
-        id, 
-        date: document.getElementById('f-date').value, 
-        ks: parseFloat(document.getElementById('f-ks').value) || 0, 
-        ke: parseFloat(document.getElementById('f-ke').value) || 0, 
-        ts: document.getElementById('f-ts').value || "", 
-        te: document.getElementById('f-te').value || "", 
-        type: document.getElementById('f-type').value, 
-        allowance: document.getElementById('f-allowance').value, 
-        stops: Array.from(document.querySelectorAll('.stop-row')).map(r => ({ client: r.querySelector('.s-client').value, addr: r.querySelector('.s-addr').value })) 
-    };
-    db.ref('users/' + currentUser.uid + '/ajot/' + id).set(data).then(() => { 
-        nollaaLomake(); 
-    });
-}
-
-function nollaaLomake() { 
-    document.getElementById('f-id').value = ""; 
-    document.getElementById('f-ks').value = document.getElementById('f-ke').value; 
-    document.getElementById('f-ke').value = ""; 
-    document.getElementById('f-te').value = "";
-    document.getElementById('stops-container').innerHTML = ""; 
-    alert("Tallennettu onnistuneesti!");
-}
-
-function laskePvrahaAutomaatti() {
-    const s = document.getElementById('f-ts').value;
-    const e = document.getElementById('f-te').value;
-    if(!s || !e) return;
-    
-    let h = (new Date("2000-01-01 "+e) - new Date("2000-01-01 "+s))/(1000*60*60);
-    if(h < 0) h += 24; 
-    
-    const sel = document.getElementById('f-allowance');
-    if(h >= 10) sel.value = "Kokopäivä";
-    else if(h >= 6) sel.value = "Osapäivä";
-    else sel.value = "-";
-}
-
-// Muut funktiot (CRM, Raportit, Arkisto) ennallaan...
-function alustaDatanKuuntelu() {
-    const p = 'users/' + currentUser.uid;
-    db.ref(p + '/asiakkaat').on('value', s => {
-        asiakkaat = s.val() ? Object.values(s.val()) : [];
-        paivitaCrmLista();
-    });
-    db.ref(p + '/ajot').on('value', s => {
-        omatAjot = s.val() ? Object.values(s.val()) : [];
-        paivitaRaportti(); paivitaArkisto();
-    });
-}
-function showPage(p) { document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active')); document.getElementById('p-'+p).classList.add('active'); document.getElementById('tab-'+p).classList.add('active'); }
-function toggleArchive() { const h = document.getElementById('history-ui'); h.style.display = h.style.display === 'none' ? 'block' : 'none'; }
-function toggleQuickMode() { document.getElementById('work-fields').style.display = document.getElementById('f-type').value === 'Oma' ? 'none' : 'block'; }
-function paivitaRaportti() { /* sama kuin v3.7 */ }
-function paivitaCrmLista() { /* sama kuin v3.7 */ }
-function paivitaArkisto() { /* sama kuin v3.7 */ }
-function addStop(val="", addr="") { 
-    const div = document.createElement('div');
-    div.className = 'stop-row';
-    div.innerHTML = `<span style="position:absolute; right:10px; top:10px; color:red; font-size: 20px;" onclick="this.parentElement.remove()">✕</span><label>Yritys</label><input type="text" class="s-client e-nav" value="${val}"><label>Osoite</label><input type="text" class="s-addr e-nav" value="${addr}">`;
-    document.getElementById('stops-container').appendChild(div);
-}
-
-// Alustus
-const dInput = document.getElementById('f-date');
-if(!dInput.value) dInput.value = new Date().toISOString().split('T')[0];
-db.ref(".info/connected").on("value", s => { if(currentUser) document.getElementById("sync-status").innerText = s.val() ? "● LINJOILLA (v3.8)" : "○ KATKOS"; });
+// ... (tallennaAjo ja muut funktiot) ...
 </script>
-</body>
-</html>
