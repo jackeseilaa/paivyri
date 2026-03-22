@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.6</title>
+    <title>Päivyri v5.7</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -93,6 +93,30 @@
         .autosave-flash { animation: flashGreen 1s ease; }
         @keyframes flashGreen { 0%,100% { background: var(--card); } 50% { background: #f0fdf4; } }
 
+        /* ARKISTO */
+        .ark-item { background: var(--card); border-radius: 14px; border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 10px; overflow: hidden; }
+        .ark-item-header { display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 16px; cursor: pointer; gap: 10px; }
+        .ark-item-header:active { background: #f8fafc; }
+        .ark-item-meta { flex: 1; min-width: 0; }
+        .ark-item-meta .datum { font-size: 13px; font-weight: 800; color: var(--text); }
+        .ark-item-meta .info  { font-size: 11px; color: #64748b; margin-top: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ark-item-badge { font-size: 9px; font-weight: 800; padding: 3px 8px; border-radius: 6px;
+            flex-shrink: 0; }
+        .badge-oy  { background: #dbeafe; color: #1d4ed8; }
+        .badge-tmi { background: #d1fae5; color: #065f46; }
+        .badge-oma { background: #f1f5f9; color: #475569; }
+        .badge-luonnos { background: #fef3c7; color: #92400e; }
+        .ark-item-details { display: none; padding: 0 16px 14px; border-top: 1px solid #f1f5f9;
+            font-size: 12px; color: #475569; }
+        .ark-item-details.open { display: block; }
+        .ark-detail-row { display: flex; justify-content: space-between; padding: 4px 0;
+            border-bottom: 1px solid #f8fafc; }
+        .ark-detail-row:last-child { border-bottom: none; }
+        .ark-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
         /* AUTH PAGE */
         #auth-page { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 30px; text-align: center; }
         #auth-page h1 { font-size: 32px; margin-bottom: 8px; }
@@ -147,6 +171,7 @@
     <div class="tabs no-print">
         <div class="tab active" id="tab-input" onclick="showPage('input')">Syöte</div>
         <div class="tab" id="tab-crm" onclick="showPage('crm')">Yritykset</div>
+        <div class="tab" id="tab-arkisto" onclick="showPage('arkisto')">Arkisto</div>
         <div class="tab" id="tab-report" onclick="showPage('report')">Raportit</div>
     </div>
 
@@ -251,6 +276,46 @@
             <input type="text" id="crm-search" placeholder="🔍 Hae yritystä..." onkeyup="paivitaCrmLista()"
                 style="margin-bottom:5px;">
             <div id="crm-list-container"></div>
+        </div>
+    </div>
+
+    <!-- ===== ARKISTO ===== -->
+    <div id="p-arkisto" class="page">
+        <!-- Suodattimet -->
+        <div class="card no-print" style="padding:15px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div>
+                    <label>Kuukausi</label>
+                    <select id="ark-month" onchange="paivitaArkistoSivu()">
+                        <option value="">Kaikki kuukaudet</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Tyyppi</label>
+                    <select id="ark-type" onchange="paivitaArkistoSivu()">
+                        <option value="">Kaikki</option>
+                        <option value="Tmi">Tmi</option>
+                        <option value="Oy">Oy</option>
+                        <option value="Oma">Oma</option>
+                    </select>
+                </div>
+            </div>
+            <input type="text" id="ark-search" placeholder="🔍 Hae päivämäärää, reittiä tai asiakasta..."
+                oninput="paivitaArkistoSivu()" style="margin-bottom:0;">
+        </div>
+        <!-- Yhteenvetorivi -->
+        <div id="ark-summary" class="no-print"
+            style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
+                   padding:12px 16px; margin-bottom:12px; font-size:12px; color:#475569;">
+        </div>
+        <!-- Lista -->
+        <div id="ark-list"></div>
+        <!-- Lataa lisää -->
+        <div id="ark-load-more" style="display:none; text-align:center; margin:10px 0;">
+            <button class="mini-btn" onclick="arkistoNaytaLisaa()"
+                style="background:#f1f5f9; width:100%; height:44px; border-radius:12px; font-size:12px;">
+                NÄYTÄ LISÄÄ
+            </button>
         </div>
     </div>
 
@@ -381,6 +446,11 @@ function alustaData() {
         omatAjot = s.val() ? Object.values(s.val()) : [];
         paivitaHistoria();
         paivitaRaportti();
+        if (document.getElementById('p-arkisto')?.classList.contains('active')) {
+            renderArkisto();
+        } else {
+            arkistoAlustaKuukaudet();  // Pidä kuukausisuodatin ajantasalla
+        }
     });
 
     db.ref('users/' + uid + '/asiakkaat').on('value', s => {
@@ -392,7 +462,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.6)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.7)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -1112,21 +1182,60 @@ function luoExcel(input) {
             const ws = wb.Sheets[sheetName];
             const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-            // Etsi otsikkorivi (rivi jossa on "pvm")
+            // Etsi otsikkorivi — etsitään "pvm", "päivämäärä", "date" tms.
+            const headerKandidaatit = ['pvm','päivämäärä','paivamaara','date','datum'];
             let headerRow = -1;
-            for (let i = 0; i < Math.min(rows.length, 10); i++) {
-                if (rows[i].some(c => String(c).toLowerCase().trim().startsWith('pvm'))) {
+            for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                const rowLower = rows[i].map(c => String(c||'').toLowerCase().trim());
+                if (rowLower.some(c => headerKandidaatit.some(k => c.startsWith(k)))) {
                     headerRow = i;
                     break;
                 }
             }
             if (headerRow === -1) {
-                alert('Ei löydy otsikkoriviä. Varmista että käytät Päivyri-tuontimallia.');
+                // Viimeinen yritys: käytetään automaattisesti otsikot pvm/tyyppi/alku_km...
+                // jos tiedostossa on ainakin yksi päivämäärän näköinen arvo riveillä 1-5
+                for (let i = 0; i < Math.min(rows.length, 5); i++) {
+                    if (rows[i].some(c => /^\d{4}-\d{2}-\d{2}/.test(String(c||'')))) {
+                        // Ensimmäinen datarivi — käytä sarakejärjestystä oletuksena
+                        headerRow = i;
+                        rows.splice(i, 0, ['pvm','tyyppi','alku_km','loppu_km',
+                                           'alku_klo','loppu_klo','paivaraha','pysahdykset']);
+                        break;
+                    }
+                }
+            }
+            if (headerRow === -1) {
+                alert('Otsikkoriviä ei löydy.\n\nVarmista että:\n• Käytät Päivyri-tuontimallia\n• TAI ensimmäinen sarake sisältää päivämääriä (VVVV-KK-PP)');
                 return;
             }
 
-            const headers = rows[headerRow].map(h => String(h).toLowerCase().trim()
-                .replace(' *','').replace(/\s+/g,'_'));
+            // Normalisoi otsikot: "Päivämäärä\nVVVV-KK-PP" → "pvm" jne.
+            const headerMap = {
+                'päivämäärä':'pvm', 'paivamaara':'pvm', 'date':'pvm', 'datum':'pvm',
+                'tyyppi':'tyyppi', 'type':'tyyppi', 'yhtiö':'tyyppi', 'yhtion':'tyyppi',
+                'alku km':'alku_km', 'aloitus km':'alku_km', 'km alku':'alku_km', 'start km':'alku_km',
+                'loppu km':'loppu_km', 'lopetus km':'loppu_km', 'km loppu':'loppu_km',
+                'alku klo':'alku_klo', 'lähtö':'alku_klo', 'lahto':'alku_klo',
+                'loppu klo':'loppu_klo', 'paluu':'loppu_klo', 'saapuminen':'loppu_klo',
+                'päiväraha':'paivaraha', 'paivaraha':'paivaraha', 'korvaus':'paivaraha',
+                'pysähdykset':'pysahdykset', 'asiakkaat':'pysahdykset', 'kohteet':'pysahdykset',
+                'reitti':'pysahdykset', 'kohde':'pysahdykset',
+            };
+            const headers = rows[headerRow].map(h => {
+                let normalized = String(h||'').toLowerCase().trim()
+                    .replace(' *','').replace(/\n.*/s,'').trim()  // poista rivinvaihdot
+                    .replace(/\s+/g,'_');
+                // Kokeile suoraa matchausta
+                if (['pvm','tyyppi','alku_km','loppu_km','alku_klo',
+                     'loppu_klo','paivaraha','pysahdykset'].includes(normalized)) {
+                    return normalized;
+                }
+                // Kokeile headerMap
+                const mapKey = Object.keys(headerMap).find(k =>
+                    normalized.replace(/_/g,' ').startsWith(k));
+                return mapKey ? headerMap[mapKey] : normalized;
+            });
 
             // Lue datarivit — ohita tyhjät ja esimerkkidata
             importData = [];
@@ -1288,10 +1397,161 @@ function suljeImport() {
     importData = [];
 }
 
+// =============================================
+// ARKISTO-SIVU
+// =============================================
+let arkistoNaytossa = 20;   // Näytettävien rivien määrä kerrallaan
+const ARK_SIVU = 20;
+
+function paivitaArkistoSivu() {
+    arkistoNaytossa = ARK_SIVU;  // Resetoi sivutus suodattimen vaihtuessa
+    renderArkisto();
+}
+
+function arkistoNaytaLisaa() {
+    arkistoNaytossa += ARK_SIVU;
+    renderArkisto();
+}
+
+function arkistoAlustaKuukaudet() {
+    const months = [...new Set(omatAjot.map(a => (a.date || '').substring(0,7)))]
+        .filter(Boolean).sort().reverse();
+    const sel = document.getElementById('ark-month');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Kaikki kuukaudet</option>' +
+        months.map(m => {
+            const [y, mo] = m.split('-');
+            const nimet = ['','Tammi','Helmi','Maalis','Huhti','Touko','Kesä',
+                           'Heinä','Elo','Syys','Loka','Marras','Joulu'];
+            return `<option value="${m}" ${m===current?'selected':''}>${nimet[parseInt(mo)]} ${y}</option>`;
+        }).join('');
+}
+
+function renderArkisto() {
+    arkistoAlustaKuukaudet();
+    const month  = document.getElementById('ark-month')?.value || '';
+    const tyyppi = document.getElementById('ark-type')?.value  || '';
+    const haku   = (document.getElementById('ark-search')?.value || '').toLowerCase();
+
+    let data = [...omatAjot].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    if (month)  data = data.filter(a => (a.date||'').startsWith(month));
+    if (tyyppi) data = data.filter(a => a.type === tyyppi);
+    if (haku)   data = data.filter(a => {
+        const reitti = (a.stops||[]).map(s=>s.client).join(' ').toLowerCase();
+        return (a.date||'').includes(haku) || reitti.includes(haku) || (a.type||'').toLowerCase().includes(haku);
+    });
+
+    // Yhteenvetorivi
+    const tKm = data.reduce((s,a) => s + Math.max(0, parseFloat(a.ke||0)-parseFloat(a.ks||0)), 0);
+    const korvData = data.filter(a => a.type !== 'Oma');
+    const tEur = korvData.reduce((s,a) => {
+        const km = Math.max(0, parseFloat(a.ke||0)-parseFloat(a.ks||0));
+        let k = km * HINNAT.km;
+        if (a.allowance==='Osapäivä')  k += HINNAT['Osapäivä'];
+        if (a.allowance==='Kokopäivä') k += HINNAT['Kokopäivä'];
+        if (a.allowance==='Ateria')    k += HINNAT['Ateria'];
+        return s + k;
+    }, 0);
+    document.getElementById('ark-summary').innerHTML =
+        `<b>${data.length} ajoa</b> &nbsp;|&nbsp; ${tKm.toFixed(1)} km yhteensä` +
+        (tEur > 0 ? ` &nbsp;|&nbsp; <b>${tEur.toFixed(2)} €</b> korvaukset` : '') +
+        (data.length !== omatAjot.length ? ` &nbsp;|&nbsp; <span style="color:#2563eb">${omatAjot.length - data.length} piilotettu suodattimilla</span>` : '');
+
+    const naytettavat = data.slice(0, arkistoNaytossa);
+
+    document.getElementById('ark-list').innerHTML = naytettavat.map(a => {
+        const km = Math.max(0, parseFloat(a.ke||0) - parseFloat(a.ks||0));
+        const reitti = (a.stops||[]).map(s => esc(s.client)).filter(Boolean).join(' → ') || '–';
+        const onLuonnos = !!a.luonnos;
+        const badgeClass = onLuonnos ? 'badge-luonnos' :
+            a.type==='Oy' ? 'badge-oy' : a.type==='Tmi' ? 'badge-tmi' : 'badge-oma';
+        const badgeLabel = onLuonnos ? '✏ LUONNOS' : a.type;
+
+        // Laske korvaus
+        let korvaus = 0;
+        if (!onLuonnos && a.type !== 'Oma') {
+            korvaus = km * HINNAT.km;
+            if (a.allowance==='Osapäivä')  korvaus += HINNAT['Osapäivä'];
+            if (a.allowance==='Kokopäivä') korvaus += HINNAT['Kokopäivä'];
+            if (a.allowance==='Ateria')    korvaus += HINNAT['Ateria'];
+        }
+
+        const pvmOsat = (a.date||'').split('-');
+        const pvmFi = pvmOsat.length===3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : esc(a.date);
+        const aika = (a.ts && a.te) ? esc(a.ts)+'–'+esc(a.te) : '';
+
+        return `<div class="ark-item" id="ark-${esc(a.id)}">
+            <div class="ark-item-header" onclick="toggleArkItem('${esc(a.id)}')">
+                <div class="ark-item-meta">
+                    <div class="datum">${pvmFi}${aika ? ' &nbsp; '+aika : ''}</div>
+                    <div class="info">${km.toFixed(1)} km${a.ks&&a.ke ? ' ('+a.ks+'→'+a.ke+')' : ''} &nbsp;|&nbsp; ${reitti}</div>
+                </div>
+                <span class="ark-item-badge ${badgeClass}">${badgeLabel}</span>
+                <span style="color:#94a3b8; font-size:18px; flex-shrink:0;">›</span>
+            </div>
+            <div class="ark-item-details" id="ark-det-${esc(a.id)}">
+                <div class="ark-detail-row"><span>Päivämäärä</span><b>${pvmFi}</b></div>
+                <div class="ark-detail-row"><span>Tyyppi</span><b>${esc(a.type)}</b></div>
+                ${aika ? `<div class="ark-detail-row"><span>Aika</span><b>${aika}</b></div>` : ''}
+                <div class="ark-detail-row"><span>Mittari</span><b>${a.ks||'–'} → ${a.ke||'–'} (${km.toFixed(1)} km)</b></div>
+                <div class="ark-detail-row"><span>Päiväraha</span><b>${a.allowance && a.allowance!=='-' ? esc(a.allowance) : '–'}</b></div>
+                <div class="ark-detail-row"><span>Reitti</span><b>${reitti}</b></div>
+                ${korvaus>0 ? `<div class="ark-detail-row"><span>Korvaus</span><b style="color:var(--success)">${korvaus.toFixed(2)} €</b></div>` : ''}
+                ${a.type==='Oma' ? `<div class="ark-detail-row"><span>Korvaus</span><b style="color:#94a3b8">yksityisajo</b></div>` : ''}
+                <div class="ark-actions">
+                    <button onclick="muokkaaArkAjo('${esc(a.id)}')" class="mini-btn"
+                        style="background:var(--ac);color:white;flex:1;">✏ Muokkaa</button>
+                    ${!onLuonnos ? `<button onclick="vieKalenteriin('${esc(a.id)}')" class="mini-btn"
+                        style="background:#f1f5f9;flex:1;">📅 Kalenteri</button>` : ''}
+                    <button onclick="poistaArkAjo('${esc(a.id)}')" class="mini-btn"
+                        style="background:var(--err);color:white;">✕ Poista</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Lataa lisää -nappi
+    const loadMore = document.getElementById('ark-load-more');
+    loadMore.style.display = data.length > arkistoNaytossa ? 'block' : 'none';
+    if (data.length > arkistoNaytossa) {
+        loadMore.querySelector('button').innerText =
+            `NÄYTÄ LISÄÄ (${data.length - arkistoNaytossa} jäljellä)`;
+    }
+}
+
+function toggleArkItem(id) {
+    const det = document.getElementById('ark-det-' + id);
+    if (!det) return;
+    // Sulje muut
+    document.querySelectorAll('.ark-item-details.open').forEach(d => {
+        if (d !== det) d.classList.remove('open');
+    });
+    det.classList.toggle('open');
+}
+
+function muokkaaArkAjo(id) {
+    editAjo(id);           // Käyttää olemassa olevaa editAjo-funktiota
+    showPage('input');     // Vaihda syöte-sivulle
+    window.scrollTo(0,0);
+}
+
+function poistaArkAjo(id) {
+    const a = omatAjot.find(x => x.id === id);
+    if (!a) return;
+    const pvmOsat = (a.date||'').split('-');
+    const pvmFi = pvmOsat.length===3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : a.date;
+    if (!confirm(`Poistetaanko ajo ${pvmFi} (${a.type})?`)) return;
+    db.ref('users/' + currentUser.uid + '/ajot/' + id).remove()
+        .catch(err => alert('Poisto epäonnistui: ' + err.message));
+}
+
 function showPage(p) {
     document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
     document.getElementById('p-' + p).classList.add('active');
     document.getElementById('tab-' + p).classList.add('active');
+    if (p === 'arkisto') renderArkisto();
 }
 </script>
 </body>
