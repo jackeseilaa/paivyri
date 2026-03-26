@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.27</title>
+    <title>Päivyri v5.28</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.27</h1>
+    <h1 id="app-version-title">Päivyri v5.28</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -362,18 +362,13 @@
             <label>Yrityksen nimi *</label><input type="text" id="c-name" class="c-nav">
             <label>Y-tunnus</label>
             <div style="display:flex; gap:6px; align-items:center;">
-                <input type="text" id="c-ytun" class="c-nav" style="flex:1; margin:0;"
-                    placeholder="1234567-8" onblur="ytjAutoHae()">
-                <button type="button" id="ytj-btn" onclick="haeYtjTiedot()"
-                    title="Hae yritystiedot PRH:n YTJ-rekisteristä"
-                    style="flex-shrink:0; height:50px; padding:0 12px; border-radius:12px;
-                           border:2px solid #e2e8f0; background:white; font-size:11px;
-                           font-weight:800; cursor:pointer; font-family:Sora,sans-serif;
-                           color:#2563eb; white-space:nowrap;">
+                <input type="text" id="c-ytun" class="c-nav" style="flex:1; margin:0;" placeholder="1234567-8">
+                <button type="button" id="ytj-btn"
+                    onclick="var y=document.getElementById('c-ytun').value.trim();if(!y){alert('Syötä Y-tunnus ensin.');}else{window.open('https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId='+encodeURIComponent(y),'_blank');}"
+                    style="flex-shrink:0;height:50px;padding:0 12px;border-radius:12px;border:2px solid #e2e8f0;background:white;font-size:11px;font-weight:800;cursor:pointer;font-family:Sora,sans-serif;color:#2563eb;">
                     🔍 YTJ
                 </button>
             </div>
-            <div id="ytj-status" style="font-size:11px; margin-top:4px; min-height:16px;"></div>
             <label>Osoite</label><input type="text" id="c-addr" class="c-nav">
             <label>Yhteyshenkilö</label><input type="text" id="c-person" class="c-nav">
             <label>Sähköposti</label><input type="email" id="c-email" class="c-nav">
@@ -492,7 +487,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.27';
+const VERSIO = 'v5.28';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -2303,230 +2298,62 @@ function vieArkistoExceliin() {
 // GPS-OSOITEHAKU
 // =============================================
 async function haeGpsOsoite(addrInput) {
-    // Etsi nappi — se on addrInput:n vieressä samassa flex-containerissa
-    const wrapper = addrInput.closest('div');
-    const btn = wrapper ? wrapper.querySelector('button') : null;
-
-    const setBtnTila = function(teksti, color, disabled) {
-        if (!btn) return;
-        btn.innerText = teksti;
-        btn.style.borderColor = color;
-        btn.style.color = disabled ? color : '';
-        btn.disabled = disabled;
-    };
-
+    const btn = addrInput.parentElement.querySelector('button');
     if (!navigator.geolocation) {
         alert('GPS ei ole tuettu tässä selaimessa.');
         return;
     }
-
-    setBtnTila('⏳', '#f59e0b', true);
+    btn.innerText = '⏳';
+    btn.disabled = true;
+    btn.style.borderColor = '#f59e0b';
 
     navigator.geolocation.getCurrentPosition(
-        async function(pos) {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
+        async (pos) => {
             try {
-                // Kokeile ensin Nominatim (paras katuosoite)
+                const url = 'https://nominatim.openstreetmap.org/reverse?lat='
+                    + pos.coords.latitude + '&lon=' + pos.coords.longitude
+                    + '&format=json&addressdetails=1&accept-language=fi';
+                const res  = await fetch(url);
+                const data = await res.json();
+                const a    = data.address || {};
                 let osoite = '';
-                try {
-                    const urlN = 'https://nominatim.openstreetmap.org/reverse'
-                        + '?lat=' + lat + '&lon=' + lon
-                        + '&format=json&addressdetails=1&accept-language=fi';
-                    const resN = await fetch(urlN, {
-                        headers: { 'User-Agent': 'Paivyri/5.22 (ajopaivakirja)' }
-                    });
-                    const dataN = await resN.json();
-                    const a = dataN.address || {};
-                    const osat2 = [];
-                    if (a.road) osat2.push(a.road + (a.house_number ? ' ' + a.house_number : ''));
-                    const kp = a.city || a.town || a.village || a.municipality || '';
-                    if (kp) osat2.push(kp);
-                    osoite = osat2.join(', ');
-                } catch(e2) { osoite = ''; }
-
-                // Fallback: BigDataCloud jos Nominatim ei toiminut
-                if (!osoite) {
-                    const urlB = 'https://api.bigdatacloud.net/data/reverse-geocode-client'
-                        + '?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=fi';
-                    const resB = await fetch(urlB);
-                    const dataB = await resB.json();
-                    const osat3 = [];
-                    if (dataB.locality) osat3.push(dataB.locality);
-                    const kp2 = dataB.city || dataB.principalSubdivision || '';
-                    if (kp2 && kp2 !== dataB.locality) osat3.push(kp2);
-                    osoite = osat3.join(', ');
+                if (a.road) {
+                    osoite = a.road + (a.house_number ? ' ' + a.house_number : '');
                 }
-
-                if (!osoite) osoite = lat.toFixed(5) + ', ' + lon.toFixed(5);
-
+                const kaupunki = a.city || a.town || a.village || a.municipality || '';
+                if (kaupunki) osoite += (osoite ? ', ' : '') + kaupunki;
+                if (!osoite) osoite = data.display_name || (pos.coords.latitude.toFixed(4) + ', ' + pos.coords.longitude.toFixed(4));
                 addrInput.value = osoite;
                 addrInput.style.borderColor = '#10b981';
-                setBtnTila('✅', '#10b981', false);
+                btn.innerText = '✅';
+                btn.style.borderColor = '#10b981';
                 setTimeout(function() {
                     addrInput.style.borderColor = '';
-                    setBtnTila('📍', '#e2e8f0', false);
-                }, 2500);
-
+                    btn.innerText = '📍';
+                    btn.style.borderColor = '#e2e8f0';
+                    btn.disabled = false;
+                }, 2000);
             } catch(err) {
-                // Fallback: näytä koordinaatit jos API ei vastaa
-                addrInput.value = lat.toFixed(5) + ', ' + lon.toFixed(5);
-                addrInput.style.borderColor = '#f59e0b';
-                setBtnTila('📍', '#e2e8f0', false);
+                alert('Osoitteen haku epäonnistui. Tarkista yhteys.');
+                btn.innerText = '📍';
+                btn.style.borderColor = '#e2e8f0';
+                btn.disabled = false;
             }
         },
         function(err) {
-            setBtnTila('📍', '#e2e8f0', false);
+            btn.innerText = '📍';
+            btn.style.borderColor = '#e2e8f0';
+            btn.disabled = false;
             if (err.code === 1) {
-                alert('GPS-lupa evätty. Salli sijainti: Safari → Asetukset → Yksityisyys → Sijainti.');
+                alert('GPS-lupa evätty. Salli sijainti selaimen asetuksista.');
             } else if (err.code === 2) {
-                alert('Sijaintia ei saatu. Varmista että GPS on päällä laitteen asetuksista.');
+                alert('Sijaintia ei saatu. Varmista että GPS on päällä.');
             } else {
-                alert('GPS-haku aikakatkaistiin. Yritä uudelleen ulkona tai avoimessa tilassa.');
+                alert('GPS-haku aikakatkaistiin. Yritä uudelleen.');
             }
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
     );
-}
-
-// =============================================
-// YTJ-HAKU — PRH:n avoin rajapinta
-// =============================================
-async function haeYtjTiedot() {
-    const ytun = document.getElementById('c-ytun').value.trim();
-    const status = document.getElementById('ytj-status');
-    const btn = document.getElementById('ytj-btn');
-
-    if (!ytun) {
-        status.style.color = '#ef4444';
-        status.innerText = 'Syötä Y-tunnus ensin.';
-        return;
-    }
-    // Validoi muoto 1234567-8
-    if (!/^\d{7}-\d$/.test(ytun)) {
-        status.style.color = '#ef4444';
-        status.innerText = 'Tarkista muoto: 1234567-8';
-        return;
-    }
-
-    btn.innerText = '⏳';
-    btn.disabled = true;
-    status.style.color = '#64748b';
-    status.innerText = 'Haetaan PRH:n rekisteristä...';
-
-    try {
-        // Kokeile ensin v3, sitten vanha bis/v1
-        const urls = [
-            'https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=' + ytun,
-            'https://avoindata.prh.fi/opendata/bis/v1/' + ytun
-        ];
-        let data = null;
-        let lastErr = '';
-        for (let i = 0; i < urls.length; i++) {
-            const urlNow = urls[i];
-            status.innerText = 'Haetaan... (' + (i+1) + '/' + urls.length + ')';
-            try {
-                const res = await fetch(urlNow, { headers: { 'Accept': 'application/json' } });
-                if (res.ok) {
-                    data = await res.json();
-                    // Näytä raakavastaus debuggausta varten
-                    const raw = JSON.stringify(data).substring(0, 400);
-                    status.innerText = 'Vastaus: ' + raw;
-                    break;
-                } else {
-                    lastErr = 'HTTP ' + res.status;
-                }
-            } catch(e) {
-                lastErr = e.message;
-            }
-        }
-        if (!data) throw new Error(lastErr || 'Kaikki rajapinnat epäonnistuivat');
-        // URL-loop valmis
-        const res = await fetch(url);
-        if (!res.ok) {
-            throw new Error('HTTP ' + res.status);
-        }
-        const data = await res.json();
-        // v3 API palauttaa { companies: [...] }
-        // Debug: näytä avaimet
-        const keys = Object.keys(data).join(', ');
-        status.innerText = 'Avaimet: ' + keys;
-        const companies = data.companies || data.results || data.bisDetails || [];
-
-        if (companies.length === 0) {
-            status.style.color = '#ef4444';
-            status.innerText = 'Y-tunnusta ei löydy rekisteristä.';
-            btn.innerText = '🔍 YTJ';
-            btn.disabled = false;
-            return;
-        }
-
-        const yritys = companies[0];
-
-        // Nimi — v3: name tai companyName
-        const nimi = yritys.name || yritys.companyName || '';
-        const nimiKentta = document.getElementById('c-name');
-        if (nimi) {
-            if (!nimiKentta.value || confirm('Löytyi: ' + nimi + '\nKorvataanko nykyinen nimi?')) {
-                nimiKentta.value = nimi;
-            }
-        }
-
-        // Osoite — v3: addresses array
-        let osoite = '';
-        const addresses = yritys.addresses || [];
-        // Etsi voimassaoleva käyntiosoite (registeredOffice type tai viimeisin)
-        const kaynti = addresses.find(function(a) {
-            return !a.endDate;
-        }) || addresses[addresses.length - 1];
-
-        if (kaynti) {
-            const osat = [];
-            const katu = kaynti.street || kaynti.streetFi || kaynti.streetAddressFi || '';
-            const nro  = kaynti.buildingNumber || kaynti.houseNumber || '';
-            if (katu) osat.push(katu + (nro ? ' ' + nro : ''));
-            const postinro = kaynti.postCode || kaynti.postalCode || '';
-            const kaupunki = kaynti.city || kaynti.cityFi || kaynti.postOffice || '';
-            if (postinro && kaupunki) osat.push(postinro + ' ' + kaupunki);
-            else if (kaupunki) osat.push(kaupunki);
-            osoite = osat.join(', ');
-        }
-
-        if (osoite) {
-            document.getElementById('c-addr').value = osoite;
-        }
-
-        // Toimiala muistiinpanoksi
-        const toimialat = yritys.businessLines || yritys.mainBusinessLine ? [yritys.mainBusinessLine] : [];
-        if (toimialat.length > 0 && !document.getElementById('c-notes').value) {
-            const tnimi = toimialat[0] && (toimialat[0].name || toimialat[0].nameFi || '');
-            if (tnimi) document.getElementById('c-notes').value = tnimi;
-        }
-
-        status.style.color = '#10b981';
-        status.innerText = '✅ Tiedot haettu: ' + (nimi || ytun);
-        btn.innerText = '✅';
-        setTimeout(function() {
-            btn.innerText = '🔍 YTJ';
-            btn.disabled = false;
-        }, 2000);
-
-    } catch(err) {
-        status.style.color = '#ef4444';
-        status.innerText = 'Haku epäonnistui. Tarkista internet-yhteys.';
-        btn.innerText = '🔍 YTJ';
-        btn.disabled = false;
-    }
-}
-
-// Auto-hae kun poistuu Y-tunnus-kentästä
-function ytjAutoHae() {
-    const ytun = document.getElementById('c-ytun').value.trim();
-    const nimiKentta = document.getElementById('c-name').value.trim();
-    // Hae automaattisesti vain jos nimi on tyhjä ja Y-tunnus näyttää oikealta
-    if (/^\d{7}-\d$/.test(ytun) && !nimiKentta) {
-        haeYtjTiedot();
-    }
 }
 
 function showPage(p) {
