@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.16</title>
+    <title>Päivyri v5.17</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -311,22 +311,22 @@
             <label>Paluu</label>
             <div style="display:flex; gap:10px;">
                 <input type="number" id="f-ke" placeholder="Loppu KM" class="e-nav" inputmode="decimal" style="flex:1">
-                <div style="flex:1;">
-                    <div style="position:relative;">
-                        <input type="time" id="f-te" class="e-nav" style="width:100%;" onchange="laskePvraha()" oninput="laskePvraha()" onblur="laskePvraha()">
-                        <div id="yliyo-badge" style="display:none; position:absolute; top:50%; right:10px;
-                            transform:translateY(-50%);
-                            background:#f59e0b; color:white; font-size:9px; font-weight:800;
-                            padding:2px 8px; border-radius:6px; pointer-events:none;">
-                            +1 pv
-                        </div>
-                    </div>
+                <div style="flex:1; display:flex; gap:6px; align-items:stretch;">
+                    <input type="time" id="f-te" class="e-nav" style="flex:1; min-width:0;"
+                        onchange="laskePvraha()" oninput="laskePvraha()">
+                    <button type="button" id="yliyo-btn" onclick="toggleYliyo()"
+                        title="Ajo päättyy seuraavana päivänä"
+                        style="flex-shrink:0; padding:0 12px; border-radius:12px; border:2px solid #e2e8f0;
+                               background:white; font-size:11px; font-weight:800; cursor:pointer;
+                               color:#94a3b8; white-space:nowrap; font-family:Sora,sans-serif;">
+                        +1 pv
+                    </button>
                 </div>
             </div>
             <div id="yliyo-huomio" style="display:none; background:#fffbeb; border:1px solid #fde68a;
                 border-radius:10px; padding:10px 13px; font-size:12px; color:#92400e; margin-top:6px;">
-                <b>⚠ Yön yli -ajo</b> — loppu-kello on seuraavana päivänä.
-                Päiväraha lasketaan automaattisesti koko matka-ajalta.
+                <b>⚠ Yön yli -ajo</b> — loppu-kello on seuraavana päivänä (+1 vrk).
+                Päiväraha lasketaan koko matka-ajalta.
             </div>
 
             <label>Päiväraha</label>
@@ -570,7 +570,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.16)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.17)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -771,7 +771,7 @@ function avaaVarmistus() {
         let h2 = (new Date(0,0,0,eh2,em2) - new Date(0,0,0,sh2,sm2)) / (1000*60*60);
         const yliyo2 = h2 < 0;
         if (yliyo2) h2 += 24;
-        aikaInfo = ` | ${tsVal}–${teVal}${yliyo2 ? ' (+1pv)' : ''} | ${h2.toFixed(1)}h`;
+        aikaInfo = ` | ${tsVal}–${teVal}${(yliyo2 || yliyoManuaalinen) ? ' (+1pv)' : ''} | ${h2.toFixed(1)}h`;
     }
     document.getElementById('modal-info').innerText =
         `${pvm} | ${type} | ${Math.max(0, km).toFixed(0)} km | ${all}${aikaInfo}`;
@@ -806,6 +806,7 @@ function tallennaAjo() {
         ts:        document.getElementById('f-ts').value,
         te:        document.getElementById('f-te').value,
         allowance: document.getElementById('f-allowance').value,
+        yliyo: yliyoManuaalinen || false,
         stops: Array.from(document.querySelectorAll('.stop-row input[type=text]'))
                     .map(i => ({ client: i.value.trim() }))
                     .filter(s => s.client)
@@ -878,6 +879,7 @@ function autoTallenna() {
         ts:        document.getElementById('f-ts').value,
         te:        document.getElementById('f-te').value,
         allowance: document.getElementById('f-allowance').value,
+        yliyo: yliyoManuaalinen || false,
         stops: Array.from(document.querySelectorAll('.stop-row input[type=text]'))
                     .map(i => ({ client: i.value.trim() }))
                     .filter(s => s.client),
@@ -934,9 +936,14 @@ function nollaaLomake() {
     document.getElementById('f-ke').value = '';
     document.getElementById('f-ts').value = '';
     document.getElementById('f-te').value = '';
-    const b = document.getElementById('yliyo-badge');
+    yliyoManuaalinen = false;
+    const yliyoBtn = document.getElementById('yliyo-btn');
+    if (yliyoBtn) {
+        yliyoBtn.style.background  = 'white';
+        yliyoBtn.style.color       = '#94a3b8';
+        yliyoBtn.style.borderColor = '#e2e8f0';
+    }
     const h2 = document.getElementById('yliyo-huomio');
-    if (b)  b.style.display  = 'none';
     if (h2) h2.style.display = 'none';
     document.getElementById('stops-container').innerHTML = '';
     document.getElementById('f-allowance').value = '-';
@@ -1065,6 +1072,16 @@ function editAjo(id) {
     document.getElementById('f-allowance').value = a.allowance || '-';
     document.getElementById('stops-container').innerHTML = '';
     if (a.stops) a.stops.forEach(s => addStop(s.client));
+    // Palauta yliyo-tila
+    yliyoManuaalinen = !!a.yliyo;
+    const yliyoBtn2 = document.getElementById('yliyo-btn');
+    const huomio2   = document.getElementById('yliyo-huomio');
+    if (yliyoBtn2) {
+        yliyoBtn2.style.background  = yliyoManuaalinen ? '#f59e0b' : 'white';
+        yliyoBtn2.style.color       = yliyoManuaalinen ? 'white'   : '#94a3b8';
+        yliyoBtn2.style.borderColor = yliyoManuaalinen ? '#f59e0b' : '#e2e8f0';
+    }
+    if (huomio2) huomio2.style.display = yliyoManuaalinen ? 'block' : 'none';
     showPage('input');
     window.scrollTo(0, 0);
 }
@@ -1435,6 +1452,27 @@ function paivitaRaportti() {
 // =============================================
 // PÄIVÄRAHA — Automaattinen laskenta
 // =============================================
+// Yön yli -tila — käyttäjä voi kytkeä manuaalisesti
+let yliyoManuaalinen = false;
+
+function toggleYliyo() {
+    yliyoManuaalinen = !yliyoManuaalinen;
+    const btn    = document.getElementById('yliyo-btn');
+    const huomio = document.getElementById('yliyo-huomio');
+    if (yliyoManuaalinen) {
+        btn.style.background   = '#f59e0b';
+        btn.style.color        = 'white';
+        btn.style.borderColor  = '#f59e0b';
+        if (huomio) huomio.style.display = 'block';
+    } else {
+        btn.style.background   = 'white';
+        btn.style.color        = '#94a3b8';
+        btn.style.borderColor  = '#e2e8f0';
+        if (huomio) huomio.style.display = 'none';
+    }
+    laskePvraha();
+}
+
 function laskePvraha() {
     const s = document.getElementById('f-ts').value;
     const e = document.getElementById('f-te').value;
@@ -1442,16 +1480,26 @@ function laskePvraha() {
     const [sh, sm] = s.split(':').map(Number);
     const [eh, em] = e.split(':').map(Number);
     let h = (new Date(0, 0, 0, eh, em) - new Date(0, 0, 0, sh, sm)) / (1000 * 60 * 60);
-    const yliyoAjo = h < 0;
+
+    // Yön yli joko automaattisesti (loppu < alku) tai manuaalisesti
+    const yliyoAuto = h < 0;
+    const yliyoAjo  = yliyoAuto || yliyoManuaalinen;
     if (yliyoAjo) h += 24;
 
-    // Näytä yön yli -merkki ja huomio
-    const badge  = document.getElementById('yliyo-badge');
+    // Päivitä nappi automaattisen tunnistuksen perusteella (mutta älä ylikirjoita manuaalista)
+    if (yliyoAuto && !yliyoManuaalinen) {
+        yliyoManuaalinen = true;
+        const btn = document.getElementById('yliyo-btn');
+        if (btn) {
+            btn.style.background  = '#f59e0b';
+            btn.style.color       = 'white';
+            btn.style.borderColor = '#f59e0b';
+        }
+    }
     const huomio = document.getElementById('yliyo-huomio');
-    if (badge)  badge.style.display  = yliyoAjo ? 'block' : 'none';
     if (huomio) huomio.style.display = yliyoAjo ? 'block' : 'none';
 
-    // Päiväraha — yön yli -ajo on aina kokopäivärahan arvoinen (yli 10h)
+    // Päiväraha
     const sel = document.getElementById('f-allowance');
     if (h >= 10)     sel.value = 'Kokopäivä';
     else if (h >= 6) sel.value = 'Osapäivä';
@@ -1782,7 +1830,7 @@ function vieJsonVarmuuskopio() {
     const payload = {
         _varmuuskopio_pvm: nyt,
         _kayttaja: currentUser?.email || '',
-        _versio: 'Paivyri v5.16',
+        _versio: 'Paivyri v5.17',
         ajot:      Object.fromEntries(omatAjot.map(a => [a.id, a])),
         asiakkaat: Object.fromEntries(asiakkaat.map(c => [c.id, c]))
     };
@@ -1841,7 +1889,7 @@ function vieExcelVarmuuskopio() {
     const metaRows = [
         ['Varmuuskopio päivä',    nyt],
         ['Käyttäjä',             currentUser?.email || ''],
-        ['Versio',               'Paivyri v5.16'],
+        ['Versio',               'Paivyri v5.17'],
         ['Ajoja yhteensä',       omatAjot.filter(a=>!a.luonnos).length],
         ['Luonnoksia',           omatAjot.filter(a=>!!a.luonnos).length],
         ['Yrityksiä',            asiakkaat.length],
