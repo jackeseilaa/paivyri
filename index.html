@@ -2423,10 +2423,10 @@ async function haeYtjTiedot() {
         let data = null;
         let lastErr = '';
         for (let i = 0; i < urls.length; i++) {
-            const url = urls[i];
-            status.innerText = 'Kokeillaan rajapintaa ' + (i+1) + '/' + urls.length + '...';
+            const urlNow = urls[i];
+            status.innerText = 'Haetaan... (' + (i+1) + '/' + urls.length + ')';
             try {
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const res = await fetch(urlNow, { headers: { 'Accept': 'application/json' } });
                 if (res.ok) {
                     data = await res.json();
                     // Näytä raakavastaus debuggausta varten
@@ -2441,7 +2441,7 @@ async function haeYtjTiedot() {
             }
         }
         if (!data) throw new Error(lastErr || 'Kaikki rajapinnat epäonnistuivat');
-        const url = urls[0]; // dummy, ei käytetä enää
+        // URL-loop valmis
         const res = await fetch(url);
         if (!res.ok) {
             throw new Error('HTTP ' + res.status);
