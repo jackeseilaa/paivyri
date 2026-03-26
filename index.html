@@ -852,10 +852,7 @@ async function haeGpsOsoite(addrInput) {
             btn.style.borderColor = '#e2e8f0';
             btn.disabled = false;
             if (err.code === err.PERMISSION_DENIED) {
-                alert('GPS-lupa evätty.
-
-Salli sijainnin käyttö selaimen asetuksista
-(osoitepalkki → 🔒 → Sijainti → Salli).');
+                alert('GPS-lupa evätty.\n\nSalli sijainnin käyttö selaimen asetuksista\n(osoitepalkki → 🔒 → Sijainti → Salli).');
             } else if (err.code === err.POSITION_UNAVAILABLE) {
                 alert('Sijaintia ei saatu. Varmista että GPS on päällä.');
             } else {
