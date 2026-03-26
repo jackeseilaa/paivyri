@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.37</title>
+    <title>Päivyri v5.38</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.37</h1>
+    <h1 id="app-version-title">Päivyri v5.38</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -445,10 +445,16 @@
                     NÄYTÄ LISÄÄ
                 </button>
             </div>
-            <button onclick="vieArkistoExceliin()" class="btn-dark no-print"
-                style="margin-top:8px; background:#166534;">
-                📤 VIE KAIKKI EXCELIIN (.xlsx)
-            </button>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button onclick="vieArkistoExceliin()" class="btn-dark no-print"
+                    style="flex:1; background:#166534;">
+                    📤 VIE EXCELIIN
+                </button>
+                <button onclick="siivoaDuplikaatit()" class="btn-dark no-print"
+                    style="background:#dc2626; flex-shrink:0;">
+                    🧹 Siivoa duplikaatit
+                </button>
+            </div>
         </div>
     </div>
 
@@ -500,7 +506,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.37';
+const VERSIO = 'v5.38';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -1447,14 +1453,19 @@ function paivitaRaportti() {
         const pvmFi = pvmOsat.length === 3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : esc(a.date);
 
         // Reitti — verottaja vaatii lähtö- ja kohdepaikat
+        // Pysähdykset = kohteet (ei lähtöpistettä)
+        // Nuoli tulee vasta kohteen nimen JÄLKEEN jos on useampi kohde
         const pysahdykset = (a.stops || []).filter(s => s.client);
         const reitti = pysahdykset.length > 0
-            ? pysahdykset.map(s => {
-                let r = esc(s.client);
-                if (s.addr)  r += `<br><span style="color:#64748b;font-size:10px;">📍 ${esc(s.addr)}</span>`;
-                if (s.note)  r += `<br><span style="color:#2563eb;font-size:10px;">📝 ${esc(s.note)}</span>`;
+            ? pysahdykset.map((s, si) => {
+                let r = '';
+                // Nuoli tulee ENNEN seuraavaa kohdetta (ei ensimmäisen eteen)
+                if (si > 0) r += '<span style="color:#94a3b8; font-size:10px;"> → </span>';
+                r += '<span style="font-weight:600">' + esc(s.client) + '</span>';
+                if (s.addr)  r += '<br><span style="color:#64748b;font-size:10px;margin-left:4px;">📍 ' + esc(s.addr) + '</span>';
+                if (s.note)  r += '<br><span style="color:#2563eb;font-size:10px;margin-left:4px;">📝 ' + esc(s.note) + '</span>';
                 return r;
-              }).join('<br><span style="color:#94a3b8">↓</span><br>')
+              }).join('')
             : 'Ei kirjattu';
 
         // Aika
@@ -2403,6 +2414,63 @@ async function haeGpsOsoite(addrInput) {
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
+}
+
+// =============================================
+// DUPLIKAATTIEN SIIVOUS
+// =============================================
+async function siivoaDuplikaatit() {
+    const uid = currentUser.uid;
+
+    // Ryhmittele ajot päivämäärä+tyyppi avaimella
+    const ryhmat = {};
+    omatAjot.filter(a => !a.luonnos).forEach(function(a) {
+        const avain = (a.date||'') + '|' + (a.type||'');
+        if (!ryhmat[avain]) ryhmat[avain] = [];
+        ryhmat[avain].push(a);
+    });
+
+    // Etsi ryhmät joissa on useampi kuin yksi ajo
+    const poistettavat = [];
+    Object.values(ryhmat).forEach(function(ryh) {
+        if (ryh.length < 2) return;
+        // Lajittele: ensin ne joilla on kilometrit
+        ryh.sort(function(a, b) {
+            const aKm = (parseFloat(a.ke)||0) - (parseFloat(a.ks)||0);
+            const bKm = (parseFloat(b.ke)||0) - (parseFloat(b.ks)||0);
+            return bKm - aKm; // suuremmat kilometrit ensin
+        });
+        // Merkitse loput poistettaviksi (ilman kilometrejä tai duplikaatit)
+        for (let i = 1; i < ryh.length; i++) {
+            const km = (parseFloat(ryh[i].ke)||0) - (parseFloat(ryh[i].ks)||0);
+            if (km === 0) poistettavat.push(ryh[i]);
+        }
+    });
+
+    if (poistettavat.length === 0) {
+        alert('Ei poistettavia duplikaatteja löydetty.');
+        return;
+    }
+
+    const pvmFi = function(d) {
+        const o = (d||'').split('-');
+        return o.length===3 ? o[2]+'.'+o[1]+'.'+o[0] : d;
+    };
+    const lista = poistettavat.slice(0,5).map(function(a) {
+        return '• ' + pvmFi(a.date) + ' | ' + a.type + ' | KM 0';
+    }).join('\n');
+    const lisaa = poistettavat.length > 5 ? '\n... ja ' + (poistettavat.length-5) + ' muuta' : '';
+
+    if (!confirm('Poistetaan ' + poistettavat.length + ' duplikaattia (ilman kilometrejä):\n\n' + lista + lisaa + '\n\nJatketaanko?')) return;
+
+    let ok = 0;
+    for (const a of poistettavat) {
+        try {
+            await db.ref('users/' + uid + '/ajot/' + a.id).remove();
+            ok++;
+        } catch(e) {}
+    }
+    alert('✅ Poistettu ' + ok + ' duplikaattia.');
 }
 
 // =============================================
