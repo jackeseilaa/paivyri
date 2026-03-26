@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.36</title>
+    <title>Päivyri v5.37</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.36</h1>
+    <h1 id="app-version-title">Päivyri v5.37</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -274,6 +274,7 @@
             </button>
         </div>
         <input type="file" id="excel-input" accept=".xlsx,.xls" style="display:none" onchange="luoExcel(this)">
+        <input type="file" id="crm-excel-input" accept=".xlsx,.xls" style="display:none" onchange="tuoCrmExcel(this)">
 
         <!-- TUONTI-ESIKATSELU MODAALI -->
         <div id="import-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -357,7 +358,14 @@
     <!-- ===== CRM ===== -->
     <div id="p-crm" class="page">
         <div class="card">
-            <h3 id="crm-form-title" style="margin:0 0 5px;">Uusi asiakas</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h3 id="crm-form-title" style="margin:0;">Uusi asiakas</h3>
+                <button onclick="document.getElementById('crm-excel-input').click()" class="mini-btn"
+                    style="background:#f1f5f9; color:#166534; font-size:11px; padding:6px 12px;
+                           border:2px dashed #cbd5e1; border-radius:10px;">
+                    📥 Tuo yritykset
+                </button>
+            </div>
             <input type="hidden" id="c-id">
             <label>Yrityksen nimi *</label><input type="text" id="c-name" class="c-nav">
             <label>Y-tunnus</label>
@@ -492,7 +500,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.36';
+const VERSIO = 'v5.37';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -2395,6 +2403,106 @@ async function haeGpsOsoite(addrInput) {
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
+}
+
+// =============================================
+// YRITYKSET EXCEL-TUONTI
+// =============================================
+function tuoCrmExcel(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const wb = XLSX.read(e.target.result, { type: 'array' });
+
+            // Etsi YRITYKSET-välilehti
+            const sheetName = wb.SheetNames.find(n =>
+                n.toUpperCase().includes('YRITYS') || n.toUpperCase().includes('CRM')
+            ) || wb.SheetNames[0];
+            const ws = wb.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+            if (rows.length < 2) {
+                alert('Tiedosto on tyhjä tai ei sisällä yritystietoja.');
+                return;
+            }
+
+            // Otsikkorivi
+            const headers = rows[0].map(h => String(h||'').toLowerCase().trim());
+            const col = function(nimi) {
+                const idx = headers.findIndex(h => h.includes(nimi));
+                return idx > -1 ? idx : -1;
+            };
+
+            const iName   = col('name') > -1 ? col('name')   : col('nimi') > -1 ? col('nimi') : 1;
+            const iYtun   = col('ytun') > -1 ? col('ytun')   : col('y-tun') > -1 ? col('y-tun') : 2;
+            const iAddr   = col('addr') > -1 ? col('addr')   : col('osoite') > -1 ? col('osoite') : 3;
+            const iPerson = col('person') > -1 ? col('person') : col('yhteyshenkilö') > -1 ? col('yhteyshenkilö') : 4;
+            const iEmail  = col('email') > -1 ? col('email')  : 5;
+            const iPhone  = col('phone') > -1 ? col('phone')  : col('puhelin') > -1 ? col('puhelin') : 6;
+            const iNotes  = col('notes') > -1 ? col('notes')  : col('muisti') > -1 ? col('muisti') : 7;
+
+            // Kerää yritykset — ohita otsikkorivi
+            const uudet = [];
+            const duplikaatit = [];
+            const olemassaNimet = new Set(asiakkaat.map(c => (c.name||'').toLowerCase()));
+
+            for (let i = 1; i < rows.length; i++) {
+                const r = rows[i];
+                const nimi = String(r[iName]||'').trim();
+                if (!nimi) continue;
+
+                if (olemassaNimet.has(nimi.toLowerCase())) {
+                    duplikaatit.push(nimi);
+                    continue;
+                }
+                uudet.push({
+                    name:   nimi,
+                    ytun:   String(r[iYtun]  ||'').trim(),
+                    addr:   String(r[iAddr]  ||'').trim(),
+                    person: String(r[iPerson]||'').trim(),
+                    email:  String(r[iEmail] ||'').trim(),
+                    phone:  String(r[iPhone] ||'').trim(),
+                    notes:  String(r[iNotes] ||'').trim()
+                });
+                olemassaNimet.add(nimi.toLowerCase());
+            }
+
+            if (uudet.length === 0) {
+                alert('Ei uusia yrityksiä tuotavaksi.' +
+                    (duplikaatit.length > 0 ? '\n\n' + duplikaatit.length + ' yritystä on jo rekisterissä.' : ''));
+                return;
+            }
+
+            // Vahvistus
+            let msg = 'Tuodaan ' + uudet.length + ' uutta yritystä:\n\n';
+            msg += uudet.slice(0,5).map(c => '• ' + c.name).join('\n');
+            if (uudet.length > 5) msg += '\n... ja ' + (uudet.length-5) + ' muuta';
+            if (duplikaatit.length > 0) msg += '\n\n(' + duplikaatit.length + ' duplikaattia ohitettu)';
+            if (!confirm(msg)) return;
+
+            // Tallenna Firebaseen
+            const uid = currentUser.uid;
+            let ok = 0;
+            uudet.forEach(function(c) {
+                const ref = db.ref('users/' + uid + '/asiakkaat').push();
+                ref.set({ id: ref.key, ...c })
+                    .then(function() { ok++; })
+                    .catch(function(err) { console.error(err); });
+            });
+
+            setTimeout(function() {
+                alert('✅ ' + uudet.length + ' yritystä tuotu rekisteriin!');
+            }, 1000);
+
+        } catch(err) {
+            alert('Tiedoston lukeminen epäonnistui: ' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
 }
 
 // =============================================
