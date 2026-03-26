@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.35</title>
+    <title>Päivyri v5.36</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.35</h1>
+    <h1 id="app-version-title">Päivyri v5.36</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -492,7 +492,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.35';
+const VERSIO = 'v5.36';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -700,9 +700,9 @@ function addStop(val = '', addr = '', note = '') {
         <div class="stop-row-top">
             <input type="text" class="stop-input e-nav" value="${esc(val)}"
                 placeholder="Asiakas / Kohde"
-                onfocus="avaaStopHaku(this)"
+                onfocus="setTimeout(function(){avaaStopHaku(this);}.bind(this),50)"
                 oninput="suodataStopHaku(this)">
-            <button class="mini-btn" onclick="avaaStopHaku(this.previousElementSibling)"
+            <button class="mini-btn" onclick="(function(el){setTimeout(function(){avaaStopHaku(el);},50);})(this.previousElementSibling)"
                 style="background:#e2e8f0; flex-shrink:0; padding:10px 10px;">🔍</button>
             <button class="stop-del" onclick="this.closest('.stop-row').remove()">✕</button>
         </div>
