@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.46</title>
+    <title>Päivyri v5.47</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -163,7 +163,9 @@
             .report-table { font-size: 9px; width: 100%; border-collapse: collapse; }
             .report-table th { font-size: 8px; padding: 4px 4px; background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .report-table td { padding: 4px 4px; vertical-align: top; }
-            .report-table tr { page-break-inside: avoid; }
+            .report-table tr { page-break-inside: avoid; break-inside: avoid; }
+            .report-table tbody tr { page-break-inside: avoid; break-inside: avoid; }
+            .report-table td { page-break-inside: avoid; break-inside: avoid; }
 
             /* Yhteenveto pysyy yhdellä sivulla */
             .summary-box {
@@ -536,7 +538,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.46';
+const VERSIO = 'v5.47';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -1514,7 +1516,7 @@ function paivitaRaportti() {
             : '<b>' + korvaus.toFixed(2) + '</b>';
 
         rows += `
-            <tr style="background:${rowBg}">
+            <tr style="background:${rowBg}; page-break-inside:avoid; break-inside:avoid;">
                 <td style="white-space:nowrap"><b>${pvmFi}</b><br><small style="color:#94a3b8">${aika}${(a.ts && a.te && (() => { const [s,m2]=(a.ts||'0:0').split(':').map(Number); const [e2,m3]=(a.te||'0:0').split(':').map(Number); return (new Date(0,0,0,e2,m3)-new Date(0,0,0,s,m2))<0; })()) ? ' <span style="color:#f59e0b">+1pv</span>' : ''}</small></td>
                 <td>${onOmaAjo ? '<span style="color:#94a3b8">●</span> ' : ''}${reittiHTML}</td>
                 <td style="white-space:nowrap;color:#64748b">${a.ks || 0}&nbsp;→&nbsp;${a.ke || 0}</td>
