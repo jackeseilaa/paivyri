@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.17</title>
+    <title>Päivyri v5.19</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -50,6 +50,17 @@
         .stop-row { background: #f8fafc; padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #cbd5e1; }
         .stop-row-top { display: flex; align-items: center; gap: 8px; }
         .stop-row input.stop-input { flex: 1; margin: 0; }
+        .stop-row input.stop-addr  { width:100%; margin:6px 0 0; font-size:14px; padding:10px 12px;
+            border:1.5px solid #e2e8f0; border-radius:10px; background:white; color:#475569; }
+        .stop-row input.stop-note  { width:100%; margin:6px 0 0; font-size:14px; padding:10px 12px;
+            border:1.5px solid #e2e8f0; border-radius:10px; background:white; color:#475569; }
+        .stop-row input.stop-addr::placeholder,
+        .stop-row input.stop-note::placeholder { color:#cbd5e1; }
+        .stop-crm-note { margin-top:6px; padding:8px 12px; background:#eff6ff;
+            border-radius:8px; border-left:3px solid #2563eb;
+            font-size:11px; color:#1e40af; line-height:1.5; display:none; }
+        .stop-crm-note b { display:block; font-size:10px; color:#93c5fd;
+            text-transform:uppercase; margin-bottom:2px; }
         .stop-del { background: none; border: none; color: #ef4444; font-size: 18px; font-weight: 800; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }
         /* Mini-haku pysähdysrivillä */
         .stop-search-panel { display: none; margin-top: 8px; background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
@@ -570,7 +581,7 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.17)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (v5.19)' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
@@ -660,7 +671,7 @@ document.addEventListener('keydown', e => {
 // =============================================
 // SYÖTE — Pysähdykset
 // =============================================
-function addStop(val = '') {
+function addStop(val = '', addr = '', note = '') {
     const div = document.createElement('div');
     div.className = 'stop-row';
     div.innerHTML = `
@@ -678,6 +689,14 @@ function addStop(val = '') {
             <div class="stop-add-new" onclick="pikaUusiAsiakas(this.closest('.stop-row'))">
                 ＋ Lisää uusi asiakas rekisteriin
             </div>
+        </div>
+        <input type="text" class="stop-addr e-nav" value="${esc(addr)}"
+            placeholder="📍 Osoite (täyttyy automaattisesti CRM:stä)">
+        <input type="text" class="stop-note e-nav" value="${esc(note)}"
+            placeholder="📝 Tarkoitus — esim. Myyntikäynti, Huolto, Sopimus...">
+        <div class="stop-crm-note">
+            <b>📋 CRM-muistiinpano</b>
+            <span class="stop-crm-note-text"></span>
         </div>`;
     document.getElementById('stops-container').appendChild(div);
     if (!val) {
@@ -715,14 +734,37 @@ function suodataStopHaku(inputEl) {
             <div class="stop-search-item" onclick="valitseAsiakas(this, '${esc(c.name)}')">
                 ${esc(c.name)}
                 <small>${esc(c.addr || '')}</small>
+                ${c.notes ? `<small style="color:#2563eb;display:block;margin-top:2px;">📋 ${esc(c.notes.substring(0,60))}${c.notes.length>60?'…':''}</small>` : ''}
             </div>`).join('');
     }
 }
 
 function valitseAsiakas(itemEl, nimi) {
     const row = itemEl.closest('.stop-row');
-    row.querySelector('input').value = nimi;
+    row.querySelector('.stop-input').value = nimi;
     row.querySelector('.stop-search-panel').classList.remove('open');
+
+    const c = asiakkaat.find(x => x.name === nimi);
+    if (c) {
+        // Täytä osoite automaattisesti jos kenttä tyhjä
+        const addrInput = row.querySelector('.stop-addr');
+        if (addrInput && !addrInput.value && c.addr) addrInput.value = c.addr;
+
+        // Näytä CRM-muistiinpano jos on
+        const crmNote     = row.querySelector('.stop-crm-note');
+        const crmNoteText = row.querySelector('.stop-crm-note-text');
+        if (crmNote && crmNoteText) {
+            if (c.notes && c.notes.trim()) {
+                crmNoteText.textContent = c.notes.trim();
+                crmNote.style.display = 'block';
+            } else {
+                crmNote.style.display = 'none';
+            }
+        }
+    }
+    // Siirrä fokus tarkoitus-kenttään
+    const noteInput = row.querySelector('.stop-note');
+    if (noteInput) setTimeout(() => noteInput.focus(), 50);
 }
 
 // Sulje hakupaneeli kun klikataan muualle
@@ -807,8 +849,12 @@ function tallennaAjo() {
         te:        document.getElementById('f-te').value,
         allowance: document.getElementById('f-allowance').value,
         yliyo: yliyoManuaalinen || false,
-        stops: Array.from(document.querySelectorAll('.stop-row input[type=text]'))
-                    .map(i => ({ client: i.value.trim() }))
+        stops: Array.from(document.querySelectorAll('.stop-row'))
+                    .map(row => ({
+                        client: (row.querySelector('.stop-input')?.value || '').trim(),
+                        addr:   (row.querySelector('.stop-addr')?.value  || '').trim(),
+                        note:   (row.querySelector('.stop-note')?.value  || '').trim()
+                    }))
                     .filter(s => s.client)
     };
 
@@ -880,8 +926,12 @@ function autoTallenna() {
         te:        document.getElementById('f-te').value,
         allowance: document.getElementById('f-allowance').value,
         yliyo: yliyoManuaalinen || false,
-        stops: Array.from(document.querySelectorAll('.stop-row input[type=text]'))
-                    .map(i => ({ client: i.value.trim() }))
+        stops: Array.from(document.querySelectorAll('.stop-row'))
+                    .map(row => ({
+                        client: (row.querySelector('.stop-input')?.value || '').trim(),
+                        addr:   (row.querySelector('.stop-addr')?.value  || '').trim(),
+                        note:   (row.querySelector('.stop-note')?.value  || '').trim()
+                    }))
                     .filter(s => s.client),
         luonnos: true  // Merkitään luonnokseksi
     };
@@ -1008,7 +1058,9 @@ function paivitaHistoria() {
 
     document.getElementById('history-list').innerHTML = naytettavat.map(a => {
         const km = parseFloat(a.ke || 0) - parseFloat(a.ks || 0);
-        const reitti = (a.stops || []).map(s => esc(s.client)).filter(Boolean).join(' → ') || '–';
+        const pysNimet = (a.stops||[]).filter(s=>s.client).map(s=>esc(s.client)).join(' → ') || '–';
+        const pysNotes = (a.stops||[]).filter(s=>s.note).map(s=>esc(s.note)).join(', ');
+        const reitti = pysNimet + (pysNotes ? ` · ${pysNotes}` : '');
         const onLuonnos = !!a.luonnos;
         return `
         <div class="card history-item" style="${onLuonnos ? 'border:1px dashed #f59e0b; background:#fffbeb;' : ''}">
@@ -1071,7 +1123,25 @@ function editAjo(id) {
     document.getElementById('f-te').value       = a.te || '';
     document.getElementById('f-allowance').value = a.allowance || '-';
     document.getElementById('stops-container').innerHTML = '';
-    if (a.stops) a.stops.forEach(s => addStop(s.client));
+    if (a.stops) {
+        a.stops.forEach(s => {
+            addStop(s.client, s.addr || '', s.note || '');
+            // Palauta CRM-muistiinpano jos asiakas löytyy rekisteristä
+            if (s.client) {
+                const c = asiakkaat.find(x => x.name === s.client);
+                if (c && c.notes) {
+                    const rows = document.querySelectorAll('.stop-row');
+                    const lastRow = rows[rows.length - 1];
+                    const crmNote     = lastRow?.querySelector('.stop-crm-note');
+                    const crmNoteText = lastRow?.querySelector('.stop-crm-note-text');
+                    if (crmNote && crmNoteText) {
+                        crmNoteText.textContent = c.notes.trim();
+                        crmNote.style.display = 'block';
+                    }
+                }
+            }
+        });
+    }
     // Palauta yliyo-tila
     yliyoManuaalinen = !!a.yliyo;
     const yliyoBtn2 = document.getElementById('yliyo-btn');
@@ -1331,8 +1401,15 @@ function paivitaRaportti() {
         const pvmFi = pvmOsat.length === 3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : esc(a.date);
 
         // Reitti — verottaja vaatii lähtö- ja kohdepaikat
-        const pysahdykset = (a.stops || []).map(s => esc(s.client)).filter(Boolean);
-        const reitti = pysahdykset.length > 0 ? pysahdykset.join(' → ') : 'Ei kirjattu';
+        const pysahdykset = (a.stops || []).filter(s => s.client);
+        const reitti = pysahdykset.length > 0
+            ? pysahdykset.map(s => {
+                let r = esc(s.client);
+                if (s.addr)  r += `<br><span style="color:#64748b;font-size:10px;">📍 ${esc(s.addr)}</span>`;
+                if (s.note)  r += `<br><span style="color:#2563eb;font-size:10px;">📝 ${esc(s.note)}</span>`;
+                return r;
+              }).join('<br><span style="color:#94a3b8">↓</span><br>')
+            : 'Ei kirjattu';
 
         // Aika
         const aika = (a.ts && a.te) ? esc(a.ts) + '–' + esc(a.te) : '–';
@@ -1830,7 +1907,7 @@ function vieJsonVarmuuskopio() {
     const payload = {
         _varmuuskopio_pvm: nyt,
         _kayttaja: currentUser?.email || '',
-        _versio: 'Paivyri v5.17',
+        _versio: 'Paivyri v5.19',
         ajot:      Object.fromEntries(omatAjot.map(a => [a.id, a])),
         asiakkaat: Object.fromEntries(asiakkaat.map(c => [c.id, c]))
     };
@@ -1889,7 +1966,7 @@ function vieExcelVarmuuskopio() {
     const metaRows = [
         ['Varmuuskopio päivä',    nyt],
         ['Käyttäjä',             currentUser?.email || ''],
-        ['Versio',               'Paivyri v5.17'],
+        ['Versio',               'Paivyri v5.19'],
         ['Ajoja yhteensä',       omatAjot.filter(a=>!a.luonnos).length],
         ['Luonnoksia',           omatAjot.filter(a=>!!a.luonnos).length],
         ['Yrityksiä',            asiakkaat.length],
@@ -1958,8 +2035,10 @@ function renderArkisto() {
     if (tyyppi === 'TmiOy')       data = data.filter(a => a.type === 'Tmi' || a.type === 'Oy');
     else if (tyyppi) data = data.filter(a => a.type === tyyppi);
     if (haku)   data = data.filter(a => {
-        const reitti = (a.stops||[]).map(s=>s.client).join(' ').toLowerCase();
-        return (a.date||'').includes(haku) || reitti.includes(haku) || (a.type||'').toLowerCase().includes(haku);
+        const teksti = (a.stops||[]).map(s =>
+            [s.client||'', s.addr||'', s.note||''].join(' ')
+        ).join(' ').toLowerCase();
+        return (a.date||'').includes(haku) || teksti.includes(haku) || (a.type||'').toLowerCase().includes(haku);
     });
 
     // Yhteenvetorivi
@@ -1982,7 +2061,13 @@ function renderArkisto() {
 
     document.getElementById('ark-list').innerHTML = naytettavat.map(a => {
         const km = Math.max(0, parseFloat(a.ke||0) - parseFloat(a.ks||0));
-        const reitti = (a.stops||[]).map(s => esc(s.client)).filter(Boolean).join(' → ') || '–';
+        const reitti = (a.stops||[]).filter(s=>s.client).map(s => esc(s.client)).join(' → ') || '–';
+        const reittiTarkka = (a.stops||[]).filter(s=>s.client).map(s => {
+            let r = `<b>${esc(s.client)}</b>`;
+            if (s.addr) r += `<br><small style="color:#64748b">📍 ${esc(s.addr)}</small>`;
+            if (s.note) r += `<br><small style="color:#2563eb">📝 ${esc(s.note)}</small>`;
+            return r;
+        }).join('<br><span style="color:#cbd5e1;font-size:10px">↓</span><br>') || '–';
         const onLuonnos = !!a.luonnos;
         const badgeClass = onLuonnos ? 'badge-luonnos' :
             a.type==='Oy' ? 'badge-oy' : a.type==='Tmi' ? 'badge-tmi' : 'badge-oma';
@@ -2016,7 +2101,7 @@ function renderArkisto() {
                 ${aika ? `<div class="ark-detail-row"><span>Aika</span><b>${aika}</b></div>` : ''}
                 <div class="ark-detail-row"><span>Mittari</span><b>${a.ks||'–'} → ${a.ke||'–'} (${km.toFixed(1)} km)</b></div>
                 <div class="ark-detail-row"><span>Päiväraha</span><b>${a.allowance && a.allowance!=='-' ? esc(a.allowance) : '–'}</b></div>
-                <div class="ark-detail-row"><span>Reitti</span><b>${reitti}</b></div>
+                <div class="ark-detail-row"><span>Reitti</span><div style="text-align:right;font-size:12px;">${reittiTarkka}</div></div>
                 ${korvaus>0 ? `<div class="ark-detail-row"><span>Korvaus</span><b style="color:var(--success)">${korvaus.toFixed(2)} €</b></div>` : ''}
                 ${a.type==='Oma' ? `<div class="ark-detail-row"><span>Korvaus</span><b style="color:#94a3b8">yksityisajo</b></div>` : ''}
                 <div class="ark-actions">
