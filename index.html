@@ -298,7 +298,7 @@
             <label>Lähtö</label>
             <div style="display:flex; gap:10px;">
                 <input type="number" id="f-ks" placeholder="Alku KM" class="e-nav" inputmode="decimal" style="flex:1">
-                <input type="time" id="f-ts" class="e-nav" style="flex:1" onchange="laskePvraha()">
+                <input type="time" id="f-ts" class="e-nav" style="flex:1" onchange="laskePvraha()" oninput="laskePvraha()">
             </div>
 
             <label>Reitti / Asiakkaat</label>
@@ -311,12 +311,15 @@
             <label>Paluu</label>
             <div style="display:flex; gap:10px;">
                 <input type="number" id="f-ke" placeholder="Loppu KM" class="e-nav" inputmode="decimal" style="flex:1">
-                <div style="flex:1; position:relative;">
-                    <input type="time" id="f-te" class="e-nav" style="width:100%;" onchange="laskePvraha()">
-                    <div id="yliyo-badge" style="display:none; position:absolute; top:-10px; right:0;
-                        background:#f59e0b; color:white; font-size:9px; font-weight:800;
-                        padding:2px 6px; border-radius:6px; white-space:nowrap;">
-                        +1 pv
+                <div style="flex:1;">
+                    <div style="position:relative;">
+                        <input type="time" id="f-te" class="e-nav" style="width:100%;" onchange="laskePvraha()" oninput="laskePvraha()" onblur="laskePvraha()">
+                        <div id="yliyo-badge" style="display:none; position:absolute; top:50%; right:10px;
+                            transform:translateY(-50%);
+                            background:#f59e0b; color:white; font-size:9px; font-weight:800;
+                            padding:2px 8px; border-radius:6px; pointer-events:none;">
+                            +1 pv
+                        </div>
                     </div>
                 </div>
             </div>
