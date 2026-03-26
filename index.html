@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.20</title>
+    <title>Päivyri v5.21</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1>Päivyri v5.20</h1>
+    <h1 id="app-version-title">Päivyri v5.21</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -477,6 +477,11 @@ const firebaseConfig = {
 };
 
 // =============================================
+// VERSIO — muuta tästä, päivittyy kaikkialle
+// =============================================
+const VERSIO = 'v5.21';
+
+// =============================================
 // HINNAT — Verohallinto 2026
 // =============================================
 const HINNAT = {
@@ -581,11 +586,15 @@ function alustaData() {
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (v5.20)' : '○ YHTEYS KATKENNUT';
+            s.val() ? '● LINJOILLA (' + VERSIO + ')' : '○ YHTEYS KATKENNUT';
     });
 
     // Käynnistä autosave-kuuntelijat
     lisaaAutosaveKuuntelijat();
+    // Päivitä title ja h1 VERSIO-vakiosta
+    document.title = 'Päivyri ' + VERSIO;
+    const vh = document.getElementById('app-version-title');
+    if (vh) vh.textContent = 'Päivyri ' + VERSIO;
 }
 
 // =============================================
@@ -694,13 +703,11 @@ function addStop(val = '', addr = '', note = '') {
             <input type="text" class="stop-addr e-nav" value="${esc(addr)}"
                 style="flex:1; margin:0;"
                 placeholder="📍 Osoite (CRM tai GPS)">
-            <button type="button" class="mini-btn"
-                onclick="haeGpsOsoite(this.previousElementSibling)"
+            <button type="button" onclick="haeGpsOsoite(this.previousElementSibling)"
                 title="Hae nykyinen sijainti GPS:llä"
                 style="flex-shrink:0; height:50px; padding:0 12px; border-radius:12px;
-                       border:2px solid #e2e8f0; background:white; font-size:16px; cursor:pointer;">
-                📍
-            </button>
+                       border:2px solid #e2e8f0; background:white; font-size:16px;
+                       cursor:pointer; font-family:Sora,sans-serif;">📍</button>
         </div>
         <input type="text" class="stop-note e-nav" value="${esc(note)}"
             placeholder="📝 Tarkoitus — esim. Myyntikäynti, Huolto, Sopimus...">
@@ -775,96 +782,6 @@ function valitseAsiakas(itemEl, nimi) {
     // Siirrä fokus tarkoitus-kenttään
     const noteInput = row.querySelector('.stop-note');
     if (noteInput) setTimeout(() => noteInput.focus(), 50);
-}
-
-// =============================================
-// GPS-OSOITEHAKU
-// =============================================
-async function haeGpsOsoite(addrInput) {
-    const btn = addrInput.nextElementSibling;
-    const alkuTeksti = btn.innerText;
-
-    // Tarkista tukeeko selain geolocationia
-    if (!navigator.geolocation) {
-        alert('GPS ei ole tuettu tässä selaimessa.');
-        return;
-    }
-
-    // Nappi lataustilaaan
-    btn.innerText = '⏳';
-    btn.disabled = true;
-    btn.style.borderColor = '#f59e0b';
-
-    navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            try {
-                // Nominatim reverse geocoding — ilmainen, ei API-avainta
-                const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=fi`;
-                const res  = await fetch(url, {
-                    headers: { 'Accept-Language': 'fi' }
-                });
-                const data = await res.json();
-
-                // Muodosta siisti suomalainen osoite
-                const a    = data.address || {};
-                const osat = [];
-
-                // Katuosoite
-                if (a.road) {
-                    let katu = a.road;
-                    if (a.house_number) katu += ' ' + a.house_number;
-                    osat.push(katu);
-                }
-                // Kaupunki
-                const kaupunki = a.city || a.town || a.village || a.municipality || '';
-                if (kaupunki) osat.push(kaupunki);
-
-                const osoite = osat.join(', ') || data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-                addrInput.value = osoite;
-                addrInput.style.borderColor = '#10b981';
-                setTimeout(() => addrInput.style.borderColor = '', 2000);
-
-                btn.innerText = '✅';
-                btn.style.borderColor = '#10b981';
-                btn.style.color = '#10b981';
-                setTimeout(() => {
-                    btn.innerText = alkuTeksti;
-                    btn.style.borderColor = '#e2e8f0';
-                    btn.style.color = '';
-                    btn.disabled = false;
-                }, 2000);
-
-            } catch (err) {
-                btn.innerText = '❌';
-                btn.style.borderColor = '#ef4444';
-                setTimeout(() => {
-                    btn.innerText = alkuTeksti;
-                    btn.style.borderColor = '#e2e8f0';
-                    btn.disabled = false;
-                }, 2000);
-                alert('Osoitteen hakeminen epäonnistui. Tarkista internet-yhteys.');
-            }
-        },
-        (err) => {
-            btn.innerText = alkuTeksti;
-            btn.style.borderColor = '#e2e8f0';
-            btn.disabled = false;
-            if (err.code === err.PERMISSION_DENIED) {
-                alert('GPS-lupa evätty.\n\nSalli sijainnin käyttö selaimen asetuksista\n(osoitepalkki → 🔒 → Sijainti → Salli).');
-            } else if (err.code === err.POSITION_UNAVAILABLE) {
-                alert('Sijaintia ei saatu. Varmista että GPS on päällä.');
-            } else {
-                alert('GPS-haku aikakatkaistiin. Yritä uudelleen.');
-            }
-        },
-        {
-            enableHighAccuracy: true,  // Käytä GPS:ää Wi-Fi:n sijaan
-            timeout: 10000,            // 10 sekuntia
-            maximumAge: 30000          // Hyväksy 30s vanha sijainti
-        }
-    );
 }
 
 // Sulje hakupaneeli kun klikataan muualle
@@ -2007,7 +1924,7 @@ function vieJsonVarmuuskopio() {
     const payload = {
         _varmuuskopio_pvm: nyt,
         _kayttaja: currentUser?.email || '',
-        _versio: 'Paivyri v5.20',
+        _versio: 'Paivyri ' + VERSIO,
         ajot:      Object.fromEntries(omatAjot.map(a => [a.id, a])),
         asiakkaat: Object.fromEntries(asiakkaat.map(c => [c.id, c]))
     };
@@ -2066,7 +1983,7 @@ function vieExcelVarmuuskopio() {
     const metaRows = [
         ['Varmuuskopio päivä',    nyt],
         ['Käyttäjä',             currentUser?.email || ''],
-        ['Versio',               'Paivyri v5.20'],
+        ['Versio',               'Paivyri ' + VERSIO],
         ['Ajoja yhteensä',       omatAjot.filter(a=>!a.luonnos).length],
         ['Luonnoksia',           omatAjot.filter(a=>!!a.luonnos).length],
         ['Yrityksiä',            asiakkaat.length],
@@ -2366,6 +2283,69 @@ function vieArkistoExceliin() {
     const pvm = nyt.toISOString().split('T')[0];
     const nimi = `Paivyri_arkisto_${tiedostoKk}_${pvm}.xlsx`;
     XLSX.writeFile(wb, nimi);
+}
+
+
+// =============================================
+// GPS-OSOITEHAKU
+// =============================================
+async function haeGpsOsoite(addrInput) {
+    const btn = addrInput.parentElement.querySelector('button');
+    if (!navigator.geolocation) {
+        alert('GPS ei ole tuettu tässä selaimessa.');
+        return;
+    }
+    btn.innerText = '⏳';
+    btn.disabled = true;
+    btn.style.borderColor = '#f59e0b';
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            try {
+                const url = 'https://nominatim.openstreetmap.org/reverse?lat='
+                    + pos.coords.latitude + '&lon=' + pos.coords.longitude
+                    + '&format=json&addressdetails=1&accept-language=fi';
+                const res  = await fetch(url);
+                const data = await res.json();
+                const a    = data.address || {};
+                let osoite = '';
+                if (a.road) {
+                    osoite = a.road + (a.house_number ? ' ' + a.house_number : '');
+                }
+                const kaupunki = a.city || a.town || a.village || a.municipality || '';
+                if (kaupunki) osoite += (osoite ? ', ' : '') + kaupunki;
+                if (!osoite) osoite = data.display_name || (pos.coords.latitude.toFixed(4) + ', ' + pos.coords.longitude.toFixed(4));
+                addrInput.value = osoite;
+                addrInput.style.borderColor = '#10b981';
+                btn.innerText = '✅';
+                btn.style.borderColor = '#10b981';
+                setTimeout(function() {
+                    addrInput.style.borderColor = '';
+                    btn.innerText = '📍';
+                    btn.style.borderColor = '#e2e8f0';
+                    btn.disabled = false;
+                }, 2000);
+            } catch(err) {
+                alert('Osoitteen haku epäonnistui. Tarkista yhteys.');
+                btn.innerText = '📍';
+                btn.style.borderColor = '#e2e8f0';
+                btn.disabled = false;
+            }
+        },
+        function(err) {
+            btn.innerText = '📍';
+            btn.style.borderColor = '#e2e8f0';
+            btn.disabled = false;
+            if (err.code === 1) {
+                alert('GPS-lupa evätty. Salli sijainti selaimen asetuksista.');
+            } else if (err.code === 2) {
+                alert('Sijaintia ei saatu. Varmista että GPS on päällä.');
+            } else {
+                alert('GPS-haku aikakatkaistiin. Yritä uudelleen.');
+            }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
 }
 
 function showPage(p) {
