@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.38</title>
+    <title>Päivyri v5.44</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.38</h1>
+    <h1 id="app-version-title">Päivyri v5.42</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -445,14 +445,22 @@
                     NÄYTÄ LISÄÄ
                 </button>
             </div>
-            <div style="display:flex; gap:8px; margin-top:8px;">
+            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
                 <button onclick="vieArkistoExceliin()" class="btn-dark no-print"
-                    style="flex:1; background:#166534;">
+                    style="flex:1; background:#166534; min-width:120px;">
                     📤 VIE EXCELIIN
                 </button>
                 <button onclick="siivoaDuplikaatit()" class="btn-dark no-print"
                     style="background:#dc2626; flex-shrink:0;">
-                    🧹 Siivoa duplikaatit
+                    🧹 Duplikaatit
+                </button>
+                <button onclick="korjaaKotiMerkinnät()" class="btn-dark no-print"
+                    style="background:#7c3aed; flex-shrink:0;">
+                    🏠 Korjaa Koti
+                </button>
+                <button onclick="korjaaSimonen()" class="btn-dark no-print"
+                    style="background:#0369a1; flex-shrink:0;">
+                    🚕 Korjaa Simonen
                 </button>
             </div>
         </div>
@@ -506,7 +514,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.38';
+const VERSIO = 'v5.44';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -1452,19 +1460,19 @@ function paivitaRaportti() {
         const pvmOsat = (a.date || '').split('-');
         const pvmFi = pvmOsat.length === 3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : esc(a.date);
 
-        // Reitti — verottaja vaatii lähtö- ja kohdepaikat
-        // Pysähdykset = kohteet (ei lähtöpistettä)
-        // Nuoli tulee vasta kohteen nimen JÄLKEEN jos on useampi kohde
+        // Reitti — selkeä muoto:
+        // Nimi (📍 osoite) → Seuraava nimi (📍 seuraava osoite)
         const pysahdykset = (a.stops || []).filter(s => s.client);
         const reitti = pysahdykset.length > 0
             ? pysahdykset.map((s, si) => {
-                let r = '';
-                // Nuoli tulee ENNEN seuraavaa kohdetta (ei ensimmäisen eteen)
-                if (si > 0) r += '<span style="color:#94a3b8; font-size:10px;"> → </span>';
-                r += '<span style="font-weight:600">' + esc(s.client) + '</span>';
-                if (s.addr)  r += '<br><span style="color:#64748b;font-size:10px;margin-left:4px;">📍 ' + esc(s.addr) + '</span>';
-                if (s.note)  r += '<br><span style="color:#2563eb;font-size:10px;margin-left:4px;">📝 ' + esc(s.note) + '</span>';
-                return r;
+                const viimeinen = si === pysahdykset.length - 1;
+                // Nimi + osoite tiiviisti
+                let kohde = '<b>' + esc(s.client) + '</b>';
+                if (s.addr) kohde += ' <span style="color:#64748b;font-size:10px;">(📍 ' + esc(s.addr) + ')</span>';
+                if (s.note) kohde += '<br><span style="color:#2563eb;font-size:10px;padding-left:8px;">📝 ' + esc(s.note) + '</span>';
+                // Nuoli seuraavaan
+                if (!viimeinen) kohde += ' <span style="color:#94a3b8;">→</span><br>';
+                return kohde;
               }).join('')
             : 'Ei kirjattu';
 
@@ -2419,6 +2427,60 @@ async function haeGpsOsoite(addrInput) {
 // =============================================
 // DUPLIKAATTIEN SIIVOUS
 // =============================================
+// Yleinen massakorjausfunktio pysähdyksille
+async function massakorjaaStop(haettava, uusiNimi, uusiOsoite, kuvaus) {
+    const uid = currentUser.uid;
+    const korjattavat = [];
+
+    omatAjot.forEach(function(a) {
+        if (!a.stops) return;
+        const uudetStops = a.stops.map(function(s) {
+            if ((s.client||'').toLowerCase().includes(haettava.toLowerCase())) {
+                return { client: uusiNimi, addr: uusiOsoite, note: s.note || '' };
+            }
+            return s;
+        });
+        const muuttui = a.stops.some(function(s, i) {
+            return s.client !== uudetStops[i].client;
+        });
+        if (muuttui) korjattavat.push({ ...a, stops: uudetStops });
+    });
+
+    if (korjattavat.length === 0) {
+        alert('Ei löydy merkintöjä joissa asiakkaan nimi sisältää "' + haettava + '".');
+        return;
+    }
+
+    if (!confirm('Korjataan ' + korjattavat.length + ' ajoa:\n' + kuvaus + '\n\nJatketaanko?')) return;
+
+    let ok = 0;
+    for (const a of korjattavat) {
+        try {
+            await db.ref('users/' + uid + '/ajot/' + a.id).set(a);
+            ok++;
+        } catch(e) { console.error(e); }
+    }
+    alert('✅ Korjattu ' + ok + ' ajoa.');
+}
+
+async function korjaaKotiMerkinnät() {
+    await massakorjaaStop(
+        'Kontiontie 55',
+        'Koti',
+        'Kontiontie 55, Riihimäki',
+        'Kontiontie 55 (nimi) → Koti + Kontiontie 55, Riihimäki (osoite)'
+    );
+}
+
+async function korjaaSimonen() {
+    await massakorjaaStop(
+        'Viipurinkatu 1',
+        'Taksi - Taksipalvelu Simonen Oy',
+        'Viipurinkatu 1, Helsinki',
+        'Viipurinkatu 1 (nimi) → Taksi - Taksipalvelu Simonen Oy + Viipurinkatu 1, Helsinki (osoite)'
+    );
+}
+
 async function siivoaDuplikaatit() {
     const uid = currentUser.uid;
 
