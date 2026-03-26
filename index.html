@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.32</title>
+    <title>Päivyri v5.33</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.32</h1>
+    <h1 id="app-version-title">Päivyri v5.33</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -492,7 +492,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.32';
+const VERSIO = 'v5.33';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -2416,30 +2416,11 @@ async function haeYtjTiedot() {
 
     try {
         // Kokeile ensin v3, sitten vanha bis/v1
-        const urls = [
-            'https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=' + ytun,
-            'https://avoindata.prh.fi/opendata/bis/v1/' + ytun
-        ];
-        let data = null;
-        let lastErr = '';
-        for (let i = 0; i < urls.length; i++) {
-            const urlNow = urls[i];
-            status.innerText = 'Haetaan... (' + (i+1) + '/' + urls.length + ')';
-            try {
-                const res = await fetch(urlNow, { headers: { 'Accept': 'application/json' } });
-                if (res.ok) {
-                    data = await res.json();
-                    // Näytä raakavastaus debuggausta varten
-                    // API vastasi OK
-                    break;
-                } else {
-                    lastErr = 'HTTP ' + res.status;
-                }
-            } catch(e) {
-                lastErr = e.message;
-            }
-        }
-        if (!data) throw new Error(lastErr || 'Kaikki rajapinnat epäonnistuivat');
+        // PRH YTJ API v3
+        const ytjUrl = 'https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=' + ytun;
+        const ytjRes = await fetch(ytjUrl, { headers: { 'Accept': 'application/json' } });
+        if (!ytjRes.ok) throw new Error('PRH API virhe: HTTP ' + ytjRes.status);
+        const data = await ytjRes.json();
         // v3 API palauttaa { companies: [...] }
         const companies = data.companies || [];
 
