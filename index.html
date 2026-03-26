@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.23</title>
+    <title>Päivyri v5.24</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.23</h1>
+    <h1 id="app-version-title">Päivyri v5.24</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -492,7 +492,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.23';
+const VERSIO = 'v5.24';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -2415,15 +2415,17 @@ async function haeYtjTiedot() {
     status.innerText = 'Haetaan PRH:n rekisteristä...';
 
     try {
-        const url = 'https://avoindata.prh.fi/opendata/bis/v1/' + ytun;
+        // PRH YTJ API v3 — uusin rajapinta
+        const url = 'https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=' + ytun;
         const res = await fetch(url);
         if (!res.ok) {
             throw new Error('HTTP ' + res.status);
         }
         const data = await res.json();
-        const results = data.results || [];
+        // v3 API palauttaa { companies: [...] }
+        const companies = data.companies || data.results || [];
 
-        if (results.length === 0) {
+        if (companies.length === 0) {
             status.style.color = '#ef4444';
             status.innerText = 'Y-tunnusta ei löydy rekisteristä.';
             btn.innerText = '🔍 YTJ';
@@ -2431,50 +2433,50 @@ async function haeYtjTiedot() {
             return;
         }
 
-        const yritys = results[0];
+        const yritys = companies[0];
 
-        // Nimi
-        const nimi = yritys.name || '';
-        if (nimi && !document.getElementById('c-name').value) {
-            document.getElementById('c-name').value = nimi;
-        } else if (nimi) {
-            // Kysy käyttäjältä jos nimi on jo täytetty
-            if (confirm('Löytyi: ' + nimi + '\nKorvataanko nykyinen nimi?')) {
-                document.getElementById('c-name').value = nimi;
+        // Nimi — v3: name tai companyName
+        const nimi = yritys.name || yritys.companyName || '';
+        const nimiKentta = document.getElementById('c-name');
+        if (nimi) {
+            if (!nimiKentta.value || confirm('Löytyi: ' + nimi + '\nKorvataanko nykyinen nimi?')) {
+                nimiKentta.value = nimi;
             }
         }
 
-        // Osoite — etsi viimeisin käyntiosoite
+        // Osoite — v3: addresses array
         let osoite = '';
         const addresses = yritys.addresses || [];
+        // Etsi voimassaoleva käyntiosoite (registeredOffice type tai viimeisin)
         const kaynti = addresses.find(function(a) {
-            return a.type === 2 && a.endDate === null;
-        }) || addresses.find(function(a) {
-            return a.endDate === null;
-        }) || addresses[0];
+            return !a.endDate;
+        }) || addresses[addresses.length - 1];
 
         if (kaynti) {
             const osat = [];
-            if (kaynti.street) osat.push(kaynti.street + (kaynti.buildingNumber ? ' ' + kaynti.buildingNumber : ''));
-            if (kaynti.postCode && kaynti.city) osat.push(kaynti.postCode + ' ' + kaynti.city);
-            else if (kaynti.city) osat.push(kaynti.city);
+            const katu = kaynti.street || kaynti.streetFi || kaynti.streetAddressFi || '';
+            const nro  = kaynti.buildingNumber || kaynti.houseNumber || '';
+            if (katu) osat.push(katu + (nro ? ' ' + nro : ''));
+            const postinro = kaynti.postCode || kaynti.postalCode || '';
+            const kaupunki = kaynti.city || kaynti.cityFi || kaynti.postOffice || '';
+            if (postinro && kaupunki) osat.push(postinro + ' ' + kaupunki);
+            else if (kaupunki) osat.push(kaupunki);
             osoite = osat.join(', ');
         }
 
-        if (osoite && !document.getElementById('c-addr').value) {
-            document.getElementById('c-addr').value = osoite;
-        } else if (osoite) {
+        if (osoite) {
             document.getElementById('c-addr').value = osoite;
         }
 
-        // Toimiala muistiinpanoksi jos kenttä tyhjä
-        const toimialat = yritys.businessLines || [];
+        // Toimiala muistiinpanoksi
+        const toimialat = yritys.businessLines || yritys.mainBusinessLine ? [yritys.mainBusinessLine] : [];
         if (toimialat.length > 0 && !document.getElementById('c-notes').value) {
-            document.getElementById('c-notes').value = toimialat[0].name || '';
+            const tnimi = toimialat[0] && (toimialat[0].name || toimialat[0].nameFi || '');
+            if (tnimi) document.getElementById('c-notes').value = tnimi;
         }
 
         status.style.color = '#10b981';
-        status.innerText = '✅ Tiedot haettu: ' + nimi;
+        status.innerText = '✅ Tiedot haettu: ' + (nimi || ytun);
         btn.innerText = '✅';
         setTimeout(function() {
             btn.innerText = '🔍 YTJ';
