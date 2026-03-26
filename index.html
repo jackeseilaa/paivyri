@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.25</title>
+    <title>Päivyri v5.26</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -179,7 +179,7 @@
 
 <!-- KIRJAUTUMISSIVU -->
 <div id="auth-page" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
-    <h1 id="app-version-title">Päivyri v5.25</h1>
+    <h1 id="app-version-title">Päivyri v5.26</h1>
     <p>Ajopäiväkirja &amp; asiakasrekisteri</p>
     <button onclick="login()" class="btn-save" style="width:auto; padding:18px 40px; font-size:15px;">
         KIRJAUDU GOOGLELLA
@@ -492,7 +492,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.25';
+const VERSIO = 'v5.26';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -2415,20 +2415,43 @@ async function haeYtjTiedot() {
     status.innerText = 'Haetaan PRH:n rekisteristä...';
 
     try {
-        // PRH YTJ API v3 — uusin rajapinta
-        const url = 'https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=' + ytun;
-        console.log('YTJ haku URL:', url);
+        // Kokeile ensin v3, sitten vanha bis/v1
+        const urls = [
+            'https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=' + ytun,
+            'https://avoindata.prh.fi/opendata/bis/v1/' + ytun
+        ];
+        let data = null;
+        let lastErr = '';
+        for (let i = 0; i < urls.length; i++) {
+            const url = urls[i];
+            status.innerText = 'Kokeillaan rajapintaa ' + (i+1) + '/' + urls.length + '...';
+            try {
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    data = await res.json();
+                    // Näytä raakavastaus debuggausta varten
+                    const raw = JSON.stringify(data).substring(0, 400);
+                    status.innerText = 'Vastaus: ' + raw;
+                    break;
+                } else {
+                    lastErr = 'HTTP ' + res.status;
+                }
+            } catch(e) {
+                lastErr = e.message;
+            }
+        }
+        if (!data) throw new Error(lastErr || 'Kaikki rajapinnat epäonnistuivat');
+        const url = urls[0]; // dummy, ei käytetä enää
         const res = await fetch(url);
-        console.log('YTJ vastaus status:', res.status);
         if (!res.ok) {
-            const errTxt = await res.text().catch(function() { return 'ei tekstiä'; });
-            console.log('YTJ virhe:', errTxt);
-            throw new Error('HTTP ' + res.status + ' — ' + errTxt.substring(0, 100));
+            throw new Error('HTTP ' + res.status);
         }
         const data = await res.json();
-        console.log('YTJ data:', JSON.stringify(data).substring(0, 500));
         // v3 API palauttaa { companies: [...] }
-        const companies = data.companies || data.results || [];
+        // Debug: näytä avaimet
+        const keys = Object.keys(data).join(', ');
+        status.innerText = 'Avaimet: ' + keys;
+        const companies = data.companies || data.results || data.bisDetails || [];
 
         if (companies.length === 0) {
             status.style.color = '#ef4444';
@@ -2490,13 +2513,7 @@ async function haeYtjTiedot() {
 
     } catch(err) {
         status.style.color = '#ef4444';
-        // Näytä tarkka virhe debuggausta varten
-        const errMsg = err && err.message ? err.message : String(err);
-        if (errMsg.toLowerCase().includes('cors') || errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network')) {
-            status.innerText = 'CORS-virhe: PRH API ei salli selainpyyntöjä. Virhe: ' + errMsg;
-        } else {
-            status.innerText = 'Virhe: ' + errMsg;
-        }
+        status.innerText = 'Haku epäonnistui. Tarkista internet-yhteys.';
         btn.innerText = '🔍 YTJ';
         btn.disabled = false;
     }
