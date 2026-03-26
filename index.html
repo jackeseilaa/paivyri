@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Päivyri v5.44</title>
+    <title>Päivyri v5.45</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -462,6 +462,10 @@
                     style="background:#0369a1; flex-shrink:0;">
                     🚕 Korjaa Simonen
                 </button>
+                <button onclick="korjaaTaksiNro()" class="btn-dark no-print"
+                    style="background:#0369a1; flex-shrink:0;">
+                    🚕 Korjaa Taksi+nro
+                </button>
             </div>
         </div>
     </div>
@@ -514,7 +518,7 @@ const firebaseConfig = {
 // =============================================
 // VERSIO — muuta tästä, päivittyy kaikkialle
 // =============================================
-const VERSIO = 'v5.44';
+const VERSIO = 'v5.45';
 
 // =============================================
 // HINNAT — Verohallinto 2026
@@ -1460,17 +1464,14 @@ function paivitaRaportti() {
         const pvmOsat = (a.date || '').split('-');
         const pvmFi = pvmOsat.length === 3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : esc(a.date);
 
-        // Reitti — selkeä muoto:
-        // Nimi (📍 osoite) → Seuraava nimi (📍 seuraava osoite)
+        // Reitti — muoto: Nimi (📍 osoite) → seuraava
         const pysahdykset = (a.stops || []).filter(s => s.client);
         const reitti = pysahdykset.length > 0
             ? pysahdykset.map((s, si) => {
                 const viimeinen = si === pysahdykset.length - 1;
-                // Nimi + osoite tiiviisti
                 let kohde = '<b>' + esc(s.client) + '</b>';
-                if (s.addr) kohde += ' <span style="color:#64748b;font-size:10px;">(📍 ' + esc(s.addr) + ')</span>';
                 if (s.note) kohde += '<br><span style="color:#2563eb;font-size:10px;padding-left:8px;">📝 ' + esc(s.note) + '</span>';
-                // Nuoli seuraavaan
+                if (s.addr) kohde += '<br><span style="color:#64748b;font-size:10px;">(📍 ' + esc(s.addr) + ')</span>';
                 if (!viimeinen) kohde += ' <span style="color:#94a3b8;">→</span><br>';
                 return kohde;
               }).join('')
@@ -2479,6 +2480,60 @@ async function korjaaSimonen() {
         'Viipurinkatu 1, Helsinki',
         'Viipurinkatu 1 (nimi) → Taksi - Taksipalvelu Simonen Oy + Viipurinkatu 1, Helsinki (osoite)'
     );
+}
+
+async function korjaaTaksiNro() {
+    // Taksi+joku nro asiakaskenttässä → Taksi - Taksipalvelu Simonen Oy
+    const uid = currentUser.uid;
+    const korjattavat = [];
+
+    omatAjot.forEach(function(a) {
+        if (!a.stops) return;
+        const uudetStops = a.stops.map(function(s) {
+            const nimi = s.client || '';
+            // Tunnista "Taksi 123", "Taksi-123", "Taksi 1234567" tms.
+            if (/^taksi[\s\-\+]?\d+/i.test(nimi) || (nimi.toLowerCase().startsWith('taksi') && nimi !== 'Taksi - Taksipalvelu Simonen Oy')) {
+                return {
+                    client: 'Taksi - Taksipalvelu Simonen Oy',
+                    addr:   s.addr || 'Viipurinkatu 1, Helsinki',
+                    note:   s.note ? (s.note + ' | ' + nimi) : nimi  // tallenna alkuperäinen lisätietoihin
+                };
+            }
+            return s;
+        });
+        const muuttui = a.stops.some(function(s, i) {
+            return s.client !== uudetStops[i].client;
+        });
+        if (muuttui) korjattavat.push({ ...a, stops: uudetStops });
+    });
+
+    if (korjattavat.length === 0) {
+        alert('Ei löydy Taksi+nro -merkintöjä.');
+        return;
+    }
+
+    // Näytä esimerkkejä
+    const esimerkit = [];
+    korjattavat.slice(0,3).forEach(function(a) {
+        a.stops.forEach(function(s) {
+            if (s.client === 'Taksi - Taksipalvelu Simonen Oy' && s.note) {
+                esimerkit.push(s.note.split(' | ').pop());
+            }
+        });
+    });
+
+    if (!confirm('Korjataan ' + korjattavat.length + ' ajoa.\n' +
+        'Esimerkit: ' + [...new Set(esimerkit)].slice(0,3).join(', ') + '\n\n' +
+        '→ Taksi - Taksipalvelu Simonen Oy\nAlkuperäinen nro tallennetaan tarkoituskenttään.\n\nJatketaanko?')) return;
+
+    let ok = 0;
+    for (const a of korjattavat) {
+        try {
+            await db.ref('users/' + uid + '/ajot/' + a.id).set(a);
+            ok++;
+        } catch(e) { console.error(e); }
+    }
+    alert('✅ Korjattu ' + ok + ' ajoa.');
 }
 
 async function siivoaDuplikaatit() {
