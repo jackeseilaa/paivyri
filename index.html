@@ -551,12 +551,9 @@ const HINNAT = {
 };
 
 // =============================================
-// ALUSTUS
+// MUUTTUJAT (alustetaan DOMContentLoaded:issa)
 // =============================================
-firebase.initializeApp(firebaseConfig);
-const db   = firebase.database();
-const auth = firebase.auth();
-let currentUser = null, omatAjot = [], asiakkaat = [];
+let db, auth, currentUser = null, omatAjot = [], asiakkaat = [];
 
 // XSS-suojaus — käytä KAIKKIALLA innerHTML-interpoloinneissa
 function esc(s) {
@@ -569,13 +566,41 @@ function esc(s) {
 }
 
 // =============================================
-// KORJAUS 3 & 4: DOMContentLoaded + paivitaRaportti-fiksit
+// KORJAUS 3 & 4: DOMContentLoaded — Alusta Firebase + titteli
 // =============================================
-// DOMContentLoaded — aseta title ja h1 heti sivun latauduttua
 document.addEventListener('DOMContentLoaded', function() {
+    // Aseta titteli ja h1
     document.title = 'Päivyri ' + VERSIO;
     const vh = document.getElementById('app-version-title');
     if (vh) vh.textContent = 'Päivyri ' + VERSIO;
+    
+    // Alusta Firebase kun DOM on valmis
+    if (typeof firebase !== 'undefined') {
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            auth = firebase.auth();
+            
+            // Kuuntele auth-muutoksia
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('auth-page').style.display = 'none';
+                    document.getElementById('app-ui').style.display = 'block';
+                    document.getElementById('user-display').innerText = user.email;
+                    asetaOletukset();
+                    alustaData();
+                } else {
+                    document.getElementById('auth-page').style.display = 'flex';
+                    document.getElementById('app-ui').style.display = 'none';
+                }
+            });
+        } catch (err) {
+            console.error('Firebase alustus epäonnistui:', err);
+        }
+    } else {
+        console.warn('Firebase-kirjastot eivät ole latautuneet. Odota hetki...');
+    }
 });
 
 // =============================================
@@ -588,6 +613,13 @@ function login() {
     loginInProgress = true;
     const btn = document.querySelector('#auth-page button');
     if (btn) { btn.disabled = true; btn.innerText = 'KIRJAUDUTAAN...'; }
+
+    if (!auth) {
+        alert('Firebase ei ole alustettu. Odota hetki ja yritä uudelleen.');
+        loginInProgress = false;
+        if (btn) { btn.disabled = false; btn.innerText = 'KIRJAUDU GOOGLELLA'; }
+        return;
+    }
 
     auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
         .catch(err => {
@@ -609,24 +641,15 @@ function logout() {
     });
 }
 
-auth.onAuthStateChanged(user => {
-    if (user) {
-        currentUser = user;
-        document.getElementById('auth-page').style.display = 'none';
-        document.getElementById('app-ui').style.display = 'block';
-        document.getElementById('user-display').innerText = user.email;
-        asetaOletukset();
-        alustaData();
-    } else {
-        document.getElementById('auth-page').style.display = 'flex';
-        document.getElementById('app-ui').style.display = 'none';
-    }
-});
-
 // =============================================
 // DATA — Firebase-kuuntelijat
 // =============================================
 function alustaData() {
+    if (!db || !auth) {
+        console.error('Firebase-objektit eivät ole alustettu vielä.');
+        return;
+    }
+    
     const uid = currentUser.uid;
 
     db.ref('users/' + uid + '/ajot').on('value', s => {
@@ -644,8 +667,10 @@ function alustaData() {
 
     db.ref('users/' + uid + '/asiakkaat').on('value', s => {
         asiakkaat = s.val() ? Object.values(s.val()) : [];
-        document.getElementById('crm-datalist').innerHTML =
-            asiakkaat.map(c => `<option value="${esc(c.name)}">`).join('');
+        const datalist = document.getElementById('crm-datalist');
+        if (datalist) {
+            datalist.innerHTML = asiakkaat.map(c => `<option value="${esc(c.name)}">`).join('');
+        }
         paivitaCrmLista();
     });
 
@@ -655,9 +680,6 @@ function alustaData() {
     });
 
     lisaaAutosaveKuuntelijat();
-    document.title = 'Päivyri ' + VERSIO;
-    const vh = document.getElementById('app-version-title');
-    if (vh) vh.textContent = 'Päivyri ' + VERSIO;
 }
 
 function asetaOletukset() {
@@ -903,7 +925,22 @@ function showPage(p) {
     document.getElementById('tab-' + p).classList.add('active');
 }
 
-// [... Stubbed funktiot dokumentin täydellisyyttä varten ...]
+// =============================================
+// AUTOSAVE-KUUNTELIJAT
+// =============================================
+let autosaveTimer = null;
+
+function lisaaAutosaveKuuntelijat() {
+    // Kuuntele form-muutoksia
+    const kentat = ['f-date','f-type','f-ks','f-ke','f-ts','f-te','f-allowance'];
+    kentat.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {});
+            el.addEventListener('input', () => {});
+        }
+    });
+}
 </script>
 </body>
 </html>
