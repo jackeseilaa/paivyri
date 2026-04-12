@@ -1465,8 +1465,7 @@ function paivitaRaportti() {
     let rows = '';
     let tKm = 0, tKmKaikki = 0, tEur = 0, cOsa = 0, cKoko = 0, cAteria = 0;
 
-    const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
-const onOmaAjo = a.type === 'Oma';
+
 
 data.forEach((a, i) => {
         const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
