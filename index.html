@@ -1468,12 +1468,24 @@ function paivitaRaportti() {
     const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
 const onOmaAjo = a.type === 'Oma';
 
-tKmKaikki += km;  // Kaikki km tilastoksi
-if (!onOmaAjo) {  // ← LISÄÄ TÄMÄ
-    if (!onOmaAjo) tKm += km;   // Vain Tmi/Oy km korvattavaksi
-}
+data.forEach((a, i) => {
+        const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
+        const onOmaAjo = a.type === 'Oma';
 
-        if (!onOmaAjo) tEur += korvaus;
+        tKmKaikki += km;  // Kaikki km tilastoksi
+        if (!onOmaAjo) {  // Vain Tmi/Oy km korvattavaksi
+            tKm += km;
+        }
+
+        // Laske korvaus
+        let korvaus = 0;
+        if (!onOmaAjo) {
+            korvaus = km * HINNAT.km;
+            if (a.allowance === 'Osapäivä')  { korvaus += HINNAT['Osapäivä'];  cOsa++; }
+            if (a.allowance === 'Kokopäivä') { korvaus += HINNAT['Kokopäivä']; cKoko++; }
+            if (a.allowance === 'Ateria')    { korvaus += HINNAT['Ateria'];     cAteria++; }
+        }
+        tEur += korvaus;
 
         // Päivämäärä suomalaisessa muodossa
         const pvmOsat = (a.date || '').split('-');
@@ -1520,13 +1532,6 @@ if (!onOmaAjo) {  // ← LISÄÄ TÄMÄ
                 <td style="text-align:right">${korvausTeksti}</td>
             </tr>`;
     });
-
-    const kmEur = (tKm * HINNAT.km).toFixed(2);
-    const pvEur = (tEur - parseFloat(kmEur)).toFixed(2);
-    const kmKorvausStr = HINNAT.km.toFixed(2).replace('.', ',');
-    const nimitiedot = currentUser ? esc(currentUser.email) : '';
-
-    document.getElementById('report-target').innerHTML = `
         <!-- TULOSTUS-OTSIKKO (näkyy printissä) -->
         <div style="margin-bottom:15px; padding-bottom:12px; border-bottom:2px solid #0f172a;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
