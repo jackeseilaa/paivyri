@@ -1532,6 +1532,15 @@ data.forEach((a, i) => {
                 <td style="text-align:right">${korvausTeksti}</td>
             </tr>`;
     });
+</tr>`;
+    });
+
+    const kmEur = (tKm * HINNAT.km).toFixed(2);
+    const pvEur = (tEur - parseFloat(kmEur)).toFixed(2);
+    const kmKorvausStr = HINNAT.km.toFixed(2).replace('.', ',');
+    const nimitiedot = currentUser ? esc(currentUser.email) : '';
+
+    document.getElementById('report-target').innerHTML = `
         <!-- TULOSTUS-OTSIKKO (näkyy printissä) -->
         <div style="margin-bottom:15px; padding-bottom:12px; border-bottom:2px solid #0f172a;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
@@ -1566,6 +1575,8 @@ data.forEach((a, i) => {
                     <th style="width:75px">PÄIVÄRAHA</th>
                     <th style="width:55px;text-align:right">EUR</th>
                 </tr>
+            </thead>
+            <tbody>${rows}</tbody>
             </thead>
             <tbody>${rows}</tbody>
             <!-- YHTEENSÄRIVI TAULUKON SISÄLLÄ -->
