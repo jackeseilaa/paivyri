@@ -1472,12 +1472,11 @@ data.forEach((a, i) => {
         const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
         const onOmaAjo = a.type === 'Oma';
 
-        tKmKaikki += km;  // Kaikki km tilastoksi
-        if (!onOmaAjo) {  // Vain Tmi/Oy km korvattavaksi
+        tKmKaikki += km;
+        if (!onOmaAjo) {
             tKm += km;
         }
 
-        // Laske korvaus
         let korvaus = 0;
         if (!onOmaAjo) {
             korvaus = km * HINNAT.km;
@@ -1487,11 +1486,9 @@ data.forEach((a, i) => {
         }
         tEur += korvaus;
 
-        // Päivämäärä suomalaisessa muodossa
         const pvmOsat = (a.date || '').split('-');
         const pvmFi = pvmOsat.length === 3 ? pvmOsat[2]+'.'+pvmOsat[1]+'.'+pvmOsat[0] : esc(a.date);
 
-        // Reitti — tiivis, A4-ystävällinen muoto
         const pysahdykset = (a.stops || []).filter(s => s.client)
         const paareitti = pysahdykset.map(function(s, si) {
             const viimeinen = si === pysahdykset.length - 1
@@ -1510,13 +1507,8 @@ data.forEach((a, i) => {
             ? '<br><span style="font-size:9px;color:#64748b;line-height:1.6;">' + lisatiedot + '</span>'
             : '')
 
-        // Aika
         const aika = (a.ts && a.te) ? esc(a.ts) + '–' + esc(a.te) : '–';
-
-        // Päiväraha-teksti
         const pvTeksti = (!onOmaAjo && a.allowance && a.allowance !== '-') ? esc(a.allowance) : '';
-
-        // Oma-ajo merkitään harmaaksi taustaväriksi
         const rowBg = onOmaAjo ? '#f8fafc' : (i % 2 === 1 ? '#fafafa' : '');
         const korvausTeksti = onOmaAjo
             ? '<span style="color:#94a3b8;font-size:10px;">yksityisajo</span>'
@@ -1530,8 +1522,7 @@ data.forEach((a, i) => {
                 <td style="text-align:right"><b>${km.toFixed(1)}</b></td>
                 <td style="font-size:10px">${pvTeksti}</td>
                 <td style="text-align:right">${korvausTeksti}</td>
-
-</tr>`;
+            </tr>`;
     });
 
     const kmEur = (tKm * HINNAT.km).toFixed(2);
