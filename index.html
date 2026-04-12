@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Päivyri v5.48</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
@@ -525,7 +522,7 @@
 // =============================================
 // KONFIGURAATIO — Vaihda omasi tähän
 // =============================================
-const firebaseConfig = {
+window.firebaseConfig = {
     apiKey: "AIzaSyCjoOqjTZxYoTA0b9HN-QAUB79pqHj5uBc",
     authDomain: "paivuri.firebaseapp.com",
     databaseURL: "https://paivuri-default-rtdb.europe-west1.firebasedatabase.app",
@@ -551,7 +548,7 @@ const HINNAT = {
 };
 
 // =============================================
-// MUUTTUJAT (alustetaan DOMContentLoaded:issa)
+// MUUTTUJAT (alustetaan kun Firebase on valmis)
 // =============================================
 let db, auth, currentUser = null, omatAjot = [], asiakkaat = [];
 
@@ -566,62 +563,26 @@ function esc(s) {
 }
 
 // =============================================
-// KORJAUS 3 & 4: DOMContentLoaded — Alusta Firebase + titteli
-// =============================================
-document.addEventListener('DOMContentLoaded', function() {
-    // Aseta titteli ja h1
-    document.title = 'Päivyri ' + VERSIO;
-    const vh = document.getElementById('app-version-title');
-    if (vh) vh.textContent = 'Päivyri ' + VERSIO;
-    
-    // Alusta Firebase kun DOM on valmis
-    if (typeof firebase !== 'undefined') {
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-            auth = firebase.auth();
-            
-            // Kuuntele auth-muutoksia
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    currentUser = user;
-                    document.getElementById('auth-page').style.display = 'none';
-                    document.getElementById('app-ui').style.display = 'block';
-                    document.getElementById('user-display').innerText = user.email;
-                    asetaOletukset();
-                    alustaData();
-                } else {
-                    document.getElementById('auth-page').style.display = 'flex';
-                    document.getElementById('app-ui').style.display = 'none';
-                }
-            });
-        } catch (err) {
-            console.error('Firebase alustus epäonnistui:', err);
-        }
-    } else {
-        console.warn('Firebase-kirjastot eivät ole latautuneet. Odota hetki...');
-    }
-});
-
-// =============================================
 // KIRJAUTUMINEN
 // =============================================
 let loginInProgress = false;
 
 function login() {
     if (loginInProgress) return;
+    
+    // Tarkista että Firebase on valmis
+    if (!window.auth) {
+        const btn = document.querySelector('#auth-page button');
+        if (btn) btn.innerText = 'Alustetaan... odota';
+        setTimeout(login, 500);
+        return;
+    }
+    
     loginInProgress = true;
     const btn = document.querySelector('#auth-page button');
     if (btn) { btn.disabled = true; btn.innerText = 'KIRJAUDUTAAN...'; }
 
-    if (!auth) {
-        alert('Firebase ei ole alustettu. Odota hetki ja yritä uudelleen.');
-        loginInProgress = false;
-        if (btn) { btn.disabled = false; btn.innerText = 'KIRJAUDU GOOGLELLA'; }
-        return;
-    }
-
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+    window.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
         .catch(err => {
             if (err.code === 'auth/cancelled-popup-request') return;
             if (err.code === 'auth/popup-closed-by-user') return;
@@ -635,7 +596,8 @@ function login() {
 
 function logout() {
     if (!confirm('Kirjaudutaanko ulos?')) return;
-    auth.signOut().then(() => {
+    if (!window.auth) return;
+    window.auth.signOut().then(() => {
         document.getElementById('app-ui').style.display = 'none';
         document.getElementById('auth-page').style.display = 'flex';
     });
@@ -645,14 +607,14 @@ function logout() {
 // DATA — Firebase-kuuntelijat
 // =============================================
 function alustaData() {
-    if (!db || !auth) {
+    if (!window.db || !window.auth) {
         console.error('Firebase-objektit eivät ole alustettu vielä.');
         return;
     }
     
-    const uid = currentUser.uid;
+    const uid = window.currentUser.uid;
 
-    db.ref('users/' + uid + '/ajot').on('value', s => {
+    window.db.ref('users/' + uid + '/ajot').on('value', s => {
         omatAjot = s.val() ? Object.values(s.val()) : [];
         alustaRepKuukaudet();
         paivitaHistoria();
@@ -665,7 +627,7 @@ function alustaData() {
         }
     });
 
-    db.ref('users/' + uid + '/asiakkaat').on('value', s => {
+    window.db.ref('users/' + uid + '/asiakkaat').on('value', s => {
         asiakkaat = s.val() ? Object.values(s.val()) : [];
         const datalist = document.getElementById('crm-datalist');
         if (datalist) {
@@ -674,9 +636,11 @@ function alustaData() {
         paivitaCrmLista();
     });
 
-    db.ref('.info/connected').on('value', s => {
-        document.getElementById('sync-status').innerText =
-            s.val() ? '● LINJOILLA (' + VERSIO + ')' : '○ YHTEYS KATKENNUT';
+    window.db.ref('.info/connected').on('value', s => {
+        const syncEl = document.getElementById('sync-status');
+        if (syncEl) {
+            syncEl.innerText = s.val() ? '● LINJOILLA (' + VERSIO + ')' : '○ YHTEYS KATKENNUT';
+        }
     });
 
     lisaaAutosaveKuuntelijat();
@@ -888,6 +852,7 @@ function peritaAlkuKm() {
 
     const viimeisin = tallennetut[0];
     const ksKentta = document.getElementById('f-ks');
+    if (!ksKentta) return;
 
     if (viimeisin && viimeisin.ke > 0) {
         ksKentta.value = viimeisin.ke;
@@ -904,8 +869,17 @@ function peritaAlkuKm() {
     }
 }
 
+function asetaOletukset() {
+    const fDate = document.getElementById('f-date');
+    if (!fDate) return;
+    
+    const n = new Date();
+    fDate.value = n.toISOString().split('T')[0];
+}
+
 function paivitaHistoria() {
-    document.getElementById('history-list').innerHTML = '<p style="color:#94a3b8;">Lataa historiaa...</p>';
+    const el = document.getElementById('history-list');
+    if (el) el.innerHTML = '<p style="color:#94a3b8;">Ladataan historiaa...</p>';
 }
 
 function nollaaLomake() {}
@@ -921,8 +895,10 @@ function renderArkisto() {}
 function arkistoAlustaKuukaudet() {}
 function showPage(p) {
     document.querySelectorAll('.page, .tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('p-' + p).classList.add('active');
-    document.getElementById('tab-' + p).classList.add('active');
+    const page = document.getElementById('p-' + p);
+    const tab = document.getElementById('tab-' + p);
+    if (page) page.classList.add('active');
+    if (tab) tab.classList.add('active');
 }
 
 // =============================================
@@ -941,6 +917,52 @@ function lisaaAutosaveKuuntelijat() {
         }
     });
 }
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<script>
+// Heti kun Firebase on ladattu, alusta se (ei DOMContentLoaded-odottelua)
+function initFirebaseImmediate() {
+    if (typeof firebase === 'undefined') {
+        setTimeout(initFirebaseImmediate, 100);
+        return;
+    }
+    
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(window.firebaseConfig);
+        }
+        window.db = firebase.database();
+        window.auth = firebase.auth();
+        
+        window.auth.onAuthStateChanged(user => {
+            if (user) {
+                window.currentUser = user;
+                document.getElementById('auth-page').style.display = 'none';
+                document.getElementById('app-ui').style.display = 'block';
+                document.getElementById('user-display').innerText = user.email;
+                asetaOletukset();
+                alustaData();
+            } else {
+                document.getElementById('auth-page').style.display = 'flex';
+                document.getElementById('app-ui').style.display = 'none';
+            }
+        });
+        
+        console.log('✅ Firebase ALUSTETTU');
+        
+        // Päivitä versio
+        document.title = 'Päivyri ' + VERSIO;
+        const vh = document.getElementById('app-version-title');
+        if (vh) vh.textContent = 'Päivyri ' + VERSIO;
+    } catch (err) {
+        console.error('Firebase alustus epäonnistui:', err);
+    }
+}
+
+initFirebaseImmediate();
 </script>
 </body>
 </html>
