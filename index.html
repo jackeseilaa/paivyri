@@ -1463,7 +1463,7 @@ function paivitaRaportti() {
     const kuukausiTeksti = kuukaudet[parseInt(kkNum)] + ' ' + vuosi;
 
     let rows = '';
-    let tKm = 0, tEur = 0, cOsa = 0, cKoko = 0, cAteria = 0;
+    let tKm = 0, tKmKaikki = 0, tEur = 0, cOsa = 0, cKoko = 0, cAteria = 0;
 
     data.forEach((a, i) => {
         const km = Math.max(0, parseFloat(a.ke || 0) - parseFloat(a.ks || 0));
@@ -1478,6 +1478,7 @@ function paivitaRaportti() {
             if (a.allowance === 'Ateria')    { korvaus += HINNAT['Ateria'];     cAteria++; }
         }
         tKm  += km;
+        tKmKaikki += km;
         if (!onOmaAjo) tEur += korvaus;
 
         // Päivämäärä suomalaisessa muodossa
@@ -1572,7 +1573,7 @@ function paivitaRaportti() {
             <tfoot>
                 <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #0f172a;">
                     <td colspan="3" style="font-size:11px;">
-                        YHTEENSÄ ${data.length} ajoa
+                        YHTEENSÄ ${data.length} ajoa — km korvattavat: ${tKm.toFixed(1)} + kaikki km: ${tKmKaikki.toFixed(1)}
                         ${data.filter(a => a.type === 'Oma').length > 0
                             ? '<br><span style="font-weight:400;color:#94a3b8;font-size:10px;">(sis. ' + data.filter(a => a.type === 'Oma').length + ' yksityisajoa, ei korvattavia)</span>'
                             : ''}
