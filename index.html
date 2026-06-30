@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.1-dev - Firestore</title>
+<title>Päivyri v8.1.2-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -238,7 +238,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.1-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.2-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -1748,7 +1748,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.1-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.2-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1758,7 +1758,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.1-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.2-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2465,6 +2465,18 @@ td.num { text-align: right; }
             return { totals, hours, pvraha, kmKorvaus, yhteensa: pvraha + kmKorvaus };
         }
 
+        // Firestore ei hyväksy undefined-kenttäarvoja (vain null). Tämä siivoaa rekursiivisesti
+        // mahdolliset undefined-arvot null:ksi ennen tallennusta - suojaa myös vanhojen,
+        // ennen tätä muutosta luotujen päivätietueiden (esim. ilman sijaintia) jatkokäsittelyä.
+        function stateClean(obj) {
+            if (obj === undefined) return null;
+            if (obj === null || typeof obj !== 'object') return obj;
+            if (Array.isArray(obj)) return obj.map(stateClean);
+            const out = {};
+            for (const k in obj) out[k] = stateClean(obj[k]);
+            return out;
+        }
+
         function stateGetGPS(targetInputId) {
             if (!navigator.geolocation) {
                 showToast('❌ GPS ei saatavilla tässä selaimessa');
@@ -2514,7 +2526,7 @@ td.num { text-align: right; }
             const id = 'day_' + Date.now();
             const data = { id, date: todayDateStr(), startKm, segments: [], open: { type, startKm, startTime: nowIso, location }, finished: false, finishedAt: null, createdAt: nowIso };
             try {
-                await setDoc(doc(fs, COLLECTIONS.stateDays, id), data);
+                await setDoc(doc(fs, COLLECTIONS.stateDays, id), stateClean(data));
                 document.getElementById('state-start-loc').value = '';
             } catch (e) { alert('Tallennus epäonnistui: ' + e.message); }
         }
@@ -2528,11 +2540,11 @@ td.num { text-align: right; }
             const location = (document.getElementById('state-now-loc').value || '').trim();
             if (!location) { alert('Anna sijainti (GPS tai vapaa teksti)'); return; }
             const nowIso = new Date().toISOString();
-            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso, startLocation: active.open.location, endLocation: location };
+            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso, startLocation: active.open.location || null, endLocation: location || null };
             const newSegments = [...(active.segments || []), closedSegment];
             const newOpen = { type: newType, startKm: nowKm, startTime: nowIso, location };
             try {
-                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), Object.assign({}, active, { segments: newSegments, open: newOpen }));
+                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), stateClean(Object.assign({}, active, { segments: newSegments, open: newOpen })));
                 document.getElementById('state-now-km').value = '';
                 document.getElementById('state-now-loc').value = '';
             } catch (e) { alert('Tallennus epäonnistui: ' + e.message); }
@@ -2547,13 +2559,13 @@ td.num { text-align: right; }
             const location = (document.getElementById('state-now-loc').value || '').trim();
             if (!location) { alert('Anna sijainti (GPS tai vapaa teksti) ennen päivän lopetusta'); return; }
             const nowIso = new Date().toISOString();
-            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso, startLocation: active.open.location, endLocation: location };
+            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso, startLocation: active.open.location || null, endLocation: location || null };
             const newSegments = [...(active.segments || []), closedSegment];
             // Asetetaan ennen tallennusta, jotta snapshotin laukaisema stateRender() osaa heti
             // näyttää "valmis"-yhteenvedon eikä ehdi näyttää tyhjää aloituslomaketta välissä.
             stateLastFinishedId = active.id;
             try {
-                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), Object.assign({}, active, { segments: newSegments, open: null, finished: true, finishedAt: nowIso }));
+                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), stateClean(Object.assign({}, active, { segments: newSegments, open: null, finished: true, finishedAt: nowIso })));
                 document.getElementById('state-now-km').value = '';
                 document.getElementById('state-now-loc').value = '';
             } catch (e) {
