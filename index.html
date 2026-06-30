@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.6.3 - CSV-tuonti</title>
+<title>Päivyri v7.6.4 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -225,7 +225,7 @@ td.num { text-align: right; }
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.6.3 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.6.4 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -1145,7 +1145,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.3' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.4' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1155,7 +1155,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.6.3_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.6.4_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -1420,7 +1420,8 @@ td.num { text-align: right; }
                 else if (key.includes('tmi')) map.tmi = i;
                 else if (key.includes('oy')) map.oy = i;
                 else if (key.includes('oma')) map.oma = i;
-                else if (key === 'km' || key.startsWith('km')) map.km = i;
+                else if (key.includes('km-korv')) map.kmkorv = i;
+                else if (key === 'km' || (key.startsWith('km') && !key.startsWith('km-'))) map.km = i;
                 else if (key.includes('tyyppi')) map.tyyppi = i;
                 else if (key.includes('reitti') || key.includes('selite')) map.reitti = i;
                 else if (key.includes('aloitus km') || key.includes('alku km')) map.alkuKm = i;
@@ -1429,7 +1430,6 @@ td.num { text-align: right; }
                 else if (key.includes('paluu')) map.paluu = i;
                 else if (key.includes('tuntia')) map.tuntia = i;
                 else if (key.includes('pv-raha') || key.includes('päiväraha')) map.pvraha = i;
-                else if (key.includes('km-korv')) map.kmkorv = i;
             });
             return map;
         }
@@ -1537,8 +1537,17 @@ td.num { text-align: right; }
             const withStops = trips.filter(t => t.stops.length > 0).length;
             const withNote = trips.filter(t => t.note).length;
 
+            const byMonth = {};
+            trips.forEach(t => {
+                const m = t.date.substring(0, 7);
+                byMonth[m] = (byMonth[m] || 0) + 1;
+            });
+            const monthBreakdown = Object.keys(byMonth).sort()
+                .map(m => `${m}: ${byMonth[m]} ajoa`).join(' | ');
+
             let html = `<div class="card">
                 <p><strong>${trips.length}</strong> ajoa tunnistettu CSV:stä (${skipped} riviä ohitettu ilman päivämäärää).</p>
+                <p style="font-size: 11px; color: var(--text-light);">${monthBreakdown}</p>
                 <p style="font-size: 12px; color: var(--text-light);">
                     Reitti/selite tulkittu: <strong>${withStops}</strong> ajossa pysähdyksiä, <strong>${withNote}</strong> ajossa otsikko/kuvaus.
                 </p>
@@ -1567,21 +1576,59 @@ td.num { text-align: right; }
             if (!db || csvParsedTrips.length === 0) return;
             if (!confirm(`Tuodaanko ${csvParsedTrips.length} ajoa? Tämä LISÄÄ uudet ajot olemassa olevien rinnalle (ei korvaa vanhoja).`)) return;
 
-            const tx = db.transaction(['trips'], 'readwrite');
-            csvParsedTrips.forEach(t => tx.objectStore('trips').add(t));
+            // Käytetään yhtä yksittäistä put()-kutsua per tietue (ei yhtä isoa transaktiota),
+            // jotta yhden rivin mahdollinen virhe (esim. avainristiriita) ei voi hiljaa
+            // perua KAIKKIA muita jo onnistuneita tallennuksia (IndexedDB-transaktio on
+            // atominen: yksi epäonnistunut pyyntö kaataa koko erän, ellei sitä käsitellä erikseen).
+            let okCount = 0;
+            let failCount = 0;
+            const failedRows = [];
+            const total = csvParsedTrips.length;
 
-            tx.oncomplete = () => {
-                showToast(`✅ Tuotu ${csvParsedTrips.length} ajoa CSV:stä`);
+            function importNext(idx) {
+                if (idx >= total) {
+                    finishImport();
+                    return;
+                }
+                const t = csvParsedTrips[idx];
+                try {
+                    const tx = db.transaction(['trips'], 'readwrite');
+                    const req = tx.objectStore('trips').put(t); // put = ei kaadu vaikka id olisi jo olemassa
+                    req.onsuccess = () => { okCount++; };
+                    req.onerror = (ev) => {
+                        failCount++;
+                        failedRows.push({ id: t.id, date: t.date, error: ev.target.error && ev.target.error.message });
+                        ev.preventDefault();
+                    };
+                    tx.oncomplete = () => importNext(idx + 1);
+                    tx.onerror = (ev) => {
+                        failCount++;
+                        failedRows.push({ id: t.id, date: t.date, error: 'tx error: ' + (ev.target.error && ev.target.error.message) });
+                        importNext(idx + 1);
+                    };
+                } catch (err) {
+                    failCount++;
+                    failedRows.push({ id: t.id, date: t.date, error: err.message });
+                    importNext(idx + 1);
+                }
+            }
+
+            function finishImport() {
+                if (failCount === 0) {
+                    showToast(`✅ Tuotu ${okCount}/${total} ajoa CSV:stä`);
+                } else {
+                    showToast(`⚠️ Tuotu ${okCount}/${total} ajoa, ${failCount} epäonnistui (ks. konsoli)`);
+                    console.error('CSV-tuonnissa epäonnistuneet rivit:', failedRows);
+                }
                 csvParsedTrips = [];
                 document.getElementById('csv-preview').innerHTML = '';
                 document.getElementById('csv-file').value = '';
                 loadDashboard();
                 loadEntries();
                 populateMonths();
-            };
-            tx.onerror = () => {
-                showToast('❌ Virhe tallennuksessa: ' + tx.error);
-            };
+            }
+
+            importNext(0);
         }
 
         // ============ KÄYNNISTYS ============
