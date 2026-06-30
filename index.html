@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.7.0 - CSV-tuonti</title>
+<title>Päivyri v7.7.1 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -222,14 +222,15 @@ td.num { text-align: right; }
 }
 @media print {
     .no-print, .tabs, .header { display: none !important; }
-    .page { display: block !important; padding: 0; margin: 0; }
+    .page { display: none !important; }
+    .page.active { display: block !important; padding: 0; margin: 0; }
     body { padding: 0; }
 }
 </style>
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.7.0 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.7.1 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -243,26 +244,39 @@ td.num { text-align: right; }
 
     <!-- ====== KOJELAUTA ====== -->
     <div id="dashboard" class="page active">
+        <div class="card" style="background: linear-gradient(135deg, #1e293b, #334155); color: white; text-align: center; padding: 20px;">
+            <div style="font-size: 12px; opacity: 0.75; letter-spacing: 0.5px;">NYKYINEN KILOMETRILUKEMA</div>
+            <div style="font-size: 38px; font-weight: bold; margin: 4px 0;" id="current-odometer">–</div>
+            <div style="font-size: 12px; opacity: 0.75;" id="current-odometer-date"></div>
+        </div>
+
+        <button class="btn btn-primary" onclick="showPage('input'); addNewTrip();" style="width: 100%; margin-bottom: 16px;">+ UUSI AJO</button>
+
         <div class="summary-box">
-            <h3>📈 Yhteenveto</h3>
+            <h3>📅 Tämä kuukausi <span id="current-month-label" style="font-weight: normal; font-size: 13px;"></span></h3>
             <div class="summary-grid">
                 <div class="summary-card">
-                    <div class="summary-label">Ajot yhteensä</div>
-                    <div class="summary-value" id="total-trips">0</div>
+                    <div class="summary-label">Ajot</div>
+                    <div class="summary-value" id="month-trips">0</div>
                 </div>
                 <div class="summary-card">
-                    <div class="summary-label">KM yhteensä</div>
-                    <div class="summary-value" id="total-km">0</div>
+                    <div class="summary-label">KM</div>
+                    <div class="summary-value" id="month-km">0</div>
                 </div>
                 <div class="summary-card">
                     <div class="summary-label">Tmi korvaus</div>
-                    <div class="summary-value" id="tmi-total">0€</div>
+                    <div class="summary-value" id="month-tmi-total">0€</div>
                 </div>
                 <div class="summary-card">
                     <div class="summary-label">Oy laskutus</div>
-                    <div class="summary-value" id="oy-total">0€</div>
+                    <div class="summary-value" id="month-oy-total">0€</div>
                 </div>
             </div>
+        </div>
+
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-light); padding: 10px 16px; flex-wrap: wrap; gap: 6px;">
+            <span>📆 Koko vuosi: <strong id="year-trips">0</strong> ajoa, <strong id="year-km">0</strong> km</span>
+            <span>Tmi <strong id="year-tmi-total">0€</strong> · Oy <strong id="year-oy-total">0€</strong></span>
         </div>
 
         <h3>🚗 Viimeisimmät ajot</h3>
@@ -634,21 +648,46 @@ td.num { text-align: right; }
         }
 
         function updateSummary(trips) {
-            let totalKm = 0, tmiTotal = 0, oyTotal = 0;
-            trips.forEach(t => {
-                const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
-                totalKm += km;
-                const kmCost = km * KM_RATE;
-                const allowanceCost = ALLOWANCES[t.allowance] || 0;
-                const total = kmCost + allowanceCost;
-                if (t.type === 'Tmi') tmiTotal += total;
-                else if (t.type === 'Oy') oyTotal += total;
-            });
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const currentYear = String(now.getFullYear());
 
-            document.getElementById('total-trips').textContent = trips.length;
-            document.getElementById('total-km').textContent = totalKm;
-            document.getElementById('tmi-total').textContent = tmiTotal.toFixed(2) + '€';
-            document.getElementById('oy-total').textContent = oyTotal.toFixed(2) + '€';
+            // Nykyinen km-lukema: viimeisimmän (uusimman) ajon loppulukema - tarvitaan
+            // joka kerta kun uutta ajoa aloitetaan, joten tämä on hyödyllisin yksittäinen luku.
+            const sorted = [...trips].sort((a, b) => new Date(b.date_end || b.date) - new Date(a.date_end || a.date));
+            const latest = sorted[0];
+            document.getElementById('current-odometer').textContent = latest ? Number(latest.ke).toLocaleString('fi-FI') + ' km' : '–';
+            document.getElementById('current-odometer-date').textContent = latest ? new Date(latest.date_end || latest.date).toLocaleDateString('fi-FI') : 'Ei merkintöjä vielä';
+
+            document.getElementById('current-month-label').textContent = '(' + now.toLocaleDateString('fi-FI', { month: 'long', year: 'numeric' }) + ')';
+
+            function computeTotals(list) {
+                let totalKm = 0, tmiTotal = 0, oyTotal = 0;
+                list.forEach(t => {
+                    const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
+                    totalKm += km;
+                    const kmCost = km * KM_RATE;
+                    const allowanceCost = ALLOWANCES[t.allowance] || 0;
+                    const total = kmCost + allowanceCost;
+                    if (t.type === 'Tmi') tmiTotal += total;
+                    else if (t.type === 'Oy') oyTotal += total;
+                });
+                return { count: list.length, totalKm, tmiTotal, oyTotal };
+            }
+
+            const monthTrips = trips.filter(t => t.date && t.date.startsWith(currentMonth));
+            const m = computeTotals(monthTrips);
+            document.getElementById('month-trips').textContent = m.count;
+            document.getElementById('month-km').textContent = m.totalKm;
+            document.getElementById('month-tmi-total').textContent = m.tmiTotal.toFixed(2) + '€';
+            document.getElementById('month-oy-total').textContent = m.oyTotal.toFixed(2) + '€';
+
+            const yearTrips = trips.filter(t => t.date && t.date.startsWith(currentYear));
+            const y = computeTotals(yearTrips);
+            document.getElementById('year-trips').textContent = y.count;
+            document.getElementById('year-km').textContent = y.totalKm;
+            document.getElementById('year-tmi-total').textContent = y.tmiTotal.toFixed(2) + '€';
+            document.getElementById('year-oy-total').textContent = y.oyTotal.toFixed(2) + '€';
         }
 
         function formatStopText(t) {
@@ -1366,7 +1405,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.0' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.1' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1376,7 +1415,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.7.0_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.7.1_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
