@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.7.3 - CSV-tuonti</title>
+<title>Päivyri v7.8.0 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; }
 :root {
@@ -230,7 +231,7 @@ td.num { text-align: right; }
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.7.3 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.8.0 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -1490,7 +1491,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.3' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.8.0' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1500,15 +1501,134 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.7.3_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.8.0_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
             };
         }
 
+        // ============ EXCEL-VIENTI ============
+        const FI_WEEKDAYS = ['su', 'ma', 'ti', 'ke', 'to', 'pe', 'la']; // Date.getDay(): 0=su
+        const FI_MONTHS = ['Tammikuu', 'Helmikuu', 'Maaliskuu', 'Huhtikuu', 'Toukokuu', 'Kesäkuu',
+            'Heinäkuu', 'Elokuu', 'Syyskuu', 'Lokakuu', 'Marraskuu', 'Joulukuu'];
+
+        // Käänteinen parseReittiSelite: kokoaa selitteen + reitin takaisin yhdeksi soluksi,
+        // samassa muodossa kuin alkuperäinen CSV/Excel (otsikko, sitten 📍-reittirivi).
+        function buildReittiSelite(t) {
+            const parts = [];
+            if (t.note) parts.push(t.note);
+            if (t.stops && t.stops.length > 0) {
+                const routeText = t.stops.map(s => s.client).join(' → ');
+                parts.push(parts.length > 0 ? '📍 ' + routeText : routeText);
+            }
+            return parts.join('\n');
+        }
+
+        function formatDateFiShort(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return `${d}.${m}.${y}`;
+        }
+
+        function timeDiffHoursStr(start, end) {
+            if (!start || !end) return '';
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            let diff = (eh * 60 + em) - (sh * 60 + sm);
+            if (diff < 0) diff += 24 * 60; // ajo yli puolenyön
+            return (diff / 60).toFixed(2).replace('.', ',');
+        }
+
+        function numFi(n) {
+            return (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+        }
+
         function exportExcel() {
-            showToast('📊 Excel-vienti tulee versiossa 7.1');
+            if (!db) return;
+            if (typeof XLSX === 'undefined') {
+                showToast('❌ Excel-kirjasto ei latautunut - tarkista verkkoyhteys ja yritä uudelleen');
+                return;
+            }
+
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                const trips = e.target.result.filter(t => t.date).sort((a, b) => new Date(a.date) - new Date(b.date));
+                if (trips.length === 0) {
+                    showToast('❌ Ei vietävää dataa');
+                    return;
+                }
+
+                const byMonth = {};
+                trips.forEach(t => {
+                    const ym = t.date.substring(0, 7);
+                    if (!byMonth[ym]) byMonth[ym] = [];
+                    byMonth[ym].push(t);
+                });
+
+                const wb = XLSX.utils.book_new();
+                const monthKeys = Object.keys(byMonth).sort();
+                const summaryRows = [['Kuukausi', 'Tmi km', 'Tmi €', 'Oy km', 'Oy €', 'Oma km', 'Ajoja yht.']];
+
+                monthKeys.forEach(ym => {
+                    const [year, monthNum] = ym.split('-');
+                    const monthName = FI_MONTHS[parseInt(monthNum, 10) - 1];
+                    const monthTrips = byMonth[ym].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    const sheetData = [];
+                    sheetData.push([`Jarmo Aaltonen – Ajopäiväkirja ${monthName} ${year}`]);
+                    sheetData.push(['Pvä', 'Pvm', 'Tmi', 'Oy', 'Oma', 'Km', 'Tyyppi', 'Reitti / selite',
+                        'Aloitus km', 'Lopetus km', 'Lähtö', 'Paluu', 'Tuntia', 'PV-raha €', 'Km-korv €', 'Yhteensä €']);
+
+                    let tmiKmSum = 0, tmiEurSum = 0, oyKmSum = 0, oyEurSum = 0, omaKmSum = 0;
+
+                    monthTrips.forEach(t => {
+                        const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
+                        const allowCost = ALLOWANCES[t.allowance] || 0;
+                        const kmCost = km * KM_RATE;
+                        const total = allowCost + kmCost;
+                        const weekday = FI_WEEKDAYS[new Date(t.date + 'T00:00:00').getDay()];
+
+                        const tmiCol = t.type === 'Tmi' ? km : '';
+                        const oyCol = t.type === 'Oy' ? km : '';
+                        const omaCol = t.type === 'Oma' ? km : '';
+
+                        if (t.type === 'Tmi') { tmiKmSum += km; tmiEurSum += total; }
+                        else if (t.type === 'Oy') { oyKmSum += km; oyEurSum += total; }
+                        else { omaKmSum += km; }
+
+                        sheetData.push([
+                            weekday, formatDateFiShort(t.date),
+                            tmiCol, oyCol, omaCol, km,
+                            t.type, buildReittiSelite(t),
+                            t.ks, t.ke,
+                            t.start_time || '', t.end_time || '',
+                            timeDiffHoursStr(t.start_time, t.end_time),
+                            numFi(allowCost), numFi(kmCost), numFi(total)
+                        ]);
+                    });
+
+                    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+                    ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 },
+                        { wch: 7 }, { wch: 55 }, { wch: 11 }, { wch: 11 }, { wch: 7 }, { wch: 7 }, { wch: 7 },
+                        { wch: 10 }, { wch: 10 }, { wch: 10 }];
+                    XLSX.utils.book_append_sheet(wb, ws, monthName.substring(0, 31));
+
+                    summaryRows.push([`${monthName} ${year}`, tmiKmSum, numFi(tmiEurSum), oyKmSum, numFi(oyEurSum), omaKmSum, monthTrips.length]);
+                });
+
+                const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+                summaryWs['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+                XLSX.utils.book_append_sheet(wb, summaryWs, 'Yhteenveto');
+
+                const filename = `Ajopaivakirja_${new Date().toISOString().split('T')[0]}.xlsx`;
+                try {
+                    XLSX.writeFile(wb, filename);
+                    showToast('✅ Excel viety: ' + filename);
+                } catch (err) {
+                    showToast('❌ Virhe Excel-viennissä: ' + err.message);
+                    console.error('Excel export error:', err);
+                }
+            };
         }
 
         function importBackup() {
