@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.6.5 - CSV-tuonti</title>
+<title>Päivyri v7.6.6 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -225,7 +225,7 @@ td.num { text-align: right; }
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.6.5 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.6.6 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -340,6 +340,18 @@ td.num { text-align: right; }
         </div>
 
         <h3>📋 Merkinnät</h3>
+        <div class="form-row" style="margin-bottom: 12px;">
+            <div>
+                <label>Suodata kuukauden mukaan</label>
+                <select id="entries-month-filter" onchange="loadEntries()">
+                    <option value="">Kaikki kuukaudet</option>
+                </select>
+            </div>
+            <div>
+                <label>Hae (selite/pysähdys)</label>
+                <input type="text" id="entries-search" placeholder="esim. RMK, OP Kipparit..." oninput="loadEntries()" style="margin-bottom: 0;">
+            </div>
+        </div>
         <div id="entries-list"></div>
     </div>
 
@@ -500,7 +512,12 @@ td.num { text-align: right; }
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(page).classList.add('active');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            // Korostetaan oikea välilehti page-parametrin perusteella (EI globaalin
+            // event-olion kautta) - tämä toimii myös kun showPage() kutsutaan
+            // ohjelmallisesti (esim. editTrip() IndexedDB-haun onsuccess-callbackista),
+            // jolloin alkuperäistä klikkaustapahtumaa ei enää ole saatavilla.
+            const tabBtn = document.querySelector(`.tab[onclick="showPage('${page}')"]`);
+            if (tabBtn) tabBtn.classList.add('active');
         }
 
         function showToast(msg) {
@@ -821,8 +838,34 @@ td.num { text-align: right; }
             if (!db) return;
             const tx = db.transaction(['trips'], 'readonly');
             tx.objectStore('trips').getAll().onsuccess = (e) => {
-                const trips = e.target.result.sort((a, b) => new Date(b.date) - new Date(a.date));
-                const html = trips.slice(0, 30).map(t => {
+                let trips = e.target.result.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                // Täytä kuukausivalikko (vain jos vielä tyhjä, ettei nykyinen valinta katoa)
+                const monthSelect = document.getElementById('entries-month-filter');
+                if (monthSelect && monthSelect.options.length <= 1) {
+                    const months = new Set();
+                    trips.forEach(t => { if (t.date) months.add(t.date.substring(0, 7)); });
+                    const sorted = Array.from(months).sort().reverse();
+                    monthSelect.innerHTML = '<option value="">Kaikki kuukaudet</option>' +
+                        sorted.map(m => `<option value="${m}">${m}</option>`).join('');
+                }
+
+                const monthFilter = monthSelect ? monthSelect.value : '';
+                const searchInput = document.getElementById('entries-search');
+                const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+                if (monthFilter) {
+                    trips = trips.filter(t => t.date && t.date.startsWith(monthFilter));
+                }
+                if (searchTerm) {
+                    trips = trips.filter(t => {
+                        const hay = [t.note || '', formatStopText(t)].join(' ').toLowerCase();
+                        return hay.includes(searchTerm);
+                    });
+                }
+
+                // EI enää 30 merkinnän rajaa - kaikki suodatetut merkinnät näytetään ja ovat muokattavissa
+                const html = trips.map(t => {
                     const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
                     const stopText = formatStopText(t);
                     const typeClass = t.type === 'Tmi' ? 'tmi' : (t.type === 'Oy' ? 'oy' : '');
@@ -831,17 +874,29 @@ td.num { text-align: right; }
                         ? `${new Date(t.date).toLocaleDateString('fi-FI')} - ${new Date(t.date_end).toLocaleDateString('fi-FI')}`
                         : new Date(t.date).toLocaleDateString('fi-FI');
 
+                    const noteHtml = t.note ? `<div style="font-style: italic;">📝 ${t.note}</div>` : '';
+
                     return `<div class="trip-item ${typeClass}" style="padding: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="flex: 1;">
                                 <div style="font-weight: 500;">${dateDisplay} | ${t.type}</div>
+                                ${noteHtml}
                                 <div style="font-size: 11px; color: var(--text-light);">${stopText} | ${t.ks}-${t.ke} (${km}km) | ${t.allowance}</div>
                             </div>
-                            <button class="btn btn-sm btn-warning" onclick="editTrip('${t.id}')" style="margin: 0;">✏️</button>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-sm btn-warning" onclick="editTrip('${t.id}')" style="margin: 0;">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTrip('${t.id}')" style="margin: 0;">🗑️</button>
+                            </div>
                         </div>
                     </div>`;
                 }).join('');
-                document.getElementById('entries-list').innerHTML = html || '<p>Ei merkintöjä</p>';
+
+                document.getElementById('entries-list').innerHTML = html || '<p>Ei merkintöjä (tarkista suodattimet)</p>';
+
+                // Näytä kokonaismäärä otsikon vieressä
+                const countText = `(${trips.length} kpl)`;
+                let h3 = document.querySelector('#input h3');
+                if (h3) h3.textContent = `📋 Merkinnät ${countText}`;
             };
         }
 
@@ -1155,7 +1210,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.5' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.6' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1165,7 +1220,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.6.5_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.6.6_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
