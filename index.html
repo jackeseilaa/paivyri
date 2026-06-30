@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.6.6 - CSV-tuonti</title>
+<title>Päivyri v7.7.0 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -216,6 +216,10 @@ td.num { text-align: right; }
     margin: 20px 0;
     page-break-inside: avoid;
 }
+@page {
+    size: A4;
+    margin: 15mm;
+}
 @media print {
     .no-print, .tabs, .header { display: none !important; }
     .page { display: block !important; padding: 0; margin: 0; }
@@ -225,7 +229,7 @@ td.num { text-align: right; }
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.6.6 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.7.0 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -269,6 +273,15 @@ td.num { text-align: right; }
     <div id="input" class="page">
         <h2>➕ Uusi ajo</h2>
         <button class="btn btn-primary" onclick="addNewTrip()" style="width: 100%; margin-bottom: 16px;">+ UUSI TYHÄÄ MERKINTÄ</button>
+
+        <div class="card" style="padding: 12px;">
+            <label style="margin-bottom: 6px;">🔎 Hae päivämäärällä muokattavaksi</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="date" id="search-date" style="flex: 1; margin-bottom: 0;" onkeydown="if(event.key==='Enter') searchTripByDate()">
+                <button class="btn btn-primary" onclick="searchTripByDate()" style="margin: 0; white-space: nowrap;">Hae</button>
+            </div>
+            <div id="search-date-result"></div>
+        </div>
 
         <div class="card" id="trip-form" style="display: none;">
             <div class="form-row">
@@ -466,11 +479,92 @@ td.num { text-align: right; }
             <button class="btn btn-warning" onclick="removeDuplicateTrips()" style="width: 100%;">🧹 POISTA KAKSOISKAPPALEET</button>
             <div id="dup-result" style="margin-top: 10px; font-size: 12px;"></div>
         </div>
+
+        <div class="card">
+            <label>🏢 Yritys- ja raporttitiedot (kirjanpitokelpoinen tuloste)</label>
+            <p style="font-size: 12px; color: var(--text-light); margin-top: -4px;">
+                Nämä tiedot tulostuvat automaattisesti Raportti-välilehden tulosteeseen:
+                Tmi-ajot → verovähennyslaskelma omilla tiedoilla, Oy-ajot → matkalasku Oy:lle.
+            </p>
+            <div class="form-row">
+                <div>
+                    <label>Ajoneuvon rekisterinumero</label>
+                    <input type="text" id="set-vehicle" placeholder="ENJ-257">
+                </div>
+                <div>
+                    <label>Kuljettajan nimi</label>
+                    <input type="text" id="set-driver" placeholder="Jarmo Aaltonen">
+                </div>
+            </div>
+            <p style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">Tmi (verovähennys)</p>
+            <input type="text" id="set-tmi-name" placeholder="Yrityksen nimi">
+            <div class="form-row">
+                <div><input type="text" id="set-tmi-ytunnus" placeholder="Y-tunnus" style="margin-bottom: 10px;"></div>
+                <div><input type="text" id="set-tmi-address" placeholder="Osoite" style="margin-bottom: 10px;"></div>
+            </div>
+            <p style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">Oy (matkalasku)</p>
+            <input type="text" id="set-oy-name" placeholder="Yrityksen nimi">
+            <div class="form-row">
+                <div><input type="text" id="set-oy-ytunnus" placeholder="Y-tunnus" style="margin-bottom: 10px;"></div>
+                <div><input type="text" id="set-oy-address" placeholder="Osoite" style="margin-bottom: 10px;"></div>
+            </div>
+            <button class="btn btn-success" onclick="saveCompanySettings()" style="width: 100%;">💾 TALLENNA YRITYSTIEDOT</button>
+        </div>
     </div>
 
     <script>
         // ============ ASETUKSET ============
         const KM_RATE = 0.55; // 2026
+
+        // ============ YRITYS-/AJONEUVOASETUKSET (kirjanpitokelpoinen raportti) ============
+        // Tallennetaan selaimen localStorageen (ei IndexedDB:hen, koska kyse on
+        // muuttumattomista perustiedoista eikä ajodatasta).
+        function getCompanySettings() {
+            const defaults = {
+                vehicleReg: 'ENJ-257',
+                driverName: 'Jarmo Aaltonen',
+                tmiName: 'J Sailing Tmi',
+                tmiYtunnus: '1728993-9',
+                tmiAddress: 'Kontiontie 55, 11120 Riihimäki',
+                oyName: 'AJarmo Oy',
+                oyYtunnus: '',
+                oyAddress: ''
+            };
+            try {
+                const saved = JSON.parse(localStorage.getItem('paivyri_company_settings') || '{}');
+                return Object.assign({}, defaults, saved);
+            } catch (e) {
+                return defaults;
+            }
+        }
+
+        function saveCompanySettings() {
+            const s = {
+                vehicleReg: document.getElementById('set-vehicle').value.trim(),
+                driverName: document.getElementById('set-driver').value.trim(),
+                tmiName: document.getElementById('set-tmi-name').value.trim(),
+                tmiYtunnus: document.getElementById('set-tmi-ytunnus').value.trim(),
+                tmiAddress: document.getElementById('set-tmi-address').value.trim(),
+                oyName: document.getElementById('set-oy-name').value.trim(),
+                oyYtunnus: document.getElementById('set-oy-ytunnus').value.trim(),
+                oyAddress: document.getElementById('set-oy-address').value.trim()
+            };
+            localStorage.setItem('paivyri_company_settings', JSON.stringify(s));
+            showToast('✅ Yritystiedot tallennettu');
+        }
+
+        function loadCompanySettingsForm() {
+            const s = getCompanySettings();
+            const ids = {
+                'set-vehicle': s.vehicleReg, 'set-driver': s.driverName,
+                'set-tmi-name': s.tmiName, 'set-tmi-ytunnus': s.tmiYtunnus, 'set-tmi-address': s.tmiAddress,
+                'set-oy-name': s.oyName, 'set-oy-ytunnus': s.oyYtunnus, 'set-oy-address': s.oyAddress
+            };
+            Object.keys(ids).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = ids[id];
+            });
+        }
         const ALLOWANCES = {
             'Osapäivä': 25,
             'Kokopäivä': 54,
@@ -637,6 +731,34 @@ td.num { text-align: right; }
             }
         }
 
+        function searchTripByDate() {
+            const dateVal = document.getElementById('search-date').value; // yyyy-MM-dd
+            const resultEl = document.getElementById('search-date-result');
+            if (!dateVal) {
+                showToast('❌ Valitse ensin päivämäärä');
+                return;
+            }
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                const matches = e.target.result.filter(t => t.date === dateVal || (t.date_end && t.date <= dateVal && t.date_end >= dateVal));
+                const dateLabel = new Date(dateVal).toLocaleDateString('fi-FI');
+
+                if (matches.length === 0) {
+                    resultEl.innerHTML = '';
+                    showToast(`❌ Ei merkintöjä päivälle ${dateLabel}`);
+                } else if (matches.length === 1) {
+                    resultEl.innerHTML = '';
+                    editTrip(matches[0].id);
+                } else {
+                    // Useampi merkintä samalle päivälle -> näytä pieni valintalista
+                    resultEl.innerHTML = `<div style="margin-top: 10px;">
+                        <p style="font-size: 12px; color: var(--text-light);">${matches.length} merkintää löytyi ${dateLabel} - valitse muokattava:</p>
+                        ${matches.map(t => `<button class="btn btn-sm btn-warning" onclick="editTrip('${t.id}')" style="display: block; width: 100%; text-align: left; margin-bottom: 4px;">${t.note || formatStopText(t)} (${t.ks}-${t.ke} km, ${t.type})</button>`).join('')}
+                    </div>`;
+                }
+            };
+        }
+
         function editTrip(id) {
             const tx = db.transaction(['trips'], 'readonly');
             tx.objectStore('trips').get(id).onsuccess = (e) => {
@@ -657,6 +779,12 @@ td.num { text-align: right; }
                 document.getElementById('trip-form').style.display = 'block';
                 renderStops();
                 showPage('input');
+                // Vieritä lomake näkyviin - muokattava ajo voi olla pitkän listan alapäässä,
+                // jolloin pelkkä välilehden vaihto ei riitä tuomaan lomaketta näkyviin.
+                const formEl = document.getElementById('trip-form');
+                if (formEl && typeof formEl.scrollIntoView === 'function') {
+                    formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             };
         }
 
@@ -1075,33 +1203,42 @@ td.num { text-align: right; }
             const tx = db.transaction(['trips'], 'readonly');
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 const months = new Set();
+                const years = new Set();
                 e.target.result.forEach(t => {
-                    if (t.date) months.add(t.date.substring(0, 7));
+                    if (t.date) {
+                        months.add(t.date.substring(0, 7));
+                        years.add(t.date.substring(0, 4));
+                    }
                 });
-                const sorted = Array.from(months).sort().reverse();
+                const sortedMonths = Array.from(months).sort().reverse();
+                const sortedYears = Array.from(years).sort().reverse();
                 const select = document.getElementById('rep-month');
                 select.innerHTML = '<option value="">-- Valitse kuukausi --</option>' +
-                    sorted.map(m => `<option value="${m}">${m}</option>`).join('');
+                    sortedYears.map(y => `<option value="year:${y}">📅 Koko vuosi ${y}</option>`).join('') +
+                    sortedMonths.map(m => `<option value="${m}">${m}</option>`).join('');
             };
         }
 
         function updateReport() {
-            const month = document.getElementById('rep-month').value;
-            if (!month) {
+            const sel = document.getElementById('rep-month').value;
+            if (!sel) {
                 document.getElementById('report-content').innerHTML = '';
                 return;
             }
+            const isYear = sel.startsWith('year:');
+            const periodVal = isYear ? sel.substring(5) : sel; // "2026" tai "2026-06"
+            const periodLabel = isYear ? `Koko vuosi ${periodVal}` : periodVal;
 
             const tx = db.transaction(['trips'], 'readonly');
             tx.objectStore('trips').getAll().onsuccess = (e) => {
-                let trips = e.target.result.filter(t => t.date && t.date.startsWith(month));
+                let trips = e.target.result.filter(t => t.date && t.date.startsWith(periodVal));
                 const type = document.getElementById('rep-type').value;
 
                 if (type === 'tmi') trips = trips.filter(t => t.type === 'Tmi');
                 else if (type === 'oy') trips = trips.filter(t => t.type === 'Oy');
 
                 trips.sort((a, b) => new Date(a.date) - new Date(b.date));
-                generateReport(trips, month);
+                generateReport(trips, periodLabel);
             };
         }
 
@@ -1122,6 +1259,7 @@ td.num { text-align: right; }
         }
 
         function reportSection(trips, month, type) {
+            const settings = getCompanySettings();
             let totalKm = 0, kmCost = 0, allowanceCost = 0;
             const allowCounts = { 'Osapäivä': 0, 'Kokopäivä': 0, 'Ateria': 0 };
 
@@ -1137,10 +1275,19 @@ td.num { text-align: right; }
             });
 
             const totalCost = kmCost + allowanceCost;
+            const printedAt = new Date().toLocaleDateString('fi-FI') + ' klo ' + new Date().toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' });
+
+            const isOy = type === 'Oy';
+            const docTitle = isOy ? 'MATKALASKU' : 'VEROVÄHENNYS – KILOMETRIKORVAUSLASKELMA';
+            const company = isOy
+                ? { name: settings.oyName, ytunnus: settings.oyYtunnus, address: settings.oyAddress }
+                : { name: settings.tmiName, ytunnus: settings.tmiYtunnus, address: settings.tmiAddress };
 
             let html = `<div class="report-header">
-                <h2>${type === 'Tmi' ? '📋 TMI - OMAT MATKAKUSTANNUKSET' : '📋 OY - LASKUTETTAVAT MATKAKUSTANNUKSET'}</h2>
-                <p>${month}</p>
+                <h2>📋 ${docTitle}</h2>
+                <p><strong>${company.name}</strong>${company.ytunnus ? ' — Y-tunnus ' + company.ytunnus : ''}</p>
+                ${company.address ? `<p>${company.address}</p>` : ''}
+                <p style="margin-top: 6px;">Kausi: <strong>${month}</strong> | Kuljettaja: <strong>${settings.driverName}</strong> | Ajoneuvo: <strong>${settings.vehicleReg}</strong></p>
             </div>
 
             <div class="report-summary">
@@ -1151,7 +1298,7 @@ td.num { text-align: right; }
                     </div>
                     <div>
                         <div style="font-size: 32px; font-weight: bold; color: #10b981;">${totalCost.toFixed(2)}€</div>
-                        <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">KORVAUKSET YHT.</div>
+                        <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">${isOy ? 'LASKUTETTAVA' : 'VÄHENNETTÄVÄ'} YHT.</div>
                     </div>
                 </div>
             </div>
@@ -1199,9 +1346,18 @@ td.num { text-align: right; }
                     ${allowCounts['Osapäivä'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Osapäiväraha:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Osapäivä']} × 25€ = ${(allowCounts['Osapäivä'] * 25).toFixed(2)}€</td></tr>` : ''}
                     ${allowCounts['Kokopäivä'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Kokopäiväraha:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Kokopäivä']} × 54€ = ${(allowCounts['Kokopäivä'] * 54).toFixed(2)}€</td></tr>` : ''}
                     ${allowCounts['Ateria'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Ateriakorvaus:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Ateria']} × 13,50€ = ${(allowCounts['Ateria'] * 13.50).toFixed(2)}€</td></tr>` : ''}
-                    <tr style="border-top: 2px solid var(--border); font-weight: bold;"><td style="border: none; padding: 6px 0;">MAKSETAVAA / LASKUTETTAVAA YHTEENSÄ:</td><td style="border: none; padding: 6px 0; text-align: right; font-size: 16px;">${totalCost.toFixed(2)}€</td></tr>
+                    <tr style="border-top: 2px solid var(--border); font-weight: bold;"><td style="border: none; padding: 6px 0;">${isOy ? 'LASKUTETTAVA' : 'MAKSETTAVA / VÄHENNETTÄVÄ'} YHTEENSÄ:</td><td style="border: none; padding: 6px 0; text-align: right; font-size: 16px;">${totalCost.toFixed(2)}€</td></tr>
                 </table>
-            </div><div style="page-break-after: always;"></div>`;
+            </div>
+
+            <div style="margin-top: 30px; font-size: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-top: 40px;">
+                    <div style="border-top: 1px solid var(--border); width: 45%; padding-top: 4px;">Paikka ja aika</div>
+                    <div style="border-top: 1px solid var(--border); width: 45%; padding-top: 4px;">Allekirjoitus / hyväksyntä</div>
+                </div>
+                <p style="color: var(--text-light); margin-top: 20px;">Tulostettu Päivyri-sovelluksesta ${printedAt}.</p>
+            </div>
+            <div style="page-break-after: always;"></div>`;
 
             return html;
         }
@@ -1210,7 +1366,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.6' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.0' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1220,7 +1376,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.6.6_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.7.0_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -1760,6 +1916,7 @@ td.num { text-align: right; }
         // ============ KÄYNNISTYS ============
         window.addEventListener('load', () => {
             initDB();
+            loadCompanySettingsForm();
         });
 
         // Unregister old Service Workers - poista ne cache:sta
