@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.7.2 - CSV-tuonti</title>
+<title>Päivyri v7.7.3 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -230,7 +230,7 @@ td.num { text-align: right; }
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.7.2 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.7.3 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -350,6 +350,9 @@ td.num { text-align: right; }
                     <input type="number" id="f-ke" required>
                 </div>
             </div>
+
+            <label>📝 SELITE / AJON TARKOITUS</label>
+            <input type="text" id="f-note" placeholder="esim. PuKu Heidi — päivä 2, OP Kipparit, Tutkinto...">
 
             <label>🚏 REITTI / ASIAKKAAT</label>
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
@@ -763,6 +766,7 @@ td.num { text-align: right; }
             document.getElementById('f-start').value = `${hours}:${minutes}`;
             document.getElementById('f-end').value = '';
             document.getElementById('f-allowance').value = '-';
+            document.getElementById('f-note').value = '';
             document.getElementById('save-btn').textContent = '💾 TALLENNA MERKINTÄ';
             document.getElementById('cancel-btn').style.display = 'none';
             renderStops();
@@ -825,6 +829,7 @@ td.num { text-align: right; }
                 document.getElementById('f-ks').value = t.ks;
                 document.getElementById('f-ke').value = t.ke;
                 document.getElementById('f-allowance').value = t.allowance;
+                document.getElementById('f-note').value = t.note || '';
                 document.getElementById('save-btn').textContent = '💾 PÄIVITÄ MERKINTÄ';
                 document.getElementById('cancel-btn').style.display = 'block';
                 document.getElementById('trip-form').style.display = 'block';
@@ -1055,6 +1060,7 @@ td.num { text-align: right; }
                 ks: ks,
                 ke: ke,
                 allowance: document.getElementById('f-allowance').value,
+                note: document.getElementById('f-note').value.trim(),
                 stops: currentStops
             };
 
@@ -1484,7 +1490,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.2' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.3' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1494,7 +1500,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.7.2_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.7.3_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2047,7 +2053,7 @@ td.num { text-align: right; }
         }
 
         // Auto-save setup - lisää event listenerit input-kenttiin
-        ['f-date', 'f-date-end', 'f-type', 'f-start', 'f-end', 'f-ks', 'f-ke', 'f-allowance'].forEach(id => {
+        ['f-date', 'f-date-end', 'f-type', 'f-start', 'f-end', 'f-ks', 'f-ke', 'f-allowance', 'f-note'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.addEventListener('input', setupAutoSave);
