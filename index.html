@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.6 - Excel CSV Fix</title>
+<title>Päivyri v7.6.1 - Excel CSV Fix</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -221,8 +221,8 @@ td.num { text-align: right; }
 <body>
 
 <div class="header">
-    <h1>Päivyri v7.6</h1>
-    <p>Reitit osoitteilla | Auto-save | Älykäs Excel CSV-tuonti</p>
+    <h1>Päivyri v7.6.1</h1>
+    <p>Reitit osoitteilla | Auto-save | Älykäs Excel CSV-tuonti (Reitti / selite korjattu)</p>
 </div>
 
 <div class="tabs">
@@ -425,7 +425,7 @@ td.num { text-align: right; }
     </div>
     <div class="card" style="border: 2px dashed #3b82f6;">
         <h3>Tuo ajot Excel CSV-tiedostosta</h3>
-        <p style="font-size: 11px; color: var(--text-light); margin-top:-6px;">Tunnistaa automaattisesti sarakkeet: <i>Päivämäärä, Ajon tarkoitus / Reitti, Alku (KM), Loppu (KM), Tyyppi</i>.</p>
+        <p style="font-size: 11px; color: var(--text-light); margin-top:-6px;">Tunnistaa automaattisesti sarakkeet: <i>Päivämäärä, Reitti / selite, Alku (KM), Loppu (KM), Tyyppi</i>.</p>
         <input type="file" id="csv-file" accept=".csv" onchange="importCSV()">
     </div>
 </div>
@@ -853,7 +853,7 @@ function exportJSON() {
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `Paivyri_v7.6_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `Paivyri_v7.6.1_${new Date().toISOString().split('T')[0]}.json`;
             a.click();
         };
     };
@@ -880,7 +880,7 @@ function importBackup() {
     reader.readAsText(file);
 }
 
-// UUSI ÄLYKÄS EXCEL CSV-TUONTILOGIIKKA
+// KORJATTU ÄLYKÄS EXCEL CSV-TUONTILOGIIKKA (Nappaa "Reitti / selite")
 function importCSV() {
     const file = document.getElementById('csv-file').files[0];
     if (!file) return;
@@ -898,7 +898,10 @@ function importCSV() {
 
             // Etsitään sarakkeiden paikat älykkäästi useilla synonyymeillä
             const dateIdx = headers.findIndex(h => h.includes('PÄIVÄ') || h.includes('DATE'));
-            const routeIdx = headers.findIndex(h => h.includes('REITTI') || h.includes('TARKOITUS') || h.includes('ROUTE') || h.includes('EXPLANATION'));
+            
+            // Kohdistetaan haku myös "REITTI / SELITE" -muotoon
+            const routeIdx = headers.findIndex(h => h.includes('REITTI') || h.includes('SELITE') || h.includes('TARKOITUS') || h.includes('ROUTE'));
+            
             const startKmIdx = headers.findIndex(h => h.includes('ALKU') || h.includes('START') || h.includes('KS'));
             const endKmIdx = headers.findIndex(h => h.includes('LOPPU') || h.includes('END') || h.includes('KE'));
             const typeIdx = headers.findIndex(h => h.includes('TYYPPI') || h.includes('TYPE'));
