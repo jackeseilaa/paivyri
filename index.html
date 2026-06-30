@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.0.1 - Firestore</title>
+<title>Päivyri v8.1.0-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -238,7 +238,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.0.1 - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.0-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -248,6 +248,7 @@ td.num { text-align: right; }
         <button class="tab" onclick="showPage('crm')">👥 CRM</button>
         <button class="tab" onclick="showPage('report')">📋 Raportti</button>
         <button class="tab" onclick="showPage('backup')">💾 Varmuuskopio</button>
+        <button class="tab" onclick="showPage('statepage'); stateEnsureInit();" style="background:#7c3aed;color:#fff;">🔄 Tila (BETA)</button>
     </div>
 
     <!-- ====== KOJELAUTA ====== -->
@@ -547,6 +548,52 @@ td.num { text-align: right; }
             <button class="btn btn-success" onclick="saveCompanySettings()" style="width: 100%;">💾 TALLENNA YRITYSTIEDOT</button>
         </div>
     </div>
+
+    <!-- ====== TILA (BETA) - kehitysversio päivän juoksevasta tilaketjusta ====== -->
+    <div id="statepage" class="page">
+        <div class="card" style="border:2px solid #7c3aed;">
+            <p style="font-size:12px;color:#7c3aed;font-weight:700;margin-bottom:8px;">
+                🔄 KEHITYSVERSIO — ei vielä yhteydessä viralliseen ajopäiväkirjaan. Kokeile rauhassa, data tallentuu erilliseen koekokoelmaan.
+            </p>
+            <div id="state-no-day" style="display:none;">
+                <label>Aloitusmittarilukema (km)</label>
+                <input type="number" id="state-start-km" placeholder="esim. 525742">
+                <label style="margin-top:10px;">Aloitustila</label>
+                <div style="display:flex;gap:8px;margin-top:6px;">
+                    <button class="btn" style="flex:1;background:#8b5cf6;color:#fff;" onclick="stateStartDay('Oy')">Oy</button>
+                    <button class="btn" style="flex:1;background:#06b6d4;color:#fff;" onclick="stateStartDay('Tmi')">Tmi</button>
+                    <button class="btn" style="flex:1;background:#94a3b8;color:#fff;" onclick="stateStartDay('Oma')">Oma</button>
+                </div>
+            </div>
+
+            <div id="state-active-day" style="display:none;">
+                <div id="state-current-card" style="background:#f1f5f9;border-radius:10px;padding:16px;text-align:center;margin-bottom:14px;">
+                    <div style="font-size:12px;color:#64748b;font-weight:700;">NYT AJOSSA</div>
+                    <div id="state-current-type" style="font-size:28px;font-weight:800;margin:4px 0;"></div>
+                    <div id="state-current-info" style="font-size:13px;color:#64748b;"></div>
+                </div>
+                <label>Nykyinen mittarilukema (km)</label>
+                <input type="number" id="state-now-km" placeholder="syötä ennen tilan vaihtoa">
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button class="btn" id="state-btn-oy" style="flex:1;background:#8b5cf6;color:#fff;" onclick="stateChangeStatus('Oy')">Oy</button>
+                    <button class="btn" id="state-btn-tmi" style="flex:1;background:#06b6d4;color:#fff;" onclick="stateChangeStatus('Tmi')">Tmi</button>
+                    <button class="btn" id="state-btn-oma" style="flex:1;background:#94a3b8;color:#fff;" onclick="stateChangeStatus('Oma')">Oma</button>
+                </div>
+                <button class="btn btn-danger" style="width:100%;margin-top:10px;" onclick="stateFinishDay()">🏁 Lopeta päivä</button>
+                <div id="state-segments-list" style="margin-top:14px;"></div>
+            </div>
+
+            <div id="state-finished-day" style="display:none;">
+                <div id="state-finished-summary"></div>
+                <button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="stateResetForNewDay()">➕ Aloita uusi päivä</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <p style="font-weight:700;margin-bottom:10px;">📋 Viimeisimmät kirjatut päivät (BETA)</p>
+            <div id="state-history-list"></div>
+        </div>
+    </div>
 </div>
 
     <script type="module">
@@ -565,7 +612,7 @@ td.num { text-align: right; }
         };
         const ALLOWED_EMAIL = "jacke.seilaa@gmail.com";
         // Omat kokoelmat - eivät törmää Tilauksen sailings/customers-kokoelmiin.
-        const COLLECTIONS = { trips: 'paivyri_trips', clients: 'paivyri_clients' };
+        const COLLECTIONS = { trips: 'paivyri_trips', clients: 'paivyri_clients', stateDays: 'paivyri_dev_state_days' };
 
         const fbApp = initializeApp(FIREBASE_CONFIG);
         const auth = getAuth(fbApp);
@@ -1691,7 +1738,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.0.1' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.0-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1701,7 +1748,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.0.1_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.0-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2357,6 +2404,194 @@ td.num { text-align: right; }
             }
         });
 
+        // ============ TILA (BETA) - juokseva päivän tilaketju erilliseen kehityskokoelmaan ============
+        let stateInitialized = false;
+        let stateUnsubHistory = null;
+        let stateAllDays = [];
+        let stateLastFinishedId = null;
+
+        function todayDateStr() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+        function stateFormatTime(iso) {
+            const d = new Date(iso);
+            return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+        function stateTypeColor(type) {
+            return type === 'Oy' ? '#8b5cf6' : type === 'Tmi' ? '#06b6d4' : '#94a3b8';
+        }
+
+        function stateEnsureInit() {
+            if (stateInitialized || !db) return;
+            stateInitialized = true;
+            stateUnsubHistory = onSnapshot(collection(fs, COLLECTIONS.stateDays), (snap) => {
+                stateAllDays = snap.docs.map(d => d.data());
+                stateRender();
+            }, err => console.error('state onSnapshot', err));
+        }
+
+        function stateGetActiveDay() {
+            return stateAllDays.filter(d => !d.finished).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0] || null;
+        }
+
+        function stateComputeSummary(d) {
+            const segs = d.segments || [];
+            const totals = { Oy: 0, Tmi: 0, Oma: 0 };
+            segs.forEach(s => { totals[s.type] = (totals[s.type] || 0) + (s.endKm - s.startKm); });
+            let hours = 0;
+            if (segs.length > 0) {
+                const start = new Date(segs[0].startTime);
+                const end = new Date(segs[segs.length - 1].endTime);
+                hours = (end - start) / 3600000;
+            }
+            const isBusinessDay = (totals.Oy > 0 || totals.Tmi > 0);
+            let pvraha = 0;
+            if (isBusinessDay) {
+                if (hours >= 10) pvraha = 54;
+                else if (hours >= 6) pvraha = 25;
+            }
+            const kmKorvaus = (totals.Oy + totals.Tmi) * KM_RATE;
+            return { totals, hours, pvraha, kmKorvaus, yhteensa: pvraha + kmKorvaus };
+        }
+
+        async function stateStartDay(type) {
+            if (!db) return;
+            const startKm = parseFloat(document.getElementById('state-start-km').value);
+            if (!startKm || startKm <= 0) { alert('Anna aloitusmittarilukema'); return; }
+            const nowIso = new Date().toISOString();
+            const id = 'day_' + Date.now();
+            const data = { id, date: todayDateStr(), startKm, segments: [], open: { type, startKm, startTime: nowIso }, finished: false, finishedAt: null, createdAt: nowIso };
+            try {
+                await setDoc(doc(fs, COLLECTIONS.stateDays, id), data);
+            } catch (e) { alert('Tallennus epäonnistui: ' + e.message); }
+        }
+
+        async function stateChangeStatus(newType) {
+            const active = stateGetActiveDay();
+            if (!active || !active.open) return;
+            const nowKm = parseFloat(document.getElementById('state-now-km').value);
+            if (isNaN(nowKm)) { alert('Anna nykyinen mittarilukema'); return; }
+            if (nowKm < active.open.startKm) { alert('Mittarilukema ei voi olla pienempi kuin edellinen (' + active.open.startKm + ' km)'); return; }
+            const nowIso = new Date().toISOString();
+            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso };
+            const newSegments = [...(active.segments || []), closedSegment];
+            const newOpen = { type: newType, startKm: nowKm, startTime: nowIso };
+            try {
+                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), Object.assign({}, active, { segments: newSegments, open: newOpen }));
+                document.getElementById('state-now-km').value = '';
+            } catch (e) { alert('Tallennus epäonnistui: ' + e.message); }
+        }
+
+        async function stateFinishDay() {
+            const active = stateGetActiveDay();
+            if (!active || !active.open) return;
+            const nowKm = parseFloat(document.getElementById('state-now-km').value);
+            if (isNaN(nowKm)) { alert('Anna nykyinen mittarilukema ennen päivän lopetusta'); return; }
+            if (nowKm < active.open.startKm) { alert('Mittarilukema ei voi olla pienempi kuin edellinen (' + active.open.startKm + ' km)'); return; }
+            const nowIso = new Date().toISOString();
+            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso };
+            const newSegments = [...(active.segments || []), closedSegment];
+            // Asetetaan ennen tallennusta, jotta snapshotin laukaisema stateRender() osaa heti
+            // näyttää "valmis"-yhteenvedon eikä ehdi näyttää tyhjää aloituslomaketta välissä.
+            stateLastFinishedId = active.id;
+            try {
+                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), Object.assign({}, active, { segments: newSegments, open: null, finished: true, finishedAt: nowIso }));
+                document.getElementById('state-now-km').value = '';
+            } catch (e) {
+                stateLastFinishedId = null;
+                alert('Tallennus epäonnistui: ' + e.message);
+            }
+        }
+
+        function stateResetForNewDay() {
+            stateLastFinishedId = null;
+            stateRender();
+        }
+
+        function stateRenderActiveCard(active) {
+            document.getElementById('state-current-type').textContent = active.open.type;
+            document.getElementById('state-current-type').style.color = stateTypeColor(active.open.type);
+            document.getElementById('state-current-info').textContent = `Alkoi klo ${stateFormatTime(active.open.startTime)} — mittari ${active.open.startKm} km`;
+            ['oy', 'tmi', 'oma'].forEach(t => {
+                const btn = document.getElementById('state-btn-' + t);
+                const label = t.charAt(0).toUpperCase() + t.slice(1);
+                if (btn) btn.style.opacity = (label === active.open.type) ? '0.4' : '1';
+            });
+            const segs = active.segments || [];
+            const listEl = document.getElementById('state-segments-list');
+            if (segs.length === 0) {
+                listEl.innerHTML = '<p style="font-size:12px;color:#94a3b8;">Ei vielä suljettuja jaksoja tältä päivältä.</p>';
+            } else {
+                listEl.innerHTML = '<p style="font-weight:700;font-size:12px;margin-bottom:6px;">Tämän päivän jaksot:</p>' +
+                    segs.map(s => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #e2e8f0;">
+                        <span style="color:${stateTypeColor(s.type)};font-weight:700;">${s.type}</span>
+                        <span>${stateFormatTime(s.startTime)}–${stateFormatTime(s.endTime)}</span>
+                        <span>${(s.endKm - s.startKm).toFixed(0)} km</span>
+                    </div>`).join('');
+            }
+        }
+
+        function stateRenderFinishedSummary(d) {
+            const s = stateComputeSummary(d);
+            document.getElementById('state-finished-summary').innerHTML = `
+                <p style="font-weight:700;margin-bottom:8px;">✅ Päivä ${d.date} valmis</p>
+                <div style="font-size:14px;line-height:1.8;">
+                    <div>Oy: <strong>${s.totals.Oy.toFixed(0)} km</strong></div>
+                    <div>Tmi: <strong>${s.totals.Tmi.toFixed(0)} km</strong></div>
+                    <div>Oma: <strong>${s.totals.Oma.toFixed(0)} km</strong></div>
+                    <div>Kesto: <strong>${s.hours.toFixed(1)} h</strong></div>
+                    <div>PV-raha (kotimaa): <strong>${s.pvraha} €</strong></div>
+                    <div>Km-korvaus: <strong>${s.kmKorvaus.toFixed(2)} €</strong></div>
+                    <div style="font-weight:800;margin-top:6px;">Yhteensä: ${s.yhteensa.toFixed(2)} €</div>
+                </div>
+                <p style="font-size:11px;color:#94a3b8;margin-top:8px;">Huom: ulkomaan päivärahaa ei lasketa automaattisesti tässä BETA-näkymässä — tarkista käsin jos matka suuntautui ulkomaille.</p>
+            `;
+        }
+
+        function stateRenderHistory() {
+            const el = document.getElementById('state-history-list');
+            if (!el) return;
+            const finished = stateAllDays.filter(d => d.finished).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
+            if (finished.length === 0) {
+                el.innerHTML = '<p style="font-size:13px;color:#94a3b8;">Ei vielä kirjattuja päiviä.</p>';
+                return;
+            }
+            el.innerHTML = finished.slice(0, 20).map(d => {
+                const s = stateComputeSummary(d);
+                return `<div style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px;">
+                    <strong>${d.date}</strong> — Oy ${s.totals.Oy.toFixed(0)}km, Tmi ${s.totals.Tmi.toFixed(0)}km, Oma ${s.totals.Oma.toFixed(0)}km
+                    · ${s.hours.toFixed(1)}h · ${s.yhteensa.toFixed(2)}€
+                </div>`;
+            }).join('');
+        }
+
+        function stateRender() {
+            const active = stateGetActiveDay();
+            const noDayEl = document.getElementById('state-no-day');
+            const activeEl = document.getElementById('state-active-day');
+            const finishedEl = document.getElementById('state-finished-day');
+            if (!noDayEl) return; // sivua ei vielä renderöity DOMiin
+            if (active) {
+                stateLastFinishedId = null;
+                noDayEl.style.display = 'none'; activeEl.style.display = 'block'; finishedEl.style.display = 'none';
+                stateRenderActiveCard(active);
+            } else if (stateLastFinishedId) {
+                const d = stateAllDays.find(x => x.id === stateLastFinishedId);
+                if (d) {
+                    noDayEl.style.display = 'none'; activeEl.style.display = 'none'; finishedEl.style.display = 'block';
+                    stateRenderFinishedSummary(d);
+                } else {
+                    stateLastFinishedId = null;
+                    noDayEl.style.display = 'block'; activeEl.style.display = 'none'; finishedEl.style.display = 'none';
+                }
+            } else {
+                noDayEl.style.display = 'block'; activeEl.style.display = 'none'; finishedEl.style.display = 'none';
+                document.getElementById('state-start-km').value = '';
+            }
+            stateRenderHistory();
+        }
+
         // ============ WINDOW-ALTISTUS ============
         // type="module" ei altista funktioita automaattisesti globaaliin scopeen,
         // joten kaikki HTML:n onclick/onchange-attribuuteista kutsutut funktiot
@@ -2368,7 +2603,8 @@ td.num { text-align: right; }
             removeDuplicateTrips, removeStop, saveClient, saveCompanySettings,
             saveTrip, searchTripByDate, searchYTJ, selectStopOption, showPage,
             toggleStopPicker, importBackup, importCSV, loadEntries,
-            renderStopPicker, updateReport
+            renderStopPicker, updateReport,
+            stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay
         });
     </script>
 </body>
