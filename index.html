@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.7.1 - CSV-tuonti</title>
+<title>Päivyri v7.7.2 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -230,7 +230,7 @@ td.num { text-align: right; }
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.7.1 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.7.2 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -353,9 +353,20 @@ td.num { text-align: right; }
 
             <label>🚏 REITTI / ASIAKKAAT</label>
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                <button class="btn btn-primary" onclick="addStop()" style="flex: 1; margin: 0;">+ LISÄÄ PYSÄHDYS</button>
+                <button class="btn btn-primary" onclick="toggleStopPicker()" style="flex: 1; margin: 0;">+ LISÄÄ PYSÄHDYS</button>
                 <button class="btn btn-primary" onclick="addGPSLocation()" style="flex: 1; margin: 0;">📍 GPS PAIKKA</button>
             </div>
+
+            <div class="card" id="stop-picker" style="display: none; padding: 12px; margin-bottom: 8px;">
+                <input type="text" id="stop-picker-search" placeholder="Hae tai kirjoita uusi paikka..." oninput="renderStopPicker()" style="margin-bottom: 8px;">
+                <div id="stop-picker-list" style="max-height: 220px; overflow-y: auto;"></div>
+                <div style="border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px;">
+                    <label style="font-size: 11px;">Osoite uudelle paikalle (valinnainen)</label>
+                    <input type="text" id="stop-picker-address" placeholder="Osoite..." style="margin-bottom: 8px;">
+                    <button class="btn btn-success btn-sm" onclick="addCustomStop()" style="width: 100%; margin: 0;">+ LISÄÄ HAKUKENTÄN TEKSTI UUTENA PYSÄHDYKSENÄ</button>
+                </div>
+            </div>
+
             <div class="stops-list" id="stops-container">
                 <div style="color: var(--text-light); font-style: italic;">Ei pysähdyksiä</div>
             </div>
@@ -742,6 +753,7 @@ td.num { text-align: right; }
             currentEditingTripId = null;
             currentStops = [];
             document.getElementById('trip-form').style.display = 'block';
+            document.getElementById('stop-picker').style.display = 'none';
             document.getElementById('f-date').valueAsDate = new Date();
             document.getElementById('f-type').value = 'Tmi';
 
@@ -816,6 +828,7 @@ td.num { text-align: right; }
                 document.getElementById('save-btn').textContent = '💾 PÄIVITÄ MERKINTÄ';
                 document.getElementById('cancel-btn').style.display = 'block';
                 document.getElementById('trip-form').style.display = 'block';
+                document.getElementById('stop-picker').style.display = 'none';
                 renderStops();
                 showPage('input');
                 // Vieritä lomake näkyviin - muokattava ajo voi olla pitkän listan alapäässä,
@@ -831,6 +844,7 @@ td.num { text-align: right; }
             currentEditingTripId = null;
             currentStops = [];
             document.getElementById('trip-form').style.display = 'none';
+            document.getElementById('stop-picker').style.display = 'none';
         }
 
         function deleteTrip(id) {
@@ -844,25 +858,90 @@ td.num { text-align: right; }
             };
         }
 
-        function addStop() {
+        // Kerää usein käytetyt pysähdyspaikat KAIKISTA ajojen pysähdyksistä (ei vain CRM-asiakkaista),
+        // koska CSV-tuonti on luonut paljon toistuvia osoitteita (esim. "Kontiontie 55", "RMK")
+        // jotka eivät ole varsinaisia CRM-asiakkaita.
+        function getFrequentStops(callback) {
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                const counts = {};
+                e.target.result.forEach(t => {
+                    (t.stops || []).forEach(s => {
+                        if (!s.client || s.client.startsWith('GPS:') || s.client.startsWith('📍')) return;
+                        const key = s.client + '|' + (s.address || '');
+                        counts[key] = (counts[key] || 0) + 1;
+                    });
+                });
+                const sorted = Object.entries(counts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 25)
+                    .map(([key, count]) => {
+                        const [client, address] = key.split('|');
+                        return { client, address, count };
+                    });
+                callback(sorted);
+            };
+        }
+
+        function toggleStopPicker() {
+            const picker = document.getElementById('stop-picker');
+            const isOpen = picker.style.display === 'block';
+            picker.style.display = isOpen ? 'none' : 'block';
+            if (!isOpen) {
+                document.getElementById('stop-picker-search').value = '';
+                document.getElementById('stop-picker-address').value = '';
+                renderStopPicker();
+                document.getElementById('stop-picker-search').focus();
+            }
+        }
+
+        function renderStopPicker() {
+            const search = document.getElementById('stop-picker-search').value.trim().toLowerCase();
+            const listEl = document.getElementById('stop-picker-list');
+
             const tx = db.transaction(['clients'], 'readonly');
             tx.objectStore('clients').getAll().onsuccess = (e) => {
-                const clients = e.target.result;
-                const options = clients.length > 0
-                    ? '\n\nSAVED CLIENTS:\n' + clients.map((c, i) => `${i + 1}. ${c.name} - ${c.address || 'no address'}`).join('\n')
-                    : '';
+                const clients = e.target.result.map(c => ({ client: c.name, address: c.address || '', isClient: true }));
 
-                const name = prompt('Enter stop/customer name:' + options, '');
-                if (!name) return;
+                getFrequentStops((frequent) => {
+                    // Yhdistä CRM-asiakkaat ja usein käytetyt pysähdykset, poista duplikaatit (asiakas voittaa)
+                    const seen = new Set(clients.map(c => c.client.toLowerCase()));
+                    const combined = clients.concat(frequent.filter(f => !seen.has(f.client.toLowerCase())));
 
-                const address = prompt('Enter address (optional):', '');
-                currentStops.push({
-                    client: name,
-                    address: address || ''
+                    const filtered = search
+                        ? combined.filter(item => item.client.toLowerCase().includes(search) || (item.address || '').toLowerCase().includes(search))
+                        : combined;
+
+                    if (filtered.length === 0) {
+                        listEl.innerHTML = '<div style="color: var(--text-light); font-style: italic; font-size: 12px; padding: 6px 0;">Ei osumia - kirjoita uusi paikka alla olevaan kenttään.</div>';
+                        return;
+                    }
+
+                    listEl.innerHTML = filtered.map(item => `
+                        <button class="btn btn-sm" onclick="selectStopOption('${item.client.replace(/'/g, "\\'")}', '${(item.address || '').replace(/'/g, "\\'")}')"
+                            style="display: block; width: 100%; text-align: left; margin: 0 0 4px 0; background: ${item.isClient ? '#dbeafe' : '#f1f5f9'}; color: var(--text);">
+                            ${item.isClient ? '👤' : '📍'} <strong>${item.client}</strong>${item.address ? ' <span style="color: var(--text-light); font-size: 11px;">— ' + item.address + '</span>' : ''}
+                        </button>
+                    `).join('');
                 });
-                renderStops();
-                showToast(`✅ Pysähdys lisätty: ${name}${address ? ' (' + address + ')' : ''}`);
             };
+        }
+
+        function selectStopOption(client, address) {
+            currentStops.push({ client, address: address || '' });
+            renderStops();
+            document.getElementById('stop-picker').style.display = 'none';
+            showToast(`✅ Pysähdys lisätty: ${client}`);
+        }
+
+        function addCustomStop() {
+            const name = document.getElementById('stop-picker-search').value.trim();
+            const address = document.getElementById('stop-picker-address').value.trim();
+            if (!name) {
+                showToast('❌ Kirjoita ensin paikan nimi hakukenttään');
+                return;
+            }
+            selectStopOption(name, address);
         }
 
         function addGPSLocation() {
@@ -1405,7 +1484,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.1' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.7.2' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1415,7 +1494,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.7.1_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.7.2_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
