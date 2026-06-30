@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.6.4 - CSV-tuonti</title>
+<title>Päivyri v7.6.5 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -225,7 +225,7 @@ td.num { text-align: right; }
 </head>
 <body>
     <div class="header">
-        <h1>📓 Päivyri v7.6.4 - CSV-tuonti</h1>
+        <h1>📓 Päivyri v7.6.5 - CSV-tuonti</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
     </div>
 
@@ -443,6 +443,16 @@ td.num { text-align: right; }
             </p>
             <input type="file" id="csv-file" accept=".csv" onchange="importCSV()">
             <div id="csv-preview" style="margin-top: 10px;"></div>
+        </div>
+        <div class="card">
+            <label>🧹 Siivous</label>
+            <p style="font-size: 12px; color: var(--text-light); margin-top: -4px;">
+                Jos sama päivä+km-väli löytyy useampaan kertaan (esim. vanhasta tuontiyrityksestä jäänyt
+                kaksoiskappale), tämä poistaa duplikaatit ja säilyttää aina sen rivin jossa on
+                selite/reitti täytettynä.
+            </p>
+            <button class="btn btn-warning" onclick="removeDuplicateTrips()" style="width: 100%;">🧹 POISTA KAKSOISKAPPALEET</button>
+            <div id="dup-result" style="margin-top: 10px; font-size: 12px;"></div>
         </div>
     </div>
 
@@ -1145,7 +1155,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.4' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.5' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1155,7 +1165,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.6.4_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v7.6.5_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -1458,6 +1468,7 @@ td.num { text-align: right; }
                     const trips = [];
                     let skipped = 0;
                     let lastDate = '';
+                    const idOccurrence = {}; // erottaa saman päivä+km-yhdistelmän useat eri tapahtumat (esim. 2 kokousta samalla kilometrilukemalla)
 
                     for (let i = 1; i < rows.length; i++) {
                         const r = rows[i];
@@ -1499,7 +1510,17 @@ td.num { text-align: right; }
                         else if (pvraha > 0) allowance = 'Ateria';
 
                         trips.push({
-                            id: Date.now().toString() + '_' + i,
+                            // Pysyvä ID (ei satunnainen Date.now()): sama CSV-rivi tuottaa aina
+                            // saman ID:n, joten uudelleentuonti KORVAA aiemman tuonnin sen sijaan
+                            // että loisi kaksoiskappaleen. Ilman tätä peräkkäiset tuontiajot
+                            // (esim. eri istunnoissa) kasaavat samat ajot moneen kertaan.
+                            // Esiintymälaskuri erottaa saman päivä+km-yhdistelmän eri tapahtumat
+                            // (esim. kaksi kokousta samana päivänä ilman ajoa välissä).
+                            id: (() => {
+                                const baseKey = 'csv_' + date + '_' + ks + '_' + ke + '_' + type;
+                                idOccurrence[baseKey] = (idOccurrence[baseKey] || 0) + 1;
+                                return idOccurrence[baseKey] > 1 ? baseKey + '_' + idOccurrence[baseKey] : baseKey;
+                            })(),
                             date: date,
                             date_end: date,
                             type: type,
@@ -1629,6 +1650,56 @@ td.num { text-align: right; }
             }
 
             importNext(0);
+        }
+
+        // ============ DUPLIKAATTIEN SIIVOUS ============
+        // Ryhmittelee ajot päivämäärän ja km-välin mukaan. Jos samalle päivä+km-väli
+        // -yhdistelmälle löytyy useampi ajo, säilytetään "paras" (selite/reitti täytetty,
+        // tai pisin selite jos useampi täytetty) ja poistetaan loput.
+        function removeDuplicateTrips() {
+            if (!db) return;
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                const trips = e.target.result;
+                const groups = {};
+                trips.forEach(t => {
+                    const key = `${t.date}_${t.ks}_${t.ke}`;
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(t);
+                });
+
+                const toDelete = [];
+                let groupCount = 0;
+                Object.values(groups).forEach(group => {
+                    if (group.length <= 1) return;
+                    groupCount++;
+                    // Pisteytä: stopit + note-pituus -> säilytä paras, poista loput
+                    const scored = group.map(t => ({
+                        t,
+                        score: (t.stops && t.stops.length > 0 ? 100 : 0) + (t.note ? t.note.length : 0)
+                    })).sort((a, b) => b.score - a.score);
+
+                    scored.slice(1).forEach(s => toDelete.push(s.t.id));
+                });
+
+                if (toDelete.length === 0) {
+                    document.getElementById('dup-result').innerHTML = '✅ Ei duplikaatteja löytynyt.';
+                    return;
+                }
+
+                if (!confirm(`Löytyi ${groupCount} päivää joilla duplikaatti (yhteensä ${toDelete.length} poistettavaa riviä). Poistetaanko?`)) return;
+
+                const tx2 = db.transaction(['trips'], 'readwrite');
+                const store = tx2.objectStore('trips');
+                toDelete.forEach(id => store.delete(id));
+                tx2.oncomplete = () => {
+                    document.getElementById('dup-result').innerHTML = `✅ Poistettu ${toDelete.length} duplikaattia (${groupCount} päivää siivottu).`;
+                    showToast(`✅ Poistettu ${toDelete.length} duplikaattia`);
+                    loadDashboard();
+                    loadEntries();
+                    populateMonths();
+                };
+            };
         }
 
         // ============ KÄYNNISTYS ============
