@@ -1,7 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /paivyri/{date} {
+    match /paivyri_trips/{tripId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == "jacke.seilaa@gmail.com";
+    }
+    match /paivyri_clients/{clientId} {
       allow read, write: if request.auth != null
         && request.auth.token.email == "jacke.seilaa@gmail.com";
     }

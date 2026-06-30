@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.8.0 - CSV-tuonti</title>
+<title>Päivyri v8.0.0 - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -230,9 +230,16 @@ td.num { text-align: right; }
 </style>
 </head>
 <body>
+<div id="auth-overlay" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;color:#fff;flex-direction:column;gap:16px;padding:20px;text-align:center;">
+    <h1 style="margin:0;font-size:28px;">📓 Päivyri</h1>
+    <p style="color:#94a3b8;margin:0;">Kirjaudu sisään jatkaaksesi</p>
+    <button id="btnGoogleLogin" style="padding:14px 28px;font-size:16px;font-weight:600;border:none;border-radius:8px;background:#fff;color:#0f172a;cursor:pointer;">Kirjaudu Googlella</button>
+    <p id="auth-error" style="color:#f87171;min-height:20px;margin:0;"></p>
+</div>
+<div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v7.8.0 - CSV-tuonti</h1>
-        <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
+        <h1>📓 Päivyri v8.0.0 - Firestore-synkronointi</h1>
+        <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
     <div class="tabs">
@@ -540,8 +547,30 @@ td.num { text-align: right; }
             <button class="btn btn-success" onclick="saveCompanySettings()" style="width: 100%;">💾 TALLENNA YRITYSTIEDOT</button>
         </div>
     </div>
+</div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // Sama jaettu Firebase-projekti jota Tilaukset (jackeseilaa/tilaukset) jo käyttää.
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyB7Dp5_5fN0Iko-4Jn1D2Dp6NNNih63UO0",
+            authDomain: "jsailing-f716c.firebaseapp.com",
+            projectId: "jsailing-f716c",
+            storageBucket: "jsailing-f716c.firebasestorage.app",
+            messagingSenderId: "543523103696",
+            appId: "1:543523103696:web:439a312efa6aec398a8fd5"
+        };
+        const ALLOWED_EMAIL = "jacke.seilaa@gmail.com";
+        // Omat kokoelmat - eivät törmää Tilauksen sailings/customers-kokoelmiin.
+        const COLLECTIONS = { trips: 'paivyri_trips', clients: 'paivyri_clients' };
+
+        const fbApp = initializeApp(FIREBASE_CONFIG);
+        const auth = getAuth(fbApp);
+        const fs = getFirestore(fbApp);
+
         // ============ ASETUKSET ============
         const KM_RATE = 0.55; // 2026
 
@@ -607,27 +636,189 @@ td.num { text-align: right; }
         let currentStops = [];
         let autoSaveTimeout = null;
 
-        // ============ TIETOKANTA ============
-        function initDB() {
-            return new Promise((resolve) => {
-                const req = indexedDB.open('PaivyriDB_v7', 1);
-                req.onsuccess = (e) => {
-                    db = e.target.result;
+        // ============ FIRESTORE-VÄLIMUISTI (reaaliaikainen, onSnapshot pitää ajan tasalla) ============
+        const cache = { trips: [], clients: [] };
+        const cacheReady = { trips: false, clients: false };
+        let unsubscribers = [];
+        let rerenderTimer = null;
+
+        function scheduleRerender() {
+            if (rerenderTimer) return;
+            rerenderTimer = setTimeout(() => {
+                rerenderTimer = null;
+                if (!cacheReady.trips || !cacheReady.clients) return;
+                try { loadDashboard(); } catch (e) { console.error(e); }
+                try { loadEntries(); } catch (e) { console.error(e); }
+                try { populateMonths(); } catch (e) { console.error(e); }
+                try { loadCrmList(); } catch (e) { console.error(e); }
+            }, 120);
+        }
+
+        function startListeners() {
+            unsubscribers.forEach(u => u());
+            unsubscribers = [];
+            cacheReady.trips = false;
+            cacheReady.clients = false;
+            unsubscribers.push(onSnapshot(collection(fs, COLLECTIONS.trips), snap => {
+                cache.trips = snap.docs.map(d => d.data());
+                cacheReady.trips = true;
+                scheduleRerender();
+            }, err => console.error('trips onSnapshot', err)));
+            unsubscribers.push(onSnapshot(collection(fs, COLLECTIONS.clients), snap => {
+                cache.clients = snap.docs.map(d => d.data());
+                cacheReady.clients = true;
+                scheduleRerender();
+            }, err => console.error('clients onSnapshot', err)));
+        }
+
+        // ---- IndexedDB-yhteensopiva rajapinta: db.transaction([...], mode).objectStore(name).getAll/get/put/add/delete/clear ----
+        // Kaikki saman transaktion sisällä SYNKRONISESTI jonotetut kirjoitukset suoritetaan
+        // RINNAKKAIN (Promise.all) Firestoreen heti seuraavassa mikrotaskissa - tämä korjaa
+        // CSV-tuonnin (185 riviä) ja varmuuskopion palautuksen nopeuden, koska kaikkia rivejä
+        // ei enää tarvitse kirjoittaa peräkkäin yksi kerrallaan (yksi Firestore-kirjoitus ~50-200ms).
+        function makeRequest() {
+            return { result: undefined, error: undefined, onsuccess: null, onerror: null };
+        }
+        function fireSuccess(req, result) {
+            req.result = result;
+            Promise.resolve().then(() => { if (typeof req.onsuccess === 'function') req.onsuccess({ target: req }); });
+        }
+        function fireError(req, error) {
+            req.error = error;
+            Promise.resolve().then(() => { if (typeof req.onerror === 'function') req.onerror({ target: req, preventDefault(){} }); });
+        }
+
+        function makeTransaction(storeNames) {
+            const tx = { oncomplete: null, onerror: null, _ops: [] };
+            const stores = {};
+            storeNames.forEach(name => {
+                stores[name] = {
+                    getAll() {
+                        const req = makeRequest();
+                        fireSuccess(req, cache[name].slice());
+                        return req;
+                    },
+                    get(id) {
+                        const req = makeRequest();
+                        fireSuccess(req, cache[name].find(x => String(x.id) === String(id)));
+                        return req;
+                    },
+                    put(obj) {
+                        const req = makeRequest();
+                        tx._ops.push({ store: name, type: 'write', data: obj, req });
+                        return req;
+                    },
+                    add(obj) {
+                        const req = makeRequest();
+                        tx._ops.push({ store: name, type: 'write', data: obj, req });
+                        return req;
+                    },
+                    delete(id) {
+                        const req = makeRequest();
+                        tx._ops.push({ store: name, type: 'delete', id, req });
+                        return req;
+                    },
+                    clear() {
+                        const req = makeRequest();
+                        tx._ops.push({ store: name, type: 'clear', req });
+                        return req;
+                    }
+                };
+            });
+            tx.objectStore = (name) => stores[name];
+
+            Promise.resolve().then(async () => {
+                if (tx._ops.length === 0) {
+                    if (typeof tx.oncomplete === 'function') tx.oncomplete();
+                    return;
+                }
+                // clear() ensin per kauppa (täytyy tyhjentyä ennen samassa tx:ssä tulevia lisäyksiä)
+                const clears = tx._ops.filter(o => o.type === 'clear');
+                for (const op of clears) {
+                    try {
+                        const existingIds = cache[op.store].map(x => x.id);
+                        await Promise.all(existingIds.map(id => deleteDoc(doc(fs, COLLECTIONS[op.store], String(id)))));
+                        fireSuccess(op.req, undefined);
+                    } catch (err) {
+                        fireError(op.req, err);
+                    }
+                }
+                // sitten kaikki write/delete RINNAKKAIN
+                const rest = tx._ops.filter(o => o.type !== 'clear');
+                await Promise.all(rest.map(async (op) => {
+                    try {
+                        if (op.type === 'write') {
+                            await setDoc(doc(fs, COLLECTIONS[op.store], String(op.data.id)), op.data);
+                        } else if (op.type === 'delete') {
+                            await deleteDoc(doc(fs, COLLECTIONS[op.store], String(op.id)));
+                        }
+                        fireSuccess(op.req, undefined);
+                    } catch (err) {
+                        fireError(op.req, err);
+                    }
+                }));
+                if (typeof tx.oncomplete === 'function') tx.oncomplete();
+            });
+
+            return tx;
+        }
+
+        // ============ AUTENTIKOINTI ============
+        function renderAuthScreen(msg) {
+            document.getElementById('auth-overlay').style.display = 'flex';
+            document.getElementById('app-root').style.display = 'none';
+            const errEl = document.getElementById('auth-error');
+            if (errEl) errEl.textContent = msg || '';
+        }
+
+        function showApp() {
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('app-root').style.display = 'block';
+        }
+
+        function waitForFirstLoad() {
+            const check = setInterval(() => {
+                if (cacheReady.trips && cacheReady.clients) {
+                    clearInterval(check);
+                    showApp();
                     loadDashboard();
                     populateMonths();
                     loadEntries();
                     loadCrmList();
-                    resolve(db);
-                };
-                req.onupgradeneeded = (e) => {
-                    const dbObj = e.target.result;
-                    if (!dbObj.objectStoreNames.contains('trips')) {
-                        dbObj.createObjectStore('trips', { keyPath: 'id' });
+                    loadCompanySettingsForm();
+                }
+            }, 100);
+        }
+
+        function initAuth() {
+            let accessDeniedMsg = '';
+            document.getElementById('btnGoogleLogin')?.addEventListener('click', async () => {
+                try {
+                    const provider = new GoogleAuthProvider();
+                    await signInWithPopup(auth, provider);
+                } catch (e) {
+                    renderAuthScreen('Kirjautuminen epäonnistui: ' + e.message);
+                }
+            });
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    if (user.email !== ALLOWED_EMAIL) {
+                        accessDeniedMsg = `Pääsy estetty. Vain ${ALLOWED_EMAIL} voi kirjautua.`;
+                        signOut(auth);
+                        renderAuthScreen(accessDeniedMsg);
+                        return;
                     }
-                    if (!dbObj.objectStoreNames.contains('clients')) {
-                        dbObj.createObjectStore('clients', { keyPath: 'id' });
-                    }
-                };
+                    accessDeniedMsg = '';
+                    db = { transaction: (storeNames) => makeTransaction(storeNames) };
+                    startListeners();
+                    waitForFirstLoad();
+                } else {
+                    db = null;
+                    unsubscribers.forEach(u => u());
+                    unsubscribers = [];
+                    renderAuthScreen(accessDeniedMsg);
+                }
             });
         }
 
@@ -1491,7 +1682,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.8.0' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.0.0' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1501,7 +1692,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v7.8.0_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.0.0_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2052,48 +2243,27 @@ td.num { text-align: right; }
             if (!db || csvParsedTrips.length === 0) return;
             if (!confirm(`Tuodaanko ${csvParsedTrips.length} ajoa? Tämä LISÄÄ uudet ajot olemassa olevien rinnalle (ei korvaa vanhoja).`)) return;
 
-            // Käytetään yhtä yksittäistä put()-kutsua per tietue (ei yhtä isoa transaktiota),
-            // jotta yhden rivin mahdollinen virhe (esim. avainristiriita) ei voi hiljaa
-            // perua KAIKKIA muita jo onnistuneita tallennuksia (IndexedDB-transaktio on
-            // atominen: yksi epäonnistunut pyyntö kaataa koko erän, ellei sitä käsitellä erikseen).
-            let okCount = 0;
-            let failCount = 0;
-            const failedRows = [];
+            // Kaikki rivit yhteen transaktioon (ei yhtä transaktiota per rivi) - shim-kerros
+            // suorittaa kaikki tämän transaktion kirjoitukset RINNAKKAIN Firestoreen, jolloin
+            // 185 rivin tuonti kestää yhden verkkoedestakaisin matkan ajan eikä 185:tä peräkkäistä.
             const total = csvParsedTrips.length;
+            const tx = db.transaction(['trips'], 'readwrite');
+            const store = tx.objectStore('trips');
+            const failedRows = [];
 
-            function importNext(idx) {
-                if (idx >= total) {
-                    finishImport();
-                    return;
-                }
-                const t = csvParsedTrips[idx];
-                try {
-                    const tx = db.transaction(['trips'], 'readwrite');
-                    const req = tx.objectStore('trips').put(t); // put = ei kaadu vaikka id olisi jo olemassa
-                    req.onsuccess = () => { okCount++; };
-                    req.onerror = (ev) => {
-                        failCount++;
-                        failedRows.push({ id: t.id, date: t.date, error: ev.target.error && ev.target.error.message });
-                        ev.preventDefault();
-                    };
-                    tx.oncomplete = () => importNext(idx + 1);
-                    tx.onerror = (ev) => {
-                        failCount++;
-                        failedRows.push({ id: t.id, date: t.date, error: 'tx error: ' + (ev.target.error && ev.target.error.message) });
-                        importNext(idx + 1);
-                    };
-                } catch (err) {
-                    failCount++;
-                    failedRows.push({ id: t.id, date: t.date, error: err.message });
-                    importNext(idx + 1);
-                }
-            }
+            csvParsedTrips.forEach((t, i) => {
+                const req = store.put(t);
+                req.onerror = (ev) => {
+                    failedRows.push({ id: t.id, date: t.date, error: ev.target.error && ev.target.error.message });
+                };
+            });
 
-            function finishImport() {
-                if (failCount === 0) {
+            tx.oncomplete = () => {
+                const okCount = total - failedRows.length;
+                if (failedRows.length === 0) {
                     showToast(`✅ Tuotu ${okCount}/${total} ajoa CSV:stä`);
                 } else {
-                    showToast(`⚠️ Tuotu ${okCount}/${total} ajoa, ${failCount} epäonnistui (ks. konsoli)`);
+                    showToast(`⚠️ Tuotu ${okCount}/${total} ajoa, ${failedRows.length} epäonnistui (ks. konsoli)`);
                     console.error('CSV-tuonnissa epäonnistuneet rivit:', failedRows);
                 }
                 csvParsedTrips = [];
@@ -2102,9 +2272,7 @@ td.num { text-align: right; }
                 loadDashboard();
                 loadEntries();
                 populateMonths();
-            }
-
-            importNext(0);
+            };
         }
 
         // ============ DUPLIKAATTIEN SIIVOUS ============
@@ -2159,8 +2327,7 @@ td.num { text-align: right; }
 
         // ============ KÄYNNISTYS ============
         window.addEventListener('load', () => {
-            initDB();
-            loadCompanySettingsForm();
+            initAuth();
         });
 
         // Unregister old Service Workers - poista ne cache:sta
@@ -2179,6 +2346,20 @@ td.num { text-align: right; }
                 el.addEventListener('input', setupAutoSave);
                 el.addEventListener('change', setupAutoSave);
             }
+        });
+
+        // ============ WINDOW-ALTISTUS ============
+        // type="module" ei altista funktioita automaattisesti globaaliin scopeen,
+        // joten kaikki HTML:n onclick/onchange-attribuuteista kutsutut funktiot
+        // täytyy nimenomaisesti liittää window-objektiin.
+        Object.assign(window, {
+            addCustomStop, addGPSLocation, addNewClient, addNewTrip,
+            cancelClientEdit, cancelEdit, confirmCSVImport, deleteClient,
+            deleteTrip, editClient, editTrip, exportExcel, exportJSON,
+            removeDuplicateTrips, removeStop, saveClient, saveCompanySettings,
+            saveTrip, searchTripByDate, searchYTJ, selectStopOption, showPage,
+            toggleStopPicker, importBackup, importCSV, loadEntries,
+            renderStopPicker, updateReport
         });
     </script>
 </body>
