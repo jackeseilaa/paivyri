@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v7.6.2 - Tuontikorjaus</title>
+<title>Päivyri v7.6.3 - CSV-tuonti</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * { box-sizing: border-box; }
@@ -18,4 +18,1594 @@
     --oy: #06b6d4;
 }
 body {
-    font-family: 'Sora', Arial, sans
+    font-family: 'Sora', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding-bottom: 100px;
+}
+.header {
+    background: linear-gradient(135deg, #1e293b, #334155);
+    color: white;
+    padding: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+.header h1 { margin: 0; font-size: 22px; }
+.header p { margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; }
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+    position: sticky;
+    top: 60px;
+    z-index: 100;
+    overflow-x: auto;
+}
+.tab {
+    flex: 1;
+    min-width: 80px;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-light);
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+.tab.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+}
+.page { display: none; padding: 20px; }
+.page.active { display: block; }
+.card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 16px;
+    margin-bottom: 12px;
+}
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    margin: 0 8px 8px 0;
+    transition: all 0.2s;
+}
+.btn:hover { opacity: 0.8; }
+.btn-primary { background: #3b82f6; color: white; }
+.btn-success { background: #10b981; color: white; }
+.btn-warning { background: #f59e0b; color: white; }
+.btn-danger { background: #ef4444; color: white; }
+.btn-sm { padding: 6px 12px; font-size: 11px; margin: 0 4px 0 0; }
+input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 13px;
+}
+.form-group { margin-bottom: 16px; }
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.form-row input, .form-row select {
+    margin-bottom: 0;
+}
+.summary-box {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+.summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+}
+.summary-label { font-size: 11px; color: var(--text-light); margin-bottom: 4px; }
+.summary-value { font-size: 18px; font-weight: bold; }
+.trip-item {
+    background: var(--card);
+    border-left: 4px solid #3b82f6;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+.trip-item.tmi { border-left-color: var(--tmi); }
+.trip-item.oy { border-left-color: var(--oy); }
+.trip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.trip-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+.trip-type.tmi { background: var(--tmi); color: white; }
+.trip-type.oy { background: var(--oy); color: white; }
+.trip-details {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+.trip-actions {
+    display: flex;
+    gap: 6px;
+}
+.stops-list {
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 8px 0;
+    font-size: 12px;
+}
+.stop-item {
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-bottom: 20px;
+}
+th, td {
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background: #f8fafc;
+    font-weight: 600;
+}
+tfoot {
+    background: #f8fafc;
+    font-weight: 600;
+    border-top: 2px solid var(--border);
+}
+td.num { text-align: right; }
+.report-header {
+    text-align: center;
+    margin: 20px 0;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+}
+.report-header h2 { margin: 0 0 4px 0; font-size: 16px; }
+.report-header p { margin: 0; font-size: 12px; color: var(--text-light); }
+.report-summary {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    page-break-inside: avoid;
+}
+@media print {
+    .no-print, .tabs, .header { display: none !important; }
+    .page { display: block !important; padding: 0; margin: 0; }
+    body { padding: 0; }
+}
+</style>
+</head>
+<body>
+    <div class="header">
+        <h1>📓 Päivyri v7.6.3 - CSV-tuonti</h1>
+        <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="showPage('dashboard')">📊 Kojelauta</button>
+        <button class="tab" onclick="showPage('input')">✏️ Syöte</button>
+        <button class="tab" onclick="showPage('crm')">👥 CRM</button>
+        <button class="tab" onclick="showPage('report')">📋 Raportti</button>
+        <button class="tab" onclick="showPage('backup')">💾 Varmuuskopio</button>
+    </div>
+
+    <!-- ====== KOJELAUTA ====== -->
+    <div id="dashboard" class="page active">
+        <div class="summary-box">
+            <h3>📈 Yhteenveto</h3>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">Ajot yhteensä</div>
+                    <div class="summary-value" id="total-trips">0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">KM yhteensä</div>
+                    <div class="summary-value" id="total-km">0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Tmi korvaus</div>
+                    <div class="summary-value" id="tmi-total">0€</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Oy laskutus</div>
+                    <div class="summary-value" id="oy-total">0€</div>
+                </div>
+            </div>
+        </div>
+
+        <h3>🚗 Viimeisimmät ajot</h3>
+        <div id="trips-list"></div>
+    </div>
+
+    <!-- ====== SYÖTE ====== -->
+    <div id="input" class="page">
+        <h2>➕ Uusi ajo</h2>
+        <button class="btn btn-primary" onclick="addNewTrip()" style="width: 100%; margin-bottom: 16px;">+ UUSI TYHÄÄ MERKINTÄ</button>
+
+        <div class="card" id="trip-form" style="display: none;">
+            <div class="form-row">
+                <div>
+                    <label>Aloituspäivä *</label>
+                    <input type="date" id="f-date" required>
+                </div>
+                <div>
+                    <label>Lopetuspäivä</label>
+                    <input type="date" id="f-date-end">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>Tyyppi</label>
+                    <select id="f-type">
+                        <option value="Tmi">Tmi</option>
+                        <option value="Oy">Oy</option>
+                        <option value="Oma">Oma</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Korvaus</label>
+                    <select id="f-allowance">
+                        <option value="-">-</option>
+                        <option value="Osapäivä">Osapäivä (25€)</option>
+                        <option value="Kokopäivä">Kokopäivä (54€)</option>
+                        <option value="Ateria">Ateria (13,50€)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>Alkuaika</label>
+                    <input type="time" id="f-start">
+                </div>
+                <div>
+                    <label>Loppuaika</label>
+                    <input type="time" id="f-end">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>🚙 LÄHTO (KM alku) *</label>
+                    <input type="number" id="f-ks" required>
+                </div>
+                <div>
+                    <label>🏁 PALUU (KM loppu) *</label>
+                    <input type="number" id="f-ke" required>
+                </div>
+            </div>
+
+            <label>🚏 REITTI / ASIAKKAAT</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <button class="btn btn-primary" onclick="addStop()" style="flex: 1; margin: 0;">+ LISÄÄ PYSÄHDYS</button>
+                <button class="btn btn-primary" onclick="addGPSLocation()" style="flex: 1; margin: 0;">📍 GPS PAIKKA</button>
+            </div>
+            <div class="stops-list" id="stops-container">
+                <div style="color: var(--text-light); font-style: italic;">Ei pysähdyksiä</div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-success" id="save-btn" onclick="saveTrip()" style="flex: 1; margin: 0;">💾 TALLENNA MERKINTÄ</button>
+                <button class="btn btn-danger" id="cancel-btn" onclick="cancelEdit()" style="flex: 1; margin: 0; display: none;">✕ PERUUTA</button>
+            </div>
+        </div>
+
+        <h3>📋 Merkinnät</h3>
+        <div id="entries-list"></div>
+    </div>
+
+    <!-- ====== CRM ====== -->
+    <div id="crm" class="page">
+        <h2>👥 Asiakkaat</h2>
+        <button class="btn btn-primary" onclick="addNewClient()" style="width: 100%; margin-bottom: 16px;">+ UUSI ASIAKAS</button>
+
+        <div class="card" id="client-form" style="display: none;">
+            <div class="form-group">
+                <label>Yrityksen nimi *</label>
+                <input type="text" id="c-name" required>
+            </div>
+            <div class="form-group">
+                <label>Y-TUNNUS</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="c-ytunnus" placeholder="1234567-8" style="flex: 1; margin-bottom: 0;">
+                    <button class="btn btn-primary" onclick="searchYTJ()" style="margin: 0; white-space: nowrap;">🔍 Hae</button>
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label>Osoite</label>
+                    <input type="text" id="c-address">
+                </div>
+                <div>
+                    <label>Kaupunki</label>
+                    <input type="text" id="c-city">
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label>Yhteyshenkilö</label>
+                    <input type="text" id="c-contact">
+                </div>
+                <div>
+                    <label>Puhelin</label>
+                    <input type="tel" id="c-phone">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Sähköposti</label>
+                <input type="email" id="c-email">
+            </div>
+            <div class="form-group">
+                <label>Muistiinpanot</label>
+                <textarea id="c-notes" style="min-height: 80px;"></textarea>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-success" id="client-save-btn" onclick="saveClient()" style="flex: 1; margin: 0;">💾 TALLENNA</button>
+                <button class="btn btn-danger" id="client-cancel-btn" onclick="cancelClientEdit()" style="flex: 1; margin: 0; display: none;">✕ PERUUTA</button>
+            </div>
+        </div>
+
+        <h3>📋 Asiakkaat</h3>
+        <div id="crm-list"></div>
+    </div>
+
+    <!-- ====== RAPORTTI ====== -->
+    <div id="report" class="page">
+        <h2>📊 Raportti</h2>
+        <div class="card no-print">
+            <div class="form-row">
+                <div>
+                    <label>Kuukausi</label>
+                    <select id="rep-month" onchange="updateReport()">
+                        <option value="">-- Valitse kuukausi --</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Näytä</label>
+                    <select id="rep-type" onchange="updateReport()">
+                        <option value="all">Kaikki ajot</option>
+                        <option value="tmi">Vain Tmi</option>
+                        <option value="oy">Vain Oy</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="window.print()" style="width: 100%;">🖨️ TULOSTA PDF</button>
+        </div>
+        <div id="report-content"></div>
+    </div>
+
+    <!-- ====== VARMUUSKOPIO ====== -->
+    <div id="backup" class="page">
+        <h2>💾 Varmuuskopiot</h2>
+        <div class="card">
+            <button class="btn btn-primary" onclick="exportJSON()" style="margin-right: 8px;">📤 Vie JSON</button>
+            <button class="btn btn-primary" onclick="exportExcel()">📊 Vie Excel</button>
+        </div>
+        <div class="card">
+            <label>📥 Tuo JSON-varmuuskopio</label>
+            <input type="file" id="backup-file" accept=".json" onchange="importBackup()">
+        </div>
+        <div class="card">
+            <label>📥 Tuo CSV (ajopäiväkirja)</label>
+            <p style="font-size: 12px; color: var(--text-light); margin-top: -4px;">
+                Tukee erotinta ";" tai ",". Sarake "Reitti / selite" tulkitaan automaattisesti:
+                emojit ja kuvakkeet poistetaan, otsikko/tapahtuma erotellaan reitistä (📍 tai " – "),
+                ja itse reitti pilkotaan pysähdyksiksi nuolimerkin "→" kohdalta.
+            </p>
+            <input type="file" id="csv-file" accept=".csv" onchange="importCSV()">
+            <div id="csv-preview" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============ ASETUKSET ============
+        const KM_RATE = 0.55; // 2026
+        const ALLOWANCES = {
+            'Osapäivä': 25,
+            'Kokopäivä': 54,
+            'Ateria': 13.50,
+            '-': 0
+        };
+
+        let db = null;
+        let currentEditingTripId = null;
+        let currentEditingClientId = null;
+        let currentStops = [];
+        let autoSaveTimeout = null;
+
+        // ============ TIETOKANTA ============
+        function initDB() {
+            return new Promise((resolve) => {
+                const req = indexedDB.open('PaivyriDB_v7', 1);
+                req.onsuccess = (e) => {
+                    db = e.target.result;
+                    loadDashboard();
+                    populateMonths();
+                    loadEntries();
+                    loadCrmList();
+                    resolve(db);
+                };
+                req.onupgradeneeded = (e) => {
+                    const dbObj = e.target.result;
+                    if (!dbObj.objectStoreNames.contains('trips')) {
+                        dbObj.createObjectStore('trips', { keyPath: 'id' });
+                    }
+                    if (!dbObj.objectStoreNames.contains('clients')) {
+                        dbObj.createObjectStore('clients', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(page).classList.add('active');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function showToast(msg) {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:fixed;top:80px;left:20px;right:20px;padding:12px 16px;background:#10b981;color:white;border-radius:8px;font-weight:600;z-index:3000';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        // ============ DASHBOARD ============
+        function loadDashboard() {
+            if (!db) return;
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                const trips = e.target.result;
+                updateSummary(trips);
+                displayTrips(trips);
+            };
+        }
+
+        function updateSummary(trips) {
+            let totalKm = 0, tmiTotal = 0, oyTotal = 0;
+            trips.forEach(t => {
+                const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
+                totalKm += km;
+                const kmCost = km * KM_RATE;
+                const allowanceCost = ALLOWANCES[t.allowance] || 0;
+                const total = kmCost + allowanceCost;
+                if (t.type === 'Tmi') tmiTotal += total;
+                else if (t.type === 'Oy') oyTotal += total;
+            });
+
+            document.getElementById('total-trips').textContent = trips.length;
+            document.getElementById('total-km').textContent = totalKm;
+            document.getElementById('tmi-total').textContent = tmiTotal.toFixed(2) + '€';
+            document.getElementById('oy-total').textContent = oyTotal.toFixed(2) + '€';
+        }
+
+        function formatStopText(t) {
+            return t.stops && t.stops.length > 0
+                ? t.stops.map(s => {
+                    if (s.client.startsWith('GPS:') || s.client.startsWith('📍')) {
+                        return '📍 ' + s.client;
+                    }
+                    return s.address ? `${s.client} (${s.address})` : s.client;
+                }).join(' → ')
+                : '(ei reittiä)';
+        }
+
+        function displayTrips(trips) {
+            const sorted = trips.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
+            const html = sorted.map(t => {
+                const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
+                const stopText = formatStopText(t);
+                const typeClass = t.type === 'Tmi' ? 'tmi' : (t.type === 'Oy' ? 'oy' : '');
+                const typeBadge = t.type === 'Tmi'
+                    ? '<span class="trip-type tmi">TMI</span>'
+                    : (t.type === 'Oy' ? '<span class="trip-type oy">OY</span>' : '');
+
+                const dateDisplay = t.date_end && t.date_end !== t.date
+                    ? `${new Date(t.date).toLocaleDateString('fi-FI')} - ${new Date(t.date_end).toLocaleDateString('fi-FI')}`
+                    : new Date(t.date).toLocaleDateString('fi-FI');
+
+                const noteHtml = t.note ? `<div style="font-style: italic; margin-bottom: 4px;">📝 ${t.note}</div>` : '';
+
+                return `<div class="trip-item ${typeClass}">
+                    <div class="trip-header">
+                        <strong>${dateDisplay}${typeBadge}</strong>
+                    </div>
+                    <div class="trip-details">
+                        ${noteHtml}
+                        <div style="font-weight: 500; color: var(--tmi-color); margin-bottom: 4px;">🚏 ${stopText}</div>
+                        <div>🕐 ${t.start_time || '-'} - ${t.end_time || '-'}</div>
+                        <div>🚙 ${t.ks} → ${t.ke} (${km}km)</div>
+                        <div>💰 ${t.allowance}</div>
+                    </div>
+                    <div class="trip-actions">
+                        <button class="btn btn-sm btn-warning" onclick="editTrip('${t.id}')">✏️ Muokkaa</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTrip('${t.id}')">🗑️ Poista</button>
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('trips-list').innerHTML = html || '<p>Ei ajoja</p>';
+        }
+
+        // ============ SYÖTE ============
+        function addNewTrip() {
+            currentEditingTripId = null;
+            currentStops = [];
+            document.getElementById('trip-form').style.display = 'block';
+            document.getElementById('f-date').valueAsDate = new Date();
+            document.getElementById('f-type').value = 'Tmi';
+
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('f-start').value = `${hours}:${minutes}`;
+            document.getElementById('f-end').value = '';
+            document.getElementById('f-allowance').value = '-';
+            document.getElementById('save-btn').textContent = '💾 TALLENNA MERKINTÄ';
+            document.getElementById('cancel-btn').style.display = 'none';
+            renderStops();
+
+            if (db) {
+                const tx = db.transaction(['trips'], 'readonly');
+                tx.objectStore('trips').getAll().onsuccess = (e) => {
+                    const trips = e.target.result.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    if (trips.length > 0) {
+                        document.getElementById('f-ks').value = trips[0].ke || '';
+                    } else {
+                        document.getElementById('f-ks').value = '';
+                    }
+                    document.getElementById('f-ke').value = '';
+                    document.getElementById('f-ks').focus();
+                };
+            }
+        }
+
+        function editTrip(id) {
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').get(id).onsuccess = (e) => {
+                const t = e.target.result;
+                if (!t) return;
+                currentEditingTripId = id;
+                currentStops = JSON.parse(JSON.stringify(t.stops || []));
+                document.getElementById('f-date').value = t.date;
+                document.getElementById('f-date-end').value = t.date_end || t.date;
+                document.getElementById('f-type').value = t.type;
+                document.getElementById('f-start').value = t.start_time || '';
+                document.getElementById('f-end').value = t.end_time || '';
+                document.getElementById('f-ks').value = t.ks;
+                document.getElementById('f-ke').value = t.ke;
+                document.getElementById('f-allowance').value = t.allowance;
+                document.getElementById('save-btn').textContent = '💾 PÄIVITÄ MERKINTÄ';
+                document.getElementById('cancel-btn').style.display = 'block';
+                document.getElementById('trip-form').style.display = 'block';
+                renderStops();
+                showPage('input');
+            };
+        }
+
+        function cancelEdit() {
+            currentEditingTripId = null;
+            currentStops = [];
+            document.getElementById('trip-form').style.display = 'none';
+        }
+
+        function deleteTrip(id) {
+            if (!confirm('Poistetaanko tämä ajo?')) return;
+            const tx = db.transaction(['trips'], 'readwrite');
+            tx.objectStore('trips').delete(id);
+            tx.oncomplete = () => {
+                showToast('✅ Ajo poistettu');
+                loadDashboard();
+                loadEntries();
+            };
+        }
+
+        function addStop() {
+            const tx = db.transaction(['clients'], 'readonly');
+            tx.objectStore('clients').getAll().onsuccess = (e) => {
+                const clients = e.target.result;
+                const options = clients.length > 0
+                    ? '\n\nSAVED CLIENTS:\n' + clients.map((c, i) => `${i + 1}. ${c.name} - ${c.address || 'no address'}`).join('\n')
+                    : '';
+
+                const name = prompt('Enter stop/customer name:' + options, '');
+                if (!name) return;
+
+                const address = prompt('Enter address (optional):', '');
+                currentStops.push({
+                    client: name,
+                    address: address || ''
+                });
+                renderStops();
+                showToast(`✅ Pysähdys lisätty: ${name}${address ? ' (' + address + ')' : ''}`);
+            };
+        }
+
+        function addGPSLocation() {
+            if (!navigator.geolocation) {
+                showToast('❌ GPS ei saatavilla tässä selaimessa');
+                return;
+            }
+            showToast('📍 Haetaan GPS-paikkaasi...');
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const address = data.address || {};
+                            let locationText = '';
+
+                            if (address.road) {
+                                locationText = address.road;
+                                if (address.house_number) {
+                                    locationText += ' ' + address.house_number;
+                                }
+                            }
+
+                            if (!locationText) {
+                                locationText = address.hamlet || address.village || address.town || address.city || 'GPS paikka';
+                            }
+
+                            if (address.city && !locationText.includes(address.city)) {
+                                locationText += ', ' + address.city;
+                            } else if (address.town && !locationText.includes(address.town)) {
+                                locationText += ', ' + address.town;
+                            }
+
+                            if (address.country_code) {
+                                locationText += ` (${address.country_code.toUpperCase()})`;
+                            }
+
+                            currentStops.push({ client: locationText });
+                            renderStops();
+                            showToast('✅ GPS-paikka lisätty: ' + locationText);
+                        })
+                        .catch((error) => {
+                            const location = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                            currentStops.push({ client: location });
+                            renderStops();
+                            showToast('✅ GPS-koordinaatit lisätty (osoite ei saatavilla)');
+                        });
+                },
+                (error) => {
+                    showToast('❌ GPS-haku epäonnistui: ' + error.message);
+                }
+            );
+        }
+
+        function renderStops() {
+            const container = document.getElementById('stops-container');
+            if (currentStops.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-light); font-style: italic;">Ei pysähdyksiä</div>';
+            } else {
+                container.innerHTML = currentStops.map((s, i) => {
+                    let displayText = s.client;
+                    if (s.address && !s.client.startsWith('GPS:')) {
+                        displayText = `${s.client}, ${s.address}`;
+                    } else if (s.client.startsWith('GPS:') || s.client.startsWith('📍')) {
+                        displayText = '📍 ' + s.client;
+                    }
+                    return `<div class="stop-item">
+                        <span style="font-size: 12px;">${i + 1}. ${displayText}</span>
+                        <button class="btn btn-sm btn-danger" onclick="removeStop(${i})" style="margin: 0;">×</button>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function removeStop(idx) {
+            currentStops.splice(idx, 1);
+            renderStops();
+        }
+
+        function setupAutoSave() {
+            if (autoSaveTimeout) {
+                clearTimeout(autoSaveTimeout);
+            }
+            autoSaveTimeout = setTimeout(() => {
+                saveTrip(true);
+            }, 15000);
+        }
+
+        function saveTrip(isDraft = false) {
+            const date = document.getElementById('f-date').value;
+            const dateEnd = document.getElementById('f-date-end').value || date;
+            const ks = parseInt(document.getElementById('f-ks').value);
+            const ke = parseInt(document.getElementById('f-ke').value);
+
+            if (!date || isNaN(ks) || isNaN(ke)) {
+                if (isDraft) return;
+                showToast('❌ Täytä päivämäärä ja KM-arvot');
+                return;
+            }
+
+            const trip = {
+                id: currentEditingTripId || Date.now().toString(),
+                date: date,
+                date_end: dateEnd,
+                type: document.getElementById('f-type').value,
+                start_time: document.getElementById('f-start').value,
+                end_time: document.getElementById('f-end').value,
+                ks: ks,
+                ke: ke,
+                allowance: document.getElementById('f-allowance').value,
+                stops: currentStops
+            };
+
+            const tx = db.transaction(['trips'], 'readwrite');
+            if (currentEditingTripId) {
+                tx.objectStore('trips').put(trip);
+            } else {
+                tx.objectStore('trips').add(trip);
+            }
+
+            tx.oncomplete = () => {
+                if (isDraft) {
+                    showToast('💾 Luonnos tallennettu (15 sekuntia inaktiivisuudesta)');
+                } else {
+                    showToast(currentEditingTripId ? '✅ Ajo päivitetty' : '✅ Ajo tallennettu');
+                    currentEditingTripId = null;
+                    currentStops = [];
+                    cancelEdit();
+                }
+                loadDashboard();
+                loadEntries();
+                populateMonths();
+            };
+        }
+
+        function loadEntries() {
+            if (!db) return;
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                const trips = e.target.result.sort((a, b) => new Date(b.date) - new Date(a.date));
+                const html = trips.slice(0, 30).map(t => {
+                    const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
+                    const stopText = formatStopText(t);
+                    const typeClass = t.type === 'Tmi' ? 'tmi' : (t.type === 'Oy' ? 'oy' : '');
+
+                    const dateDisplay = t.date_end && t.date_end !== t.date
+                        ? `${new Date(t.date).toLocaleDateString('fi-FI')} - ${new Date(t.date_end).toLocaleDateString('fi-FI')}`
+                        : new Date(t.date).toLocaleDateString('fi-FI');
+
+                    return `<div class="trip-item ${typeClass}" style="padding: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 500;">${dateDisplay} | ${t.type}</div>
+                                <div style="font-size: 11px; color: var(--text-light);">${stopText} | ${t.ks}-${t.ke} (${km}km) | ${t.allowance}</div>
+                            </div>
+                            <button class="btn btn-sm btn-warning" onclick="editTrip('${t.id}')" style="margin: 0;">✏️</button>
+                        </div>
+                    </div>`;
+                }).join('');
+                document.getElementById('entries-list').innerHTML = html || '<p>Ei merkintöjä</p>';
+            };
+        }
+
+        // ============ CRM ============
+        function addNewClient() {
+            currentEditingClientId = null;
+            document.getElementById('client-form').style.display = 'block';
+            document.getElementById('c-name').value = '';
+            document.getElementById('c-ytunnus').value = '';
+            document.getElementById('c-address').value = '';
+            document.getElementById('c-city').value = '';
+            document.getElementById('c-contact').value = '';
+            document.getElementById('c-phone').value = '';
+            document.getElementById('c-email').value = '';
+            document.getElementById('c-notes').value = '';
+            document.getElementById('client-save-btn').textContent = '💾 TALLENNA';
+            document.getElementById('client-cancel-btn').style.display = 'none';
+            document.getElementById('c-name').focus();
+        }
+
+        function editClient(id) {
+            const tx = db.transaction(['clients'], 'readonly');
+            tx.objectStore('clients').get(id).onsuccess = (e) => {
+                const c = e.target.result;
+                if (!c) return;
+                currentEditingClientId = id;
+                document.getElementById('c-name').value = c.name;
+                document.getElementById('c-ytunnus').value = c.ytunnus || '';
+                document.getElementById('c-address').value = c.address || '';
+                document.getElementById('c-city').value = c.city || '';
+                document.getElementById('c-contact').value = c.contact || '';
+                document.getElementById('c-phone').value = c.phone || '';
+                document.getElementById('c-email').value = c.email || '';
+                document.getElementById('c-notes').value = c.notes || '';
+                document.getElementById('client-save-btn').textContent = '💾 PÄIVITÄ';
+                document.getElementById('client-cancel-btn').style.display = 'block';
+                document.getElementById('client-form').style.display = 'block';
+                showPage('crm');
+            };
+        }
+
+        function cancelClientEdit() {
+            currentEditingClientId = null;
+            document.getElementById('client-form').style.display = 'none';
+        }
+
+        function searchYTJ() {
+            const ytunnus = document.getElementById('c-ytunnus').value.trim();
+            if (!ytunnus) {
+                showToast('❌ Kirjoita Y-tunnus');
+                return;
+            }
+
+            showToast('🔍 Haetaan YTJ:stä...');
+            const url = `https://avoindata.prh.fi/opendata-ytjapi/v3/companies/${encodeURIComponent(ytunnus)}`;
+
+            fetch(url, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.name) {
+                        document.getElementById('c-name').value = data.name || '';
+                        document.getElementById('c-ytunnus').value = data.businessId || ytunnus;
+
+                        if (data.addresses && data.addresses.length > 0) {
+                            const address = data.addresses[0];
+                            const street = address.street || '';
+                            const postCode = address.postCode || '';
+                            const postOffice = address.postOffice || '';
+                            document.getElementById('c-address').value = street + ' ' + postCode;
+                            document.getElementById('c-city').value = postOffice;
+                        }
+
+                        if (data.contactDetails && data.contactDetails.length > 0) {
+                            data.contactDetails.forEach(contact => {
+                                if (contact.type === 'EMAIL') {
+                                    document.getElementById('c-email').value = contact.value || '';
+                                } else if (contact.type === 'PHONE') {
+                                    document.getElementById('c-phone').value = contact.value || '';
+                                }
+                            });
+                        }
+
+                        showToast('✅ Yritys löytyi! Tiedot täyttyi.');
+                    } else {
+                        showToast('❌ Yritystä ei löytynyt Y-tunnuksella: ' + ytunnus);
+                    }
+                })
+                .catch(error => {
+                    showToast('❌ Virhe haussa: ' + error.message);
+                    console.error('YTJ API error:', error);
+                });
+        }
+
+        function deleteClient(id) {
+            if (!confirm('Poistetaanko tämä asiakas?')) return;
+            const tx = db.transaction(['clients'], 'readwrite');
+            tx.objectStore('clients').delete(id);
+            tx.oncomplete = () => {
+                showToast('✅ Asiakas poistettu');
+                loadCrmList();
+            };
+        }
+
+        function saveClient() {
+            const name = document.getElementById('c-name').value;
+            if (!name) {
+                showToast('❌ Yrityksen nimi vaaditaan');
+                return;
+            }
+
+            const client = {
+                id: currentEditingClientId || Date.now().toString(),
+                name: name,
+                ytunnus: document.getElementById('c-ytunnus').value,
+                address: document.getElementById('c-address').value,
+                city: document.getElementById('c-city').value,
+                contact: document.getElementById('c-contact').value,
+                phone: document.getElementById('c-phone').value,
+                email: document.getElementById('c-email').value,
+                notes: document.getElementById('c-notes').value
+            };
+
+            const tx = db.transaction(['clients'], 'readwrite');
+            if (currentEditingClientId) {
+                tx.objectStore('clients').put(client);
+            } else {
+                tx.objectStore('clients').add(client);
+            }
+
+            tx.oncomplete = () => {
+                showToast(currentEditingClientId ? '✅ Asiakas päivitetty' : '✅ Asiakas tallennettu');
+                currentEditingClientId = null;
+                cancelClientEdit();
+                loadCrmList();
+            };
+        }
+
+        function loadCrmList() {
+            if (!db) return;
+            const tx = db.transaction(['clients'], 'readonly');
+            tx.objectStore('clients').getAll().onsuccess = (e) => {
+                const html = e.target.result.map(c => `<div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <strong>${c.name}</strong> ${c.ytunnus ? '(' + c.ytunnus + ')' : ''}<br>
+                            <span style="font-size: 12px; color: var(--text-light);">
+                                ${c.address ? '📍 ' + c.address : ''}
+                                ${c.city ? ', ' + c.city : ''}${c.address || c.city ? ' | ' : ''}
+                                ${c.contact ? '👤 ' + c.contact + ' | ' : ''}
+                                ${c.phone ? '📞 ' + c.phone : ''}
+                            </span>
+                            ${c.email ? '<br><span style="font-size: 12px; color: var(--text-light);">✉️ ' + c.email + '</span>' : ''}
+                            ${c.notes ? '<br><span style="font-size: 11px; margin-top: 4px; display: block;">📝 ' + c.notes + '</span>' : ''}
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-sm btn-warning" onclick="editClient('${c.id}')" style="margin: 0;">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteClient('${c.id}')" style="margin: 0;">🗑️</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+                document.getElementById('crm-list').innerHTML = html || '<p>Ei asiakkaita</p>';
+            };
+        }
+
+        // ============ RAPORTTI ============
+        function populateMonths() {
+            if (!db) return;
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                const months = new Set();
+                e.target.result.forEach(t => {
+                    if (t.date) months.add(t.date.substring(0, 7));
+                });
+                const sorted = Array.from(months).sort().reverse();
+                const select = document.getElementById('rep-month');
+                select.innerHTML = '<option value="">-- Valitse kuukausi --</option>' +
+                    sorted.map(m => `<option value="${m}">${m}</option>`).join('');
+            };
+        }
+
+        function updateReport() {
+            const month = document.getElementById('rep-month').value;
+            if (!month) {
+                document.getElementById('report-content').innerHTML = '';
+                return;
+            }
+
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                let trips = e.target.result.filter(t => t.date && t.date.startsWith(month));
+                const type = document.getElementById('rep-type').value;
+
+                if (type === 'tmi') trips = trips.filter(t => t.type === 'Tmi');
+                else if (type === 'oy') trips = trips.filter(t => t.type === 'Oy');
+
+                trips.sort((a, b) => new Date(a.date) - new Date(b.date));
+                generateReport(trips, month);
+            };
+        }
+
+        function generateReport(trips, month) {
+            if (trips.length === 0) {
+                document.getElementById('report-content').innerHTML = '<p>Ei ajoja</p>';
+                return;
+            }
+
+            const tmiTrips = trips.filter(t => t.type === 'Tmi');
+            const oyTrips = trips.filter(t => t.type === 'Oy');
+
+            let html = '';
+            if (tmiTrips.length > 0) html += reportSection(tmiTrips, month, 'Tmi');
+            if (oyTrips.length > 0) html += reportSection(oyTrips, month, 'Oy');
+
+            document.getElementById('report-content').innerHTML = html;
+        }
+
+        function reportSection(trips, month, type) {
+            let totalKm = 0, kmCost = 0, allowanceCost = 0;
+            const allowCounts = { 'Osapäivä': 0, 'Kokopäivä': 0, 'Ateria': 0 };
+
+            trips.forEach(t => {
+                const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
+                totalKm += km;
+                kmCost += km * KM_RATE;
+                const allowType = t.allowance;
+                if (allowCounts.hasOwnProperty(allowType)) {
+                    allowCounts[allowType]++;
+                    allowanceCost += ALLOWANCES[allowType];
+                }
+            });
+
+            const totalCost = kmCost + allowanceCost;
+
+            let html = `<div class="report-header">
+                <h2>${type === 'Tmi' ? '📋 TMI - OMAT MATKAKUSTANNUKSET' : '📋 OY - LASKUTETTAVAT MATKAKUSTANNUKSET'}</h2>
+                <p>${month}</p>
+            </div>
+
+            <div class="report-summary">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: center;">
+                    <div>
+                        <div style="font-size: 32px; font-weight: bold; color: #3b82f6;">${totalKm}</div>
+                        <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">KM YHTEENSÄ</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 32px; font-weight: bold; color: #10b981;">${totalCost.toFixed(2)}€</div>
+                        <div style="font-size: 12px; color: var(--text-light); margin-top: 4px;">KORVAUKSET YHT.</div>
+                    </div>
+                </div>
+            </div>
+
+            <table>
+                <thead><tr>
+                    <th>PÄIVÄMÄÄRÄ</th>
+                    <th>AJON TARKOITUS / REITTI</th>
+                    <th style="width: 50px;">ALKU</th>
+                    <th style="width: 50px;">LOPPU</th>
+                    <th style="width: 40px;">KM</th>
+                    <th style="width: 80px;">PÄIVÄRAHA</th>
+                    <th style="width: 60px;">EUR</th>
+                </tr></thead><tbody>`;
+
+            trips.forEach(t => {
+                const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
+                const kmCostTrip = km * KM_RATE;
+                const allowCost = ALLOWANCES[t.allowance] || 0;
+                const tripTotal = kmCostTrip + allowCost;
+                const stopText = formatStopText(t);
+
+                html += `<tr>
+                    <td>${new Date(t.date).toLocaleDateString('fi-FI')}</td>
+                    <td>${t.note ? t.note + ' — ' : ''}${stopText}</td>
+                    <td class="num">${t.ks}</td>
+                    <td class="num">${t.ke}</td>
+                    <td class="num">${km}</td>
+                    <td>${t.allowance}</td>
+                    <td class="num">${tripTotal.toFixed(2)}</td>
+                </tr>`;
+            });
+
+            html += `</tbody><tfoot><tr>
+                <td colspan="4">YHTEENSÄ ${trips.length} ajoa</td>
+                <td class="num"><strong>${totalKm}</strong></td>
+                <td></td>
+                <td class="num"><strong>${totalCost.toFixed(2)}</strong></td>
+            </tr></tfoot></table>
+
+            <div class="report-summary">
+                <h3>💰 YHTEENVETO</h3>
+                <table style="margin: 0; font-size: 13px;">
+                    <tr><td style="border: none; padding: 6px 0;">Kilometrikorvaus:</td><td style="border: none; padding: 6px 0; text-align: right;"><strong>${totalKm} km × 0,55€ = ${kmCost.toFixed(2)}€</strong></td></tr>
+                    ${allowCounts['Osapäivä'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Osapäiväraha:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Osapäivä']} × 25€ = ${(allowCounts['Osapäivä'] * 25).toFixed(2)}€</td></tr>` : ''}
+                    ${allowCounts['Kokopäivä'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Kokopäiväraha:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Kokopäivä']} × 54€ = ${(allowCounts['Kokopäivä'] * 54).toFixed(2)}€</td></tr>` : ''}
+                    ${allowCounts['Ateria'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Ateriakorvaus:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Ateria']} × 13,50€ = ${(allowCounts['Ateria'] * 13.50).toFixed(2)}€</td></tr>` : ''}
+                    <tr style="border-top: 2px solid var(--border); font-weight: bold;"><td style="border: none; padding: 6px 0;">MAKSETAVAA / LASKUTETTAVAA YHTEENSÄ:</td><td style="border: none; padding: 6px 0; text-align: right; font-size: 16px;">${totalCost.toFixed(2)}€</td></tr>
+                </table>
+            </div><div style="page-break-after: always;"></div>`;
+
+            return html;
+        }
+
+        // ============ VARMUUSKOPIO (JSON) ============
+        function exportJSON() {
+            if (!db) return;
+            const tx = db.transaction(['trips', 'clients'], 'readonly');
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v7.6.3' };
+
+            tx.objectStore('trips').getAll().onsuccess = (e) => {
+                data.trips = e.target.result;
+                tx.objectStore('clients').getAll().onsuccess = (e) => {
+                    data.clients = e.target.result;
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Paivyri_v7.6.3_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    showToast('✅ JSON viety');
+                };
+            };
+        }
+
+        function exportExcel() {
+            showToast('📊 Excel-vienti tulee versiossa 7.1');
+        }
+
+        function importBackup() {
+            const file = document.getElementById('backup-file').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let trips = [];
+                    let clients = [];
+
+                    if (data.ajot) {
+                        trips = Object.values(data.ajot).map(t => ({
+                            id: t.id || Date.now().toString(),
+                            date: t.date || '',
+                            type: t.type || 'Oma',
+                            start_time: t.ts || t.start_time || '',
+                            end_time: t.te || t.end_time || '',
+                            ks: t.ks || 0,
+                            ke: t.ke || 0,
+                            allowance: t.allowance || '-',
+                            stops: t.stops || []
+                        }));
+                    } else if (data.trips) {
+                        trips = data.trips;
+                    }
+
+                    if (data.asiakkaat) {
+                        clients = Object.values(data.asiakkaat).map(c => ({
+                            id: c.id || Date.now().toString(),
+                            name: c.nimi || c.name || '',
+                            ytunnus: c.ytunnus || '',
+                            address: c.addr || c.address || '',
+                            city: c.city || '',
+                            contact: c.contact || '',
+                            phone: c.phone || '',
+                            email: c.email || '',
+                            notes: c.notes || ''
+                        }));
+                    } else if (data.clients) {
+                        clients = data.clients;
+                    }
+
+                    const tx = db.transaction(['trips', 'clients'], 'readwrite');
+                    tx.objectStore('trips').clear();
+                    tx.objectStore('clients').clear();
+
+                    trips.forEach(t => tx.objectStore('trips').add(t));
+                    clients.forEach(c => tx.objectStore('clients').add(c));
+
+                    tx.oncomplete = () => {
+                        showToast(`✅ Tuotu! Ajot: ${trips.length}, Asiakkaat: ${clients.length}`);
+                        loadDashboard();
+                        loadCrmList();
+                        loadEntries();
+                        populateMonths();
+                    };
+                } catch (err) {
+                    showToast('❌ Virhe tuonnissa: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ============ CSV-TUONTI ============
+        // Tukee sekä ";" että "," -erotinta, lainausmerkkien sisällä olevia
+        // erotinmerkkejä ja rivinvaihtoja (RFC4180 -tyylinen parsinta).
+        function parseCSVText(text) {
+            // Poista mahdollinen UTF-8 BOM
+            if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+            // Yhtenäistä rivinvaihdot
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+            // Päättele erotin ensimmäisestä rivistä (puolipiste yleisin suomalaisessa Excel-CSV:ssä)
+            const firstLine = text.split('\n')[0];
+            const delimiter = (firstLine.split(';').length >= firstLine.split(',').length) ? ';' : ',';
+
+            const rows = [];
+            let row = [];
+            let field = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                const next = text[i + 1];
+
+                if (inQuotes) {
+                    if (c === '"' && next === '"') {
+                        field += '"';
+                        i++;
+                    } else if (c === '"') {
+                        inQuotes = false;
+                    } else {
+                        field += c;
+                    }
+                } else {
+                    if (c === '"') {
+                        inQuotes = true;
+                    } else if (c === delimiter) {
+                        row.push(field);
+                        field = '';
+                    } else if (c === '\n') {
+                        row.push(field);
+                        rows.push(row);
+                        row = [];
+                        field = '';
+                    } else {
+                        field += c;
+                    }
+                }
+            }
+            // Viimeinen kenttä/rivi
+            if (field.length > 0 || row.length > 0) {
+                row.push(field);
+                rows.push(row);
+            }
+
+            // Poista täysin tyhjät rivit
+            return rows.filter(r => r.some(f => f && f.trim() !== ''));
+        }
+
+        // Poistaa emojit, kuvakkeet ja ZWJ-yhdistelmämerkit tekstistä
+        function stripEmoji(text) {
+            if (!text) return '';
+            return text
+                .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')   // laajat emoji-alueet (mm. 🚕🚗⛵📚🏛️💰)
+                .replace(/[\u{2190}-\u{21FF}]/gu, '')      // nuolet (varmuuden vuoksi, → käsitellään erikseen)
+                .replace(/[\u{2600}-\u{27BF}]/gu, '')      // muut symbolit/dingbats (mm. ✓✕)
+                .replace(/[\u{2B00}-\u{2BFF}]/gu, '')      // lisäsymbolit/nuolet
+                .replace(/[\u{FE00}-\u{FE0F}]/gu, '')      // variaatioselectorit (esim. ⛵️ "️")
+                .replace(/[\u{200D}]/gu, '')                // ZWJ (yhdistää emojit, esim. 👨‍👧)
+                .trim();
+        }
+
+        // Siistii ylimääräiset väliviivat/tyhjät tekstin reunoilta
+        function trimDashes(text) {
+            return (text || '').replace(/^[\s\-–—:]+/, '').replace(/[\s\-–—]+$/, '').trim();
+        }
+
+        // Tulkitsee CSV:n "Reitti / selite" -sarakkeen sisällön.
+        // Palauttaa { note, stops } jossa note = ajon otsikko/tapahtuma (jos eroteltavissa)
+        // ja stops = [{client: '...'}] reitin pysähdyksistä "→"-merkin perusteella.
+        //
+        // Tunnistettuja muotoja:
+        //   "🚕 Koti → RMK Viipurinkatu 1 → Koti"                              -> pelkkä reitti
+        //   "👨‍👧 Susa/Ellan kaveri synttärit (14:00+)"                        -> pelkkä kuvaus, ei nuolia
+        //   "🚕Taksi 154 – Kontiontie 55 → Viipurinkatu 1 (12:00-21:00)"        -> otsikko + " – " + reitti
+        //   "📚 Tutkinto Rannikkopäällikkö\n📍 Kontiontie 55 → ... → Kontiontie 55" -> otsikko-rivi + 📍-reittirivi
+        //   "⛵ PuKu Heidi — päivä 1 (17:00-21:00)\n📍 Koti → ... → Koti"        -> sama, em-dash otsikossa säilyy
+        function parseReittiSelite(raw) {
+            const result = { note: '', stops: [] };
+            if (!raw) return result;
+
+            // Rivit (CSV-soluissa voi olla sisäisiä rivinvaihtoja, esim. otsikko + 📍-reitti)
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length === 0) return result;
+
+            let titlePart = '';
+            let routePart = '';
+
+            if (lines.length > 1) {
+                // Monirivinen: etsi rivi joka sisältää 📍 tai nuolen "→" -> se on reittirivi,
+                // loput rivit ovat otsikko/kuvaus
+                let routeIdx = lines.findIndex(l => l.includes('📍'));
+                if (routeIdx === -1) routeIdx = lines.findIndex(l => l.includes('→'));
+
+                if (routeIdx !== -1) {
+                    titlePart = lines.filter((l, i) => i !== routeIdx).join(' ');
+                    routePart = lines[routeIdx];
+                } else {
+                    titlePart = lines.join(' ');
+                }
+            } else {
+                const line = lines[0];
+                if (line.includes('→')) {
+                    // Yksirivinen ja sisältää reitin. Tarkista onko ennen reittiä
+                    // erillinen otsikko erotettuna ajatusviivalla (– tai —).
+                    const dashMatch = line.match(/^(.*?)[–—](.*)$/);
+                    if (dashMatch && dashMatch[2].includes('→')) {
+                        titlePart = dashMatch[1];
+                        routePart = dashMatch[2];
+                    } else {
+                        routePart = line;
+                    }
+                } else {
+                    // Ei nuolia -> koko teksti on pelkkä kuvaus/tapahtuma, ei reittiä
+                    titlePart = line;
+                }
+            }
+
+            // Siisti otsikko: poista emojit ja ylimääräiset väliviivat
+            titlePart = trimDashes(stripEmoji(titlePart));
+            result.note = titlePart;
+
+            // Pilko reitti pysähdyksiksi "→"-merkin kohdalta
+            if (routePart) {
+                routePart = routePart.replace(/^📍\s*/, '');
+                const stopParts = routePart.split('→').map(p => trimDashes(stripEmoji(p))).filter(p => p.length > 0);
+                result.stops = stopParts.map(p => ({ client: p }));
+            }
+
+            return result;
+        }
+
+        // Suomalainen desimaaliluku ("1234,56" tai "1234.56" tai "") -> Number
+        function parseFiNumber(val) {
+            if (val === undefined || val === null) return 0;
+            const s = String(val).trim();
+            if (s === '') return 0;
+            const normalized = s.replace(/\s/g, '').replace(',', '.');
+            const n = parseFloat(normalized);
+            return isNaN(n) ? 0 : n;
+        }
+
+        // Suomalainen päivämäärä "d.M.yyyy" -> "yyyy-MM-dd" (HTML date -input -muoto).
+        // Tukee myös Excelin sarjanumeromuotoisia päivämääriä (esim. "46057"),
+        // joita esiintyy kun Excel-solu on vahingossa muotoiltu numeroksi tekstin sijaan.
+        function parseFiDate(val) {
+            if (!val) return '';
+            const s = String(val).trim();
+
+            const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+            if (m) {
+                const [, d, mo, y] = m;
+                return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            }
+
+            // Pelkkä numero (esim. "46057") -> Excel-sarjanumero (epoch 1899-12-30)
+            if (/^\d{4,6}$/.test(s)) {
+                const serial = parseInt(s, 10);
+                const ms = (serial - 25569) * 86400 * 1000; // 25569 = päivät 1899-12-30 -> 1970-01-01
+                const d = new Date(ms);
+                if (!isNaN(d.getTime()) && d.getFullYear() > 1950 && d.getFullYear() < 2100) {
+                    const y = d.getUTCFullYear();
+                    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getUTCDate()).padStart(2, '0');
+                    return `${y}-${mo}-${dd}`;
+                }
+            }
+
+            return '';
+        }
+
+        // Tunnistaa CSV:n sarakkeet otsikkorivin perusteella (joustava järjestykselle)
+        function mapCSVHeaders(headerRow) {
+            const map = {};
+            headerRow.forEach((h, i) => {
+                const key = (h || '').toLowerCase().trim()
+                    .replace(/€/g, '')
+                    .trim();
+                if (key.includes('pvm')) map.pvm = i;
+                else if (key.includes('tmi')) map.tmi = i;
+                else if (key.includes('oy')) map.oy = i;
+                else if (key.includes('oma')) map.oma = i;
+                else if (key === 'km' || key.startsWith('km')) map.km = i;
+                else if (key.includes('tyyppi')) map.tyyppi = i;
+                else if (key.includes('reitti') || key.includes('selite')) map.reitti = i;
+                else if (key.includes('aloitus km') || key.includes('alku km')) map.alkuKm = i;
+                else if (key.includes('lopetus km') || key.includes('loppu km')) map.loppuKm = i;
+                else if (key.includes('lähtö') || key.includes('lahto')) map.lahto = i;
+                else if (key.includes('paluu')) map.paluu = i;
+                else if (key.includes('tuntia')) map.tuntia = i;
+                else if (key.includes('pv-raha') || key.includes('päiväraha')) map.pvraha = i;
+                else if (key.includes('km-korv')) map.kmkorv = i;
+            });
+            return map;
+        }
+
+        let csvParsedTrips = [];
+
+        function importCSV() {
+            const file = document.getElementById('csv-file').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const rows = parseCSVText(e.target.result);
+                    if (rows.length < 2) {
+                        showToast('❌ CSV ei sisältänyt rivejä');
+                        return;
+                    }
+
+                    const headerMap = mapCSVHeaders(rows[0]);
+                    if (headerMap.alkuKm === undefined || headerMap.loppuKm === undefined) {
+                        showToast('❌ CSV:stä ei löytynyt Aloitus km / Lopetus km -sarakkeita');
+                        return;
+                    }
+
+                    const trips = [];
+                    let skipped = 0;
+                    let lastDate = '';
+
+                    for (let i = 1; i < rows.length; i++) {
+                        const r = rows[i];
+
+                        const dateRaw = headerMap.pvm !== undefined ? r[headerMap.pvm] : '';
+                        let date = parseFiDate(dateRaw);
+                        const ks = parseFiNumber(r[headerMap.alkuKm]);
+                        const ke = parseFiNumber(r[headerMap.loppuKm]);
+
+                        const reittiRaw = headerMap.reitti !== undefined ? (r[headerMap.reitti] || '').trim() : '';
+
+                        // Tyhjä Pvm-solu mutta reitti/selite täytetty = saman päivän toinen merkintä -> peri edellinen päivämäärä
+                        if (!date && lastDate && reittiRaw) {
+                            date = lastDate;
+                        }
+
+                        // Ohita rivit joilla ei ole kelvollista päivämäärää (esim. tyhjät välirivit)
+                        if (!date) { skipped++; continue; }
+                        lastDate = date;
+
+                        const parsed = parseReittiSelite(reittiRaw);
+
+                        let type = headerMap.tyyppi !== undefined ? (r[headerMap.tyyppi] || '').trim() : '';
+                        if (!['Tmi', 'Oy', 'Oma'].includes(type)) {
+                            // Päättele tyyppi km-sarakkeista jos Tyyppi-sarake puuttuu/on tuntematon
+                            const tmiKm = headerMap.tmi !== undefined ? parseFiNumber(r[headerMap.tmi]) : 0;
+                            const oyKm = headerMap.oy !== undefined ? parseFiNumber(r[headerMap.oy]) : 0;
+                            type = oyKm > 0 ? 'Oy' : (tmiKm > 0 ? 'Tmi' : 'Oma');
+                        }
+
+                        // Aika: "Lähtö"/"Paluu" CSV:ssä usein vuorokauden murto-osana (esim. 0,5 = 12:00).
+                        const startTime = decimalToTime(headerMap.lahto !== undefined ? r[headerMap.lahto] : '');
+                        const endTime = decimalToTime(headerMap.paluu !== undefined ? r[headerMap.paluu] : '');
+
+                        let allowance = '-';
+                        const pvraha = headerMap.pvraha !== undefined ? parseFiNumber(r[headerMap.pvraha]) : 0;
+                        if (pvraha >= 54) allowance = 'Kokopäivä';
+                        else if (pvraha >= 25) allowance = 'Osapäivä';
+                        else if (pvraha > 0) allowance = 'Ateria';
+
+                        trips.push({
+                            id: Date.now().toString() + '_' + i,
+                            date: date,
+                            date_end: date,
+                            type: type,
+                            start_time: startTime,
+                            end_time: endTime,
+                            ks: ks,
+                            ke: ke,
+                            allowance: allowance,
+                            note: parsed.note,
+                            stops: parsed.stops
+                        });
+                    }
+
+                    csvParsedTrips = trips;
+                    renderCSVPreview(trips, skipped);
+                } catch (err) {
+                    showToast('❌ Virhe CSV:n luvussa: ' + err.message);
+                    console.error('CSV import error:', err);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // Excel-tyylinen vuorokauden murto-osa (0-1) -> "HH:MM". Tyhjä jos ei tulkittavissa.
+        function decimalToTime(val) {
+            const n = parseFiNumber(val);
+            if (!n || n <= 0 || n >= 1) return '';
+            const totalMinutes = Math.round(n * 24 * 60);
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function renderCSVPreview(trips, skipped) {
+            const withStops = trips.filter(t => t.stops.length > 0).length;
+            const withNote = trips.filter(t => t.note).length;
+
+            let html = `<div class="card">
+                <p><strong>${trips.length}</strong> ajoa tunnistettu CSV:stä (${skipped} riviä ohitettu ilman päivämäärää).</p>
+                <p style="font-size: 12px; color: var(--text-light);">
+                    Reitti/selite tulkittu: <strong>${withStops}</strong> ajossa pysähdyksiä, <strong>${withNote}</strong> ajossa otsikko/kuvaus.
+                </p>
+                <div style="max-height: 300px; overflow-y: auto; margin: 10px 0;">`;
+
+            trips.slice(0, 15).forEach(t => {
+                const stopText = t.stops.length > 0 ? t.stops.map(s => s.client).join(' → ') : '(ei reittiä)';
+                html += `<div class="trip-item" style="padding: 8px; font-size: 11px;">
+                    <strong>${t.date}</strong> | ${t.type} | ${t.ks}-${t.ke}km
+                    ${t.note ? '<br>📝 ' + t.note : ''}
+                    <br>🚏 ${stopText}
+                </div>`;
+            });
+            if (trips.length > 15) {
+                html += `<p style="font-size: 12px; color: var(--text-light);">... ja ${trips.length - 15} riviä lisää</p>`;
+            }
+
+            html += `</div>
+                <button class="btn btn-success" onclick="confirmCSVImport()" style="width: 100%;">✅ TUO ${trips.length} AJOA TIETOKANTAAN</button>
+            </div>`;
+
+            document.getElementById('csv-preview').innerHTML = html;
+        }
+
+        function confirmCSVImport() {
+            if (!db || csvParsedTrips.length === 0) return;
+            if (!confirm(`Tuodaanko ${csvParsedTrips.length} ajoa? Tämä LISÄÄ uudet ajot olemassa olevien rinnalle (ei korvaa vanhoja).`)) return;
+
+            const tx = db.transaction(['trips'], 'readwrite');
+            csvParsedTrips.forEach(t => tx.objectStore('trips').add(t));
+
+            tx.oncomplete = () => {
+                showToast(`✅ Tuotu ${csvParsedTrips.length} ajoa CSV:stä`);
+                csvParsedTrips = [];
+                document.getElementById('csv-preview').innerHTML = '';
+                document.getElementById('csv-file').value = '';
+                loadDashboard();
+                loadEntries();
+                populateMonths();
+            };
+            tx.onerror = () => {
+                showToast('❌ Virhe tallennuksessa: ' + tx.error);
+            };
+        }
+
+        // ============ KÄYNNISTYS ============
+        window.addEventListener('load', () => {
+            initDB();
+        });
+
+        // Unregister old Service Workers - poista ne cache:sta
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                registrations.forEach((reg) => {
+                    reg.unregister();
+                });
+            });
+        }
+
+        // Auto-save setup - lisää event listenerit input-kenttiin
+        ['f-date', 'f-date-end', 'f-type', 'f-start', 'f-end', 'f-ks', 'f-ke', 'f-allowance'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', setupAutoSave);
+                el.addEventListener('change', setupAutoSave);
+            }
+        });
+    </script>
+</body>
+</html>
