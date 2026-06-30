@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.0.0 - Firestore</title>
+<title>Päivyri v8.0.1 - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -238,7 +238,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.0.0 - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.0.1 - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -551,7 +551,7 @@ td.num { text-align: right; }
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         // Sama jaettu Firebase-projekti jota Tilaukset (jackeseilaa/tilaukset) jo käyttää.
@@ -795,8 +795,17 @@ td.num { text-align: right; }
             document.getElementById('btnGoogleLogin')?.addEventListener('click', async () => {
                 try {
                     const provider = new GoogleAuthProvider();
-                    await signInWithPopup(auth, provider);
+                    await signInWithRedirect(auth, provider);
                 } catch (e) {
+                    renderAuthScreen('Kirjautuminen epäonnistui: ' + e.message);
+                }
+            });
+
+            // Käsitellään mahdolliset virheet jotka tulivat takaisin Google-uudelleenohjauksesta
+            // (esim. auth/unauthorized-domain). Onnistunut kirjautuminen havaitaan joka tapauksessa
+            // alla olevalla onAuthStateChanged-kuuntelijalla.
+            getRedirectResult(auth).catch((e) => {
+                if (e && e.code && e.code !== 'auth/no-current-user') {
                     renderAuthScreen('Kirjautuminen epäonnistui: ' + e.message);
                 }
             });
@@ -1682,7 +1691,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.0.0' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.0.1' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1692,7 +1701,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.0.0_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.0.1_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
