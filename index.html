@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.16-dev - Firestore</title>
+<title>Päivyri v8.1.17-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -293,9 +293,16 @@ td.num { text-align: right; }
     <p id="auth-error" style="color:#f87171;min-height:20px;margin:0;"></p>
 </div>
 <div id="app-root" style="display:none;">
-    <div class="header">
-        <h1>📓 Päivyri v8.1.16-dev - Firestore-synkronointi</h1>
-        <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
+    <div class="header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;">
+        <div>
+            <h1>📓 Päivyri v8.1.17-dev</h1>
+            <p>Firestore-synkronointi | KM autofill | GPS | CSV-tuonti</p>
+        </div>
+        <button onclick="location.reload(true)"
+                style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);
+                       color:#fff;border-radius:8px;padding:8px 12px;font-size:20px;cursor:pointer;
+                       -webkit-tap-highlight-color:transparent;touch-action:manipulation;"
+                title="Päivitä sovellus">🔄</button>
     </div>
 
     <div class="tabs">
@@ -471,16 +478,22 @@ td.num { text-align: right; }
             </div>
         </div>
         <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-            <button id="entries-missing-btn" class="btn btn-sm" onclick="entriesToggleMissing()"
-                style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;font-weight:600;">
+            <button id="entries-missing-btn" onclick="entriesToggleMissing()"
+                style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;font-weight:600;
+                       padding:10px 12px;border-radius:6px;font-size:13px;cursor:pointer;
+                       -webkit-tap-highlight-color:transparent;touch-action:manipulation;min-height:44px;">
                 ⚠️ Vain puuttuvat ajat
             </button>
-            <button id="entries-sort-btn" class="btn btn-sm" onclick="entriesToggleSort()"
-                style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;font-weight:600;">
+            <button id="entries-sort-btn" onclick="entriesToggleSort()"
+                style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;font-weight:600;
+                       padding:10px 12px;border-radius:6px;font-size:13px;cursor:pointer;
+                       -webkit-tap-highlight-color:transparent;touch-action:manipulation;min-height:44px;">
                 📅 Vanhin ensin
             </button>
-            <button id="entries-hideoma-btn" class="btn btn-sm" onclick="entriesToggleHideOma()"
-                style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;font-weight:600;">
+            <button id="entries-hideoma-btn" onclick="entriesToggleHideOma()"
+                style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;font-weight:600;
+                       padding:10px 12px;border-radius:6px;font-size:13px;cursor:pointer;
+                       -webkit-tap-highlight-color:transparent;touch-action:manipulation;min-height:44px;">
                 👤 Piilota Oma
             </button>
         </div>
@@ -729,7 +742,15 @@ td.num { text-align: right; }
 
         <!-- Historia -->
         <div class="card" style="margin-top:16px;">
-            <p style="font-weight:700;margin-bottom:10px;">📋 Viimeisimmät päivät</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <p style="font-weight:700;margin:0;">📋 Viimeisimmät päivät</p>
+                <button onclick="stateClearAll()"
+                        style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;
+                               border-radius:6px;padding:6px 10px;font-size:12px;font-weight:600;
+                               cursor:pointer;touch-action:manipulation;">
+                    🗑️ Tyhjennä kaikki
+                </button>
+            </div>
             <div id="state-history-list"></div>
         </div>
     </div>
@@ -2223,7 +2244,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.16-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.17-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -2233,7 +2254,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.16-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.17-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -3131,6 +3152,22 @@ td.num { text-align: right; }
 
         function stateResetForNewDay() { stateLastFinishedId=null; stateRender(); }
 
+        async function stateClearAll() {
+            if (!confirm('Poistetaanko kaikki BETA-kirjaukset? Tätä ei voi peruuttaa.')) return;
+            try {
+                const snap = await new Promise((res,rej) => {
+                    onSnapshot(collection(fs, COLLECTIONS.stateDays), res, rej);
+                });
+                // käytetään jo ladattua stateAllDays
+                if (stateAllDays.length === 0) { showToast('ℹ️ Ei poistettavaa'); return; }
+                await Promise.all(stateAllDays.map(d => deleteDoc(doc(fs, COLLECTIONS.stateDays, d.id))));
+                stateAllDays = [];
+                stateLastFinishedId = null;
+                showToast('✅ Kaikki BETA-kirjaukset poistettu');
+                stateRender();
+            } catch(e) { showToast('❌ Poisto epäonnistui: ' + e.message); }
+        }
+
         function stateRenderActiveCard(active) {
             const card = document.getElementById('state-status-card');
             if (card) card.style.background = stateTypeBg(active.open.type);
@@ -3301,7 +3338,7 @@ td.num { text-align: right; }
             renderStopPicker, updateReport,
             checkGap, gapAccept, gapSkip,
             showReport, printReport,
-            stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS, stateCommitToTrips,
+            stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS, stateCommitToTrips, stateClearAll,
             openQuickEdit, saveQuickEdit, closeQuickEdit, qeOverlayClick, qeSetType
         });
     </script>
