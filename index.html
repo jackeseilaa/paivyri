@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.7-dev - Firestore</title>
+<title>Päivyri v8.1.8-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.7-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.8-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -390,6 +390,7 @@ td.num { text-align: right; }
                         <option value="Osapäivä">Osapäivä (25€)</option>
                         <option value="Kokopäivä">Kokopäivä (54€)</option>
                         <option value="Ateria">Ateria (13,50€)</option>
+                        <option value="Ulkomaan PV-raha">Ulkomaan PV-raha (82€)</option>
                     </select>
                 </div>
             </div>
@@ -716,6 +717,16 @@ td.num { text-align: right; }
             <label>📝 Huomio / reitti</label>
             <input type="text" id="qe-note" placeholder="esim. Riihimäki → Helsinki">
         </div>
+        <div class="qe-row">
+            <label>💰 Päiväraha</label>
+            <select id="qe-allowance" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:15px;background:var(--bg);">
+                <option value="-">-</option>
+                <option value="Osapäivä">Osapäivä (25€)</option>
+                <option value="Kokopäivä">Kokopäivä (54€)</option>
+                <option value="Ateria">Ateria (13,50€)</option>
+                <option value="Ulkomaan PV-raha">Ulkomaan PV-raha (82€)</option>
+            </select>
+        </div>
         <div class="qe-actions">
             <button class="qe-save" onclick="saveQuickEdit()">💾 TALLENNA</button>
             <button class="qe-cancel" onclick="closeQuickEdit()">✕ PERUUTA</button>
@@ -801,6 +812,7 @@ td.num { text-align: right; }
             'Osapäivä': 25,
             'Kokopäivä': 54,
             'Ateria': 13.50,
+            'Ulkomaan PV-raha': 82,
             '-': 0
         };
 
@@ -1816,7 +1828,7 @@ td.num { text-align: right; }
         function reportSection(trips, month, type) {
             const settings = getCompanySettings();
             let totalKm = 0, kmCost = 0, allowanceCost = 0;
-            const allowCounts = { 'Osapäivä': 0, 'Kokopäivä': 0, 'Ateria': 0 };
+            const allowCounts = { 'Osapäivä': 0, 'Kokopäivä': 0, 'Ateria': 0, 'Ulkomaan PV-raha': 0 };
 
             trips.forEach(t => {
                 const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
@@ -1901,6 +1913,7 @@ td.num { text-align: right; }
                     ${allowCounts['Osapäivä'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Osapäiväraha:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Osapäivä']} × 25€ = ${(allowCounts['Osapäivä'] * 25).toFixed(2)}€</td></tr>` : ''}
                     ${allowCounts['Kokopäivä'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Kokopäiväraha:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Kokopäivä']} × 54€ = ${(allowCounts['Kokopäivä'] * 54).toFixed(2)}€</td></tr>` : ''}
                     ${allowCounts['Ateria'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Ateriakorvaus:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Ateria']} × 13,50€ = ${(allowCounts['Ateria'] * 13.50).toFixed(2)}€</td></tr>` : ''}
+                    ${allowCounts['Ulkomaan PV-raha'] > 0 ? `<tr><td style="border: none; padding: 6px 0;">Ulkomaan PV-raha:</td><td style="border: none; padding: 6px 0; text-align: right;">${allowCounts['Ulkomaan PV-raha']} × 82€ = ${(allowCounts['Ulkomaan PV-raha'] * 82).toFixed(2)}€</td></tr>` : ''}
                     <tr style="border-top: 2px solid var(--border); font-weight: bold;"><td style="border: none; padding: 6px 0;">${isOy ? 'LASKUTETTAVA' : 'MAKSETTAVA / VÄHENNETTÄVÄ'} YHTEENSÄ:</td><td style="border: none; padding: 6px 0; text-align: right; font-size: 16px;">${totalCost.toFixed(2)}€</td></tr>
                 </table>
             </div>
@@ -1921,7 +1934,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.7-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.8-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1931,7 +1944,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.7-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.8-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2858,6 +2871,7 @@ td.num { text-align: right; }
                 document.getElementById('qe-ks').value    = t.ks !== undefined ? t.ks : '';
                 document.getElementById('qe-ke').value    = t.ke !== undefined ? t.ke : '';
                 document.getElementById('qe-note').value  = t.note || '';
+                document.getElementById('qe-allowance').value = t.allowance || '-';
                 // Korostetaan puuttuvat kellonajat
                 const startInput = document.getElementById('qe-start');
                 const endInput   = document.getElementById('qe-end');
@@ -2890,6 +2904,7 @@ td.num { text-align: right; }
                 t.ke         = parseInt(document.getElementById('qe-ke').value)  || t.ke;
                 t.note       = document.getElementById('qe-note').value.trim();
                 t.type       = qeCurrentType;
+                t.allowance  = document.getElementById('qe-allowance').value;
                 const tx2 = db.transaction(['trips'], 'readwrite');
                 tx2.objectStore('trips').put(t);
                 tx2.oncomplete = () => {
