@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.4-dev - Firestore</title>
+<title>Päivyri v8.1.5-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -163,6 +163,62 @@ label {
     line-height: 1.6;
     margin-bottom: 8px;
 }
+/* ===== PIKAMUOKKAUS-MODAL ===== */
+.qe-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55); z-index: 2000;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.qe-overlay.open { display: flex; align-items: flex-start; justify-content: center; padding: 16px; }
+.qe-card {
+    background: var(--card); border-radius: 12px; padding: 20px;
+    width: 100%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    margin-top: 20px;
+}
+.qe-title {
+    font-size: 17px; font-weight: 700; margin: 0 0 16px 0;
+    display: flex; align-items: center; gap: 8px;
+}
+.qe-time-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
+}
+.qe-time-block label {
+    display: block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    color: var(--text-light); margin-bottom: 4px;
+}
+.qe-time-block input[type="time"] {
+    width: 100%; font-size: 28px; font-weight: 700; text-align: center;
+    border: 2px solid var(--border); border-radius: 8px; padding: 8px 4px;
+    color: var(--text); background: var(--bg); box-sizing: border-box;
+}
+.qe-time-block input[type="time"]:focus { border-color: #0a4272; outline: none; }
+.qe-missing { border-color: #f59e0b !important; background: #fffbeb !important; }
+.qe-row { margin-bottom: 12px; }
+.qe-row label { display: block; font-size: 12px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
+.qe-row input[type="date"], .qe-row input[type="number"], .qe-row input[type="text"] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 15px; box-sizing: border-box; background: var(--bg);
+}
+.qe-type-btns { display: flex; gap: 8px; }
+.qe-type-btn {
+    flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-weight: 700; cursor: pointer; background: var(--bg);
+    color: var(--text-light); transition: all 0.15s;
+}
+.qe-type-btn.active-oy { background: var(--oy); color: white; border-color: var(--oy); }
+.qe-type-btn.active-tmi { background: var(--tmi); color: white; border-color: var(--tmi); }
+.qe-type-btn.active-oma { background: #94a3b8; color: white; border-color: #94a3b8; }
+.qe-actions { display: flex; gap: 10px; margin-top: 18px; }
+.qe-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; }
+.qe-save { background: #16a34a; color: white; }
+.qe-cancel { background: #e2e8f0; color: var(--text); }
+/* Puuttuvat kellonajat korostus listassa */
+.trip-item.missing-time { border-left-color: #f59e0b !important; }
+.missing-time-badge {
+    display: inline-block; background: #fef3c7; color: #92400e;
+    font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+}
+
 .trip-actions {
     display: flex;
     gap: 6px;
@@ -238,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.4-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.5-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -606,7 +662,54 @@ td.num { text-align: right; }
     </div>
 </div>
 
-    <script type="module">
+    <!-- ===== PIKAMUOKKAUS-MODAL ===== -->
+<div class="qe-overlay" id="qe-overlay" onclick="qeOverlayClick(event)">
+    <div class="qe-card">
+        <div class="qe-title">⚡ Pikamuokkaus</div>
+        <div class="qe-time-row">
+            <div class="qe-time-block">
+                <label>⏱ Lähtöaika</label>
+                <input type="time" id="qe-start">
+            </div>
+            <div class="qe-time-block">
+                <label>🏁 Lopetusaika</label>
+                <input type="time" id="qe-end">
+            </div>
+        </div>
+        <div class="qe-row">
+            <label>📅 Päivämäärä</label>
+            <input type="date" id="qe-date">
+        </div>
+        <div class="qe-row">
+            <label>🏢 Segmentti</label>
+            <div class="qe-type-btns">
+                <button class="qe-type-btn" id="qe-btn-oy" onclick="qeSetType('Oy')">OY</button>
+                <button class="qe-type-btn" id="qe-btn-tmi" onclick="qeSetType('Tmi')">TMI</button>
+                <button class="qe-type-btn" id="qe-btn-oma" onclick="qeSetType('Oma')">OMA</button>
+            </div>
+        </div>
+        <div class="qe-time-row" style="margin-bottom:0">
+            <div class="qe-row" style="margin:0">
+                <label>🚙 KM alku</label>
+                <input type="number" id="qe-ks">
+            </div>
+            <div class="qe-row" style="margin:0">
+                <label>🚙 KM loppu</label>
+                <input type="number" id="qe-ke">
+            </div>
+        </div>
+        <div class="qe-row" style="margin-top:12px">
+            <label>📝 Huomio / reitti</label>
+            <input type="text" id="qe-note" placeholder="esim. Riihimäki → Helsinki">
+        </div>
+        <div class="qe-actions">
+            <button class="qe-save" onclick="saveQuickEdit()">💾 TALLENNA</button>
+            <button class="qe-cancel" onclick="closeQuickEdit()">✕ PERUUTA</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -1002,9 +1105,9 @@ td.num { text-align: right; }
 
                 const noteHtml = t.note ? `<div style="font-style: italic; margin-bottom: 4px;">📝 ${t.note}</div>` : '';
 
-                return `<div class="trip-item ${typeClass}">
+                return `<div class="trip-item ${typeClass}${(!t.start_time || !t.end_time) ? ' missing-time' : ''}">
                     <div class="trip-header">
-                        <strong>${dateDisplay}${typeBadge}</strong>
+                        <strong>${dateDisplay}${typeBadge}${(!t.start_time || !t.end_time) ? '<span class="missing-time-badge">⚠️ aika puuttuu</span>' : ''}</strong>
                     </div>
                     <div class="trip-details">
                         ${noteHtml}
@@ -1014,7 +1117,8 @@ td.num { text-align: right; }
                         <div>💰 ${t.allowance}</div>
                     </div>
                     <div class="trip-actions">
-                        <button class="btn btn-sm btn-warning" onclick="editTrip('${t.id}')">✏️ Muokkaa</button>
+                        <button class="btn btn-sm btn-warning" onclick="openQuickEdit('${t.id}')">⚡ Pikamuokkaa</button>
+                        <button class="btn btn-sm" style="background:#475569;color:white;" onclick="editTrip('${t.id}')">✏️ Täysi</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteTrip('${t.id}')">🗑️ Poista</button>
                     </div>
                 </div>`;
@@ -1761,7 +1865,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.4-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.5-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1771,7 +1875,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.4-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.5-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2682,6 +2786,74 @@ td.num { text-align: right; }
         // type="module" ei altista funktioita automaattisesti globaaliin scopeen,
         // joten kaikki HTML:n onclick/onchange-attribuuteista kutsutut funktiot
         // täytyy nimenomaisesti liittää window-objektiin.
+        // ===== PIKAMUOKKAUS-MODAL =====
+        let qeCurrentId = null;
+        let qeCurrentType = 'Oy';
+
+        function openQuickEdit(id) {
+            const tx = db.transaction(['trips'], 'readonly');
+            tx.objectStore('trips').get(id).onsuccess = (e) => {
+                const t = e.target.result;
+                if (!t) return;
+                qeCurrentId = id;
+                document.getElementById('qe-date').value  = t.date || '';
+                document.getElementById('qe-start').value = t.start_time || '';
+                document.getElementById('qe-end').value   = t.end_time || '';
+                document.getElementById('qe-ks').value    = t.ks !== undefined ? t.ks : '';
+                document.getElementById('qe-ke').value    = t.ke !== undefined ? t.ke : '';
+                document.getElementById('qe-note').value  = t.note || '';
+                // Korostetaan puuttuvat kellonajat
+                const startInput = document.getElementById('qe-start');
+                const endInput   = document.getElementById('qe-end');
+                startInput.classList.toggle('qe-missing', !t.start_time);
+                endInput.classList.toggle('qe-missing',   !t.end_time);
+                qeSetType(t.type || 'Oy');
+                document.getElementById('qe-overlay').classList.add('open');
+            };
+        }
+
+        function qeSetType(type) {
+            qeCurrentType = type;
+            ['Oy','Tmi','Oma'].forEach(tp => {
+                const btn = document.getElementById(`qe-btn-${tp.toLowerCase()}`);
+                btn.className = 'qe-type-btn';
+                if (tp === type) btn.classList.add(`active-${tp.toLowerCase()}`);
+            });
+        }
+
+        function saveQuickEdit() {
+            if (!qeCurrentId) return;
+            const tx = db.transaction(['trips'], 'readwrite');
+            tx.objectStore('trips').get(qeCurrentId).onsuccess = (e) => {
+                const t = e.target.result;
+                if (!t) return;
+                t.date       = document.getElementById('qe-date').value  || t.date;
+                t.start_time = document.getElementById('qe-start').value;
+                t.end_time   = document.getElementById('qe-end').value;
+                t.ks         = parseInt(document.getElementById('qe-ks').value)  || t.ks;
+                t.ke         = parseInt(document.getElementById('qe-ke').value)  || t.ke;
+                t.note       = document.getElementById('qe-note').value.trim();
+                t.type       = qeCurrentType;
+                const tx2 = db.transaction(['trips'], 'readwrite');
+                tx2.objectStore('trips').put(t);
+                tx2.oncomplete = () => {
+                    showToast('✅ Ajo päivitetty');
+                    closeQuickEdit();
+                    loadDashboard();
+                    loadEntries();
+                };
+            };
+        }
+
+        function closeQuickEdit() {
+            qeCurrentId = null;
+            document.getElementById('qe-overlay').classList.remove('open');
+        }
+
+        function qeOverlayClick(e) {
+            if (e.target === document.getElementById('qe-overlay')) closeQuickEdit();
+        }
+
         Object.assign(window, {
             addCustomStop, addGPSLocation, addNewClient, addNewTrip,
             cancelClientEdit, cancelEdit, confirmCSVImport, deleteClient,
@@ -2690,7 +2862,8 @@ td.num { text-align: right; }
             saveTrip, searchTripByDate, searchYTJ, selectStopOption, showPage,
             toggleStopPicker, importBackup, importCSV, loadEntries,
             renderStopPicker, updateReport,
-            stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS
+            stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS,
+            openQuickEdit, saveQuickEdit, closeQuickEdit, qeOverlayClick, qeSetType
         });
     </script>
 </body>
