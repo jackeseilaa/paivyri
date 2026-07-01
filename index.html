@@ -4,7 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.18-dev - Firestore</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Päivyri v8.1.19-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -295,7 +299,7 @@ td.num { text-align: right; }
 <div id="app-root" style="display:none;">
     <div class="header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;">
         <div>
-            <h1>📓 Päivyri v8.1.18-dev</h1>
+            <h1>📓 Päivyri v8.1.19-dev</h1>
             <p>Firestore-synkronointi | KM autofill | GPS | CSV-tuonti</p>
         </div>
         <button onclick="location.reload(true)"
@@ -2257,7 +2261,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.18-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.19-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -2267,7 +2271,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.18-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.19-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
