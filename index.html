@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.15-dev - Firestore</title>
+<title>Päivyri v8.1.16-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.15-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.16-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -631,58 +631,105 @@ td.num { text-align: right; }
         </div>
     </div>
 
-    <!-- ====== TILA (BETA) - kehitysversio päivän juoksevasta tilaketjusta ====== -->
+    <!-- ====== TILA (BETA) ====== -->
     <div id="statepage" class="page">
-        <div class="card" style="border:2px solid #7c3aed;">
-            <p style="font-size:12px;color:#7c3aed;font-weight:700;margin-bottom:8px;">
-                🔄 KEHITYSVERSIO — ei vielä yhteydessä viralliseen ajopäiväkirjaan. Kokeile rauhassa, data tallentuu erilliseen koekokoelmaan.
-            </p>
-            <div id="state-no-day" style="display:none;">
-                <label>Aloitusmittarilukema (km)</label>
-                <input type="number" id="state-start-km" placeholder="esim. 525742">
-                <label style="margin-top:10px;">Sijainti</label>
-                <div style="display:flex;gap:6px;">
-                    <input type="text" id="state-start-loc" placeholder="esim. Kontiontie 55, Riihimäki" style="flex:1;">
-                    <button type="button" class="btn" style="flex:0 0 auto;background:#0a4272;color:#fff;" onclick="stateGetGPS('state-start-loc')">📍 GPS</button>
-                </div>
-                <label style="margin-top:10px;">Aloitustila</label>
-                <div style="display:flex;gap:8px;margin-top:6px;">
-                    <button class="btn" style="flex:1;background:#8b5cf6;color:#fff;" onclick="stateStartDay('Oy')">Oy</button>
-                    <button class="btn" style="flex:1;background:#06b6d4;color:#fff;" onclick="stateStartDay('Tmi')">Tmi</button>
-                    <button class="btn" style="flex:1;background:#94a3b8;color:#fff;" onclick="stateStartDay('Oma')">Oma</button>
-                </div>
-            </div>
 
-            <div id="state-active-day" style="display:none;">
-                <div id="state-current-card" style="background:#f1f5f9;border-radius:10px;padding:16px;text-align:center;margin-bottom:14px;">
-                    <div style="font-size:12px;color:#64748b;font-weight:700;">NYT AJOSSA</div>
-                    <div id="state-current-type" style="font-size:28px;font-weight:800;margin:4px 0;"></div>
-                    <div id="state-current-info" style="font-size:13px;color:#64748b;"></div>
+        <!-- TILA: ei päivää -->
+        <div id="state-no-day" style="display:none;">
+            <div style="text-align:center; font-size:52px; font-weight:800; letter-spacing:2px;
+                        color:#1e293b; padding:12px 0 4px 0; font-variant-numeric:tabular-nums;"
+                 id="state-clock">--:--</div>
+            <div style="text-align:center; font-size:13px; color:#94a3b8; margin-bottom:16px;"
+                 id="state-date-display"></div>
+            <div class="card">
+                <label style="font-weight:700;">🚗 Aloitusmittarilukema</label>
+                <input type="number" id="state-start-km"
+                       style="font-size:26px;text-align:center;padding:14px;font-weight:700;margin-bottom:4px;">
+                <div id="state-last-km-hint"
+                     style="font-size:12px;color:#94a3b8;text-align:center;margin-bottom:16px;"></div>
+                <label style="font-weight:700;">Aloita päivä:</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+                    <button onclick="stateStartDay('Oy')"
+                            style="padding:22px 8px;font-size:22px;font-weight:800;border:none;
+                                   border-radius:12px;background:#06b6d4;color:#fff;cursor:pointer;">
+                        🚕 OY
+                    </button>
+                    <button onclick="stateStartDay('Tmi')"
+                            style="padding:22px 8px;font-size:22px;font-weight:800;border:none;
+                                   border-radius:12px;background:#8b5cf6;color:#fff;cursor:pointer;">
+                        ⛵ TMI
+                    </button>
                 </div>
-                <label>Nykyinen mittarilukema (km)</label>
-                <input type="number" id="state-now-km" placeholder="syötä ennen tilan vaihtoa">
-                <label style="margin-top:10px;">Sijainti nyt</label>
-                <div style="display:flex;gap:6px;">
-                    <input type="text" id="state-now-loc" placeholder="esim. Roihuvuoren Venekerho ry" style="flex:1;">
-                    <button type="button" class="btn" style="flex:0 0 auto;background:#0a4272;color:#fff;" onclick="stateGetGPS('state-now-loc')">📍 GPS</button>
-                </div>
-                <div style="display:flex;gap:8px;margin-top:10px;">
-                    <button class="btn" id="state-btn-oy" style="flex:1;background:#8b5cf6;color:#fff;" onclick="stateChangeStatus('Oy')">Oy</button>
-                    <button class="btn" id="state-btn-tmi" style="flex:1;background:#06b6d4;color:#fff;" onclick="stateChangeStatus('Tmi')">Tmi</button>
-                    <button class="btn" id="state-btn-oma" style="flex:1;background:#94a3b8;color:#fff;" onclick="stateChangeStatus('Oma')">Oma</button>
-                </div>
-                <button class="btn btn-danger" style="width:100%;margin-top:10px;" onclick="stateFinishDay()">🏁 Lopeta päivä</button>
-                <div id="state-segments-list" style="margin-top:14px;"></div>
-            </div>
-
-            <div id="state-finished-day" style="display:none;">
-                <div id="state-finished-summary"></div>
-                <button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="stateResetForNewDay()">➕ Aloita uusi päivä</button>
+                <button onclick="stateStartDay('Oma')"
+                        style="width:100%;margin-top:10px;padding:14px;font-size:16px;font-weight:700;
+                               border:none;border-radius:10px;background:#94a3b8;color:#fff;cursor:pointer;">
+                    🏠 OMA
+                </button>
             </div>
         </div>
 
-        <div class="card">
-            <p style="font-weight:700;margin-bottom:10px;">📋 Viimeisimmät kirjatut päivät (BETA)</p>
+        <!-- TILA: päivä käynnissä -->
+        <div id="state-active-day" style="display:none;">
+            <!-- Iso tilanäyttö -->
+            <div id="state-status-card"
+                 style="border-radius:16px;padding:20px;text-align:center;margin-bottom:14px;
+                        transition:background 0.3s;">
+                <div style="font-size:12px;font-weight:700;opacity:0.7;letter-spacing:1px;">NYT AJOSSA</div>
+                <div id="state-current-type"
+                     style="font-size:52px;font-weight:900;margin:6px 0;letter-spacing:2px;"></div>
+                <div id="state-elapsed"
+                     style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;opacity:0.85;"></div>
+                <div id="state-current-info"
+                     style="font-size:12px;opacity:0.7;margin-top:4px;"></div>
+            </div>
+
+            <!-- Segmenttinapit -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+                <button id="state-btn-oy" onclick="stateChangeStatus('Oy')"
+                        style="padding:18px 4px;font-size:18px;font-weight:800;border:3px solid #06b6d4;
+                               border-radius:12px;background:#06b6d4;color:#fff;cursor:pointer;">OY</button>
+                <button id="state-btn-tmi" onclick="stateChangeStatus('Tmi')"
+                        style="padding:18px 4px;font-size:18px;font-weight:800;border:3px solid #8b5cf6;
+                               border-radius:12px;background:#8b5cf6;color:#fff;cursor:pointer;">TMI</button>
+                <button id="state-btn-oma" onclick="stateChangeStatus('Oma')"
+                        style="padding:18px 4px;font-size:18px;font-weight:800;border:3px solid #94a3b8;
+                               border-radius:12px;background:#94a3b8;color:#fff;cursor:pointer;">OMA</button>
+            </div>
+
+            <!-- Päivän jaksot -->
+            <div id="state-segments-list" style="margin-bottom:14px;"></div>
+
+            <!-- Lopeta päivä -->
+            <div class="card" style="border:2px solid #ef4444;">
+                <label style="font-weight:700;">🏁 Lopetus km</label>
+                <input type="number" id="state-end-km"
+                       style="font-size:22px;text-align:center;padding:12px;font-weight:700;margin-bottom:10px;">
+                <button onclick="stateFinishDay()"
+                        style="width:100%;padding:18px;font-size:18px;font-weight:800;border:none;
+                               border-radius:12px;background:#ef4444;color:#fff;cursor:pointer;">
+                    🏁 LOPETA PÄIVÄ
+                </button>
+            </div>
+        </div>
+
+        <!-- TILA: päivä valmis -->
+        <div id="state-finished-day" style="display:none;">
+            <div class="card" id="state-finished-summary"></div>
+            <button onclick="stateCommitToTrips()"
+                    style="width:100%;padding:18px;font-size:17px;font-weight:800;border:none;
+                           border-radius:12px;background:#16a34a;color:#fff;cursor:pointer;margin-bottom:10px;">
+                📋 VIE AJOPÄIVÄKIRJAAN
+            </button>
+            <button onclick="stateResetForNewDay()"
+                    style="width:100%;padding:14px;font-size:15px;font-weight:700;border:none;
+                           border-radius:10px;background:#e2e8f0;color:#334155;cursor:pointer;">
+                ➕ Aloita uusi päivä
+            </button>
+        </div>
+
+        <!-- Historia -->
+        <div class="card" style="margin-top:16px;">
+            <p style="font-weight:700;margin-bottom:10px;">📋 Viimeisimmät päivät</p>
             <div id="state-history-list"></div>
         </div>
     </div>
@@ -2176,7 +2223,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.15-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.16-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -2186,7 +2233,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.15-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.16-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2842,60 +2889,34 @@ td.num { text-align: right; }
             }
         });
 
-        // ============ TILA (BETA) - juokseva päivän tilaketju erilliseen kehityskokoelmaan ============
+        // ============ TILA (BETA) ============
         let stateInitialized = false;
         let stateUnsubHistory = null;
         let stateAllDays = [];
         let stateLastFinishedId = null;
+        let stateClockTimer = null;
+        let stateElapsedTimer = null;
 
         function todayDateStr() {
             const d = new Date();
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         }
         function stateFormatTime(iso) {
             const d = new Date(iso);
-            return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
         }
         function stateTypeColor(type) {
-            return type === 'Oy' ? '#8b5cf6' : type === 'Tmi' ? '#06b6d4' : '#94a3b8';
+            return type === 'Oy' ? '#06b6d4' : type === 'Tmi' ? '#8b5cf6' : '#94a3b8';
         }
-
-        function stateEnsureInit() {
-            if (stateInitialized || !db) return;
-            stateInitialized = true;
-            stateUnsubHistory = onSnapshot(collection(fs, COLLECTIONS.stateDays), (snap) => {
-                stateAllDays = snap.docs.map(d => d.data());
-                stateRender();
-            }, err => console.error('state onSnapshot', err));
+        function stateTypeBg(type) {
+            return type === 'Oy' ? 'linear-gradient(135deg,#0891b2,#06b6d4)'
+                 : type === 'Tmi' ? 'linear-gradient(135deg,#7c3aed,#8b5cf6)'
+                 : 'linear-gradient(135deg,#64748b,#94a3b8)';
         }
-
-        function stateGetActiveDay() {
-            return stateAllDays.filter(d => !d.finished).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0] || null;
+        function stateFormatElapsed(ms) {
+            const m = Math.floor(ms/60000), h = Math.floor(m/60);
+            return h > 0 ? h + 'h ' + String(m%60).padStart(2,'0') + 'min' : m + 'min';
         }
-
-        function stateComputeSummary(d) {
-            const segs = d.segments || [];
-            const totals = { Oy: 0, Tmi: 0, Oma: 0 };
-            segs.forEach(s => { totals[s.type] = (totals[s.type] || 0) + (s.endKm - s.startKm); });
-            let hours = 0;
-            if (segs.length > 0) {
-                const start = new Date(segs[0].startTime);
-                const end = new Date(segs[segs.length - 1].endTime);
-                hours = (end - start) / 3600000;
-            }
-            const isBusinessDay = (totals.Oy > 0 || totals.Tmi > 0);
-            let pvraha = 0;
-            if (isBusinessDay) {
-                if (hours >= 10) pvraha = 54;
-                else if (hours >= 6) pvraha = 25;
-            }
-            const kmKorvaus = (totals.Oy + totals.Tmi) * KM_RATE;
-            return { totals, hours, pvraha, kmKorvaus, yhteensa: pvraha + kmKorvaus };
-        }
-
-        // Firestore ei hyväksy undefined-kenttäarvoja (vain null). Tämä siivoaa rekursiivisesti
-        // mahdolliset undefined-arvot null:ksi ennen tallennusta - suojaa myös vanhojen,
-        // ennen tätä muutosta luotujen päivätietueiden (esim. ilman sijaintia) jatkokäsittelyä.
         function stateClean(obj) {
             if (obj === undefined) return null;
             if (obj === null || typeof obj !== 'object') return obj;
@@ -2904,196 +2925,299 @@ td.num { text-align: right; }
             for (const k in obj) out[k] = stateClean(obj[k]);
             return out;
         }
+        function stateGetActiveDay() {
+            return stateAllDays.filter(d => !d.finished)
+                .sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''))[0] || null;
+        }
 
-        function stateGetGPS(targetInputId) {
-            if (!navigator.geolocation) {
-                showToast('❌ GPS ei saatavilla tässä selaimessa');
-                return;
+        // KM-jako aikasuhteiden mukaan
+        function stateDistributeKm(segments, totalKm) {
+            if (!segments || segments.length === 0) return [];
+            const totalMs = segments.reduce((sum,s) =>
+                sum + (new Date(s.endTime) - new Date(s.startTime)), 0);
+            let distributed = 0;
+            return segments.map((s, i) => {
+                const segMs = new Date(s.endTime) - new Date(s.startTime);
+                const ratio = totalMs > 0 ? segMs / totalMs : 1/segments.length;
+                const km = i === segments.length-1
+                    ? totalKm - distributed
+                    : Math.round(totalKm * ratio);
+                distributed += km;
+                return { ...s, km };
+            });
+        }
+
+        function stateComputeSummary(d) {
+            const segs = d.segments || [];
+            const totalKm = Math.max(0, (d.endKm||0) - (d.startKm||0));
+            const segsWithKm = stateDistributeKm(segs, totalKm);
+            const totals = { Oy:0, Tmi:0, Oma:0 };
+            segsWithKm.forEach(s => { totals[s.type] = (totals[s.type]||0) + s.km; });
+            let hours = 0;
+            if (segs.length > 0) {
+                hours = (new Date(segs[segs.length-1].endTime) - new Date(segs[0].startTime)) / 3600000;
             }
-            showToast('📍 Haetaan GPS-paikkaasi...');
+            const isBusinessDay = totals.Oy > 0 || totals.Tmi > 0;
+            let pvraha = 0;
+            if (isBusinessDay) {
+                if (hours >= 10) pvraha = 54;
+                else if (hours >= 6) pvraha = 25;
+            }
+            const kmKorvaus = (totals.Oy + totals.Tmi) * KM_RATE;
+            return { totals, hours, pvraha, kmKorvaus, yhteensa: pvraha+kmKorvaus, segsWithKm };
+        }
+
+        function stateGetGPSSilent(callback) {
+            if (!navigator.geolocation) { callback(null); return; }
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-                        .then(response => response.json())
+                pos => {
+                    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+pos.coords.latitude+'&lon='+pos.coords.longitude)
+                        .then(r => r.json())
                         .then(data => {
-                            const address = data.address || {};
-                            let locationText = '';
-                            if (address.road) {
-                                locationText = address.road;
-                                if (address.house_number) locationText += ' ' + address.house_number;
-                            }
-                            if (!locationText) {
-                                locationText = address.hamlet || address.village || address.town || address.city || 'GPS paikka';
-                            }
-                            if (address.city && !locationText.includes(address.city)) {
-                                locationText += ', ' + address.city;
-                            } else if (address.town && !locationText.includes(address.town)) {
-                                locationText += ', ' + address.town;
-                            }
-                            if (address.country_code) locationText += ` (${address.country_code.toUpperCase()})`;
-                            const input = document.getElementById(targetInputId);
-                            if (input) input.value = locationText;
-                            showToast('✅ GPS-paikka haettu: ' + locationText);
+                            const a = data.address || {};
+                            let loc = a.road ? a.road + (a.house_number ? ' '+a.house_number : '') : '';
+                            if (!loc) loc = a.hamlet||a.village||a.town||a.city||'';
+                            const city = a.city||a.town||'';
+                            if (city && !loc.includes(city)) loc += (loc?', ':'')+city;
+                            callback(loc||null);
                         })
-                        .catch(() => showToast('❌ Osoitteen haku epäonnistui'));
+                        .catch(() => callback(null));
                 },
-                () => showToast('❌ GPS-paikan haku epäonnistui'),
-                { enableHighAccuracy: true, timeout: 10000 }
+                () => callback(null),
+                { enableHighAccuracy:true, timeout:8000 }
             );
         }
 
+        function stateGetGPS(targetInputId) {
+            showToast('📍 Haetaan sijaintia...');
+            stateGetGPSSilent(loc => {
+                if (loc) {
+                    const el = document.getElementById(targetInputId);
+                    if (el) el.value = loc;
+                    showToast('✅ '+loc);
+                } else { showToast('❌ GPS-haku epäonnistui'); }
+            });
+        }
+
+        function stateStartClock() {
+            if (stateClockTimer) clearInterval(stateClockTimer);
+            const tick = () => {
+                const now = new Date();
+                const cl = document.getElementById('state-clock');
+                if (cl) cl.textContent = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+                const dd = document.getElementById('state-date-display');
+                if (dd) dd.textContent = now.toLocaleDateString('fi-FI',{weekday:'long',day:'numeric',month:'long'});
+            };
+            tick();
+            stateClockTimer = setInterval(tick, 10000);
+        }
+
+        function stateStartElapsed(startIso) {
+            if (stateElapsedTimer) clearInterval(stateElapsedTimer);
+            const tick = () => {
+                const el = document.getElementById('state-elapsed');
+                if (el) el.textContent = stateFormatElapsed(Date.now() - new Date(startIso).getTime());
+            };
+            tick();
+            stateElapsedTimer = setInterval(tick, 30000);
+        }
+
+        function stateEnsureInit() {
+            stateStartClock();
+            if (db) {
+                const tx = db.transaction(['trips'],'readonly');
+                tx.objectStore('trips').getAll().onsuccess = e => {
+                    const trips = e.target.result.sort((a,b) => new Date(b.date)-new Date(a.date));
+                    const kmEl = document.getElementById('state-start-km');
+                    const hint = document.getElementById('state-last-km-hint');
+                    if (trips.length > 0 && kmEl && !kmEl.value) {
+                        kmEl.value = trips[0].ke;
+                        if (hint) hint.textContent = 'Edellinen: '+trips[0].ke+' km ('+new Date(trips[0].date+'T00:00:00').toLocaleDateString('fi-FI')+')';
+                    }
+                };
+            }
+            if (stateInitialized || !db) return;
+            stateInitialized = true;
+            stateUnsubHistory = onSnapshot(collection(fs, COLLECTIONS.stateDays), snap => {
+                stateAllDays = snap.docs.map(d => d.data());
+                stateRender();
+            }, err => console.error('state onSnapshot', err));
+        }
+
         async function stateStartDay(type) {
-            if (!db) return;
             const startKm = parseFloat(document.getElementById('state-start-km').value);
-            if (!startKm || startKm <= 0) { alert('Anna aloitusmittarilukema'); return; }
-            const location = (document.getElementById('state-start-loc').value || '').trim();
-            if (!location) { alert('Anna sijainti (GPS tai vapaa teksti)'); return; }
+            if (!startKm || startKm <= 0) { showToast('❌ Anna aloitusmittarilukema'); return; }
+            if (navigator.vibrate) navigator.vibrate(50);
             const nowIso = new Date().toISOString();
-            const id = 'day_' + Date.now();
-            const data = { id, date: todayDateStr(), startKm, segments: [], open: { type, startKm, startTime: nowIso, location }, finished: false, finishedAt: null, createdAt: nowIso };
+            const id = 'day_'+Date.now();
+            const data = { id, date:todayDateStr(), startKm, segments:[], open:{type, startTime:nowIso, location:null},
+                           finished:false, finishedAt:null, createdAt:nowIso, endKm:null, committed:false };
+            stateGetGPSSilent(loc => { if (loc && data.open) data.open.location = loc; });
             try {
                 await setDoc(doc(fs, COLLECTIONS.stateDays, id), stateClean(data));
-                document.getElementById('state-start-loc').value = '';
-            } catch (e) { alert('Tallennus epäonnistui: ' + e.message); }
+                showToast('✅ '+type+'-päivä aloitettu klo '+stateFormatTime(nowIso));
+            } catch(e) { showToast('❌ '+e.message); }
         }
 
         async function stateChangeStatus(newType) {
             const active = stateGetActiveDay();
-            if (!active || !active.open) return;
-            const nowKm = parseFloat(document.getElementById('state-now-km').value);
-            if (isNaN(nowKm)) { alert('Anna nykyinen mittarilukema'); return; }
-            if (nowKm < active.open.startKm) { alert('Mittarilukema ei voi olla pienempi kuin edellinen (' + active.open.startKm + ' km)'); return; }
-            const location = (document.getElementById('state-now-loc').value || '').trim();
-            if (!location) { alert('Anna sijainti (GPS tai vapaa teksti)'); return; }
+            if (!active||!active.open) return;
+            if (active.open.type === newType) { showToast('ℹ️ Jo tilassa '+newType); return; }
+            if (navigator.vibrate) navigator.vibrate(60);
             const nowIso = new Date().toISOString();
-            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso, startLocation: active.open.location || null, endLocation: location || null };
-            const newSegments = [...(active.segments || []), closedSegment];
-            const newOpen = { type: newType, startKm: nowKm, startTime: nowIso, location };
+            const closedSeg = { type:active.open.type, startTime:active.open.startTime,
+                                endTime:nowIso, startLocation:active.open.location||null, endLocation:null };
+            stateGetGPSSilent(loc => { if (loc) closedSeg.endLocation = loc; });
+            const newOpen = { type:newType, startTime:nowIso, location:null };
             try {
-                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), stateClean(Object.assign({}, active, { segments: newSegments, open: newOpen })));
-                document.getElementById('state-now-km').value = '';
-                document.getElementById('state-now-loc').value = '';
-            } catch (e) { alert('Tallennus epäonnistui: ' + e.message); }
+                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id),
+                    stateClean({...active, segments:[...(active.segments||[]),closedSeg], open:newOpen}));
+                showToast('🔄 '+active.open.type+' → '+newType+' klo '+stateFormatTime(nowIso));
+            } catch(e) { showToast('❌ '+e.message); }
         }
 
         async function stateFinishDay() {
             const active = stateGetActiveDay();
-            if (!active || !active.open) return;
-            const nowKm = parseFloat(document.getElementById('state-now-km').value);
-            if (isNaN(nowKm)) { alert('Anna nykyinen mittarilukema ennen päivän lopetusta'); return; }
-            if (nowKm < active.open.startKm) { alert('Mittarilukema ei voi olla pienempi kuin edellinen (' + active.open.startKm + ' km)'); return; }
-            const location = (document.getElementById('state-now-loc').value || '').trim();
-            if (!location) { alert('Anna sijainti (GPS tai vapaa teksti) ennen päivän lopetusta'); return; }
+            if (!active||!active.open) return;
+            const endKm = parseFloat(document.getElementById('state-end-km').value);
+            if (!endKm||endKm<=0) { showToast('❌ Anna lopetus km'); return; }
+            if (endKm < active.startKm) { showToast('❌ Lopetus km < aloitus km ('+active.startKm+')'); return; }
+            if (navigator.vibrate) navigator.vibrate([50,50,100]);
             const nowIso = new Date().toISOString();
-            const closedSegment = { type: active.open.type, startKm: active.open.startKm, endKm: nowKm, startTime: active.open.startTime, endTime: nowIso, startLocation: active.open.location || null, endLocation: location || null };
-            const newSegments = [...(active.segments || []), closedSegment];
-            // Asetetaan ennen tallennusta, jotta snapshotin laukaisema stateRender() osaa heti
-            // näyttää "valmis"-yhteenvedon eikä ehdi näyttää tyhjää aloituslomaketta välissä.
+            const closedSeg = { type:active.open.type, startTime:active.open.startTime,
+                                endTime:nowIso, startLocation:active.open.location||null, endLocation:null };
+            stateGetGPSSilent(loc => { if (loc) closedSeg.endLocation = loc; });
             stateLastFinishedId = active.id;
             try {
-                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id), stateClean(Object.assign({}, active, { segments: newSegments, open: null, finished: true, finishedAt: nowIso })));
-                document.getElementById('state-now-km').value = '';
-                document.getElementById('state-now-loc').value = '';
-            } catch (e) {
-                stateLastFinishedId = null;
-                alert('Tallennus epäonnistui: ' + e.message);
-            }
+                await setDoc(doc(fs, COLLECTIONS.stateDays, active.id),
+                    stateClean({...active, segments:[...(active.segments||[]),closedSeg],
+                                open:null, finished:true, finishedAt:nowIso, endKm}));
+                if (stateElapsedTimer) clearInterval(stateElapsedTimer);
+            } catch(e) { stateLastFinishedId=null; showToast('❌ '+e.message); }
         }
 
-        function stateResetForNewDay() {
-            stateLastFinishedId = null;
-            stateRender();
+        async function stateCommitToTrips() {
+            const d = stateAllDays.find(x => x.id === stateLastFinishedId);
+            if (!d||!d.finished) { showToast('❌ Ei valmista päivää'); return; }
+            if (d.committed) { showToast('ℹ️ Jo viety ajopäiväkirjaan'); return; }
+            const totalKm = Math.max(0,(d.endKm||0)-(d.startKm||0));
+            const segs = d.segments||[];
+            if (!segs.length||totalKm<=0) { showToast('❌ Ei vietävää dataa'); return; }
+            const segsWithKm = stateDistributeKm(segs, totalKm);
+            let runningKm = d.startKm;
+            try {
+                for (let i=0; i<segsWithKm.length; i++) {
+                    const s = segsWithKm[i];
+                    const ks = Math.round(runningKm), ke = Math.round(runningKm+s.km);
+                    runningKm += s.km;
+                    const stops = [];
+                    if (s.startLocation) stops.push({client:s.startLocation,address:''});
+                    if (s.endLocation)   stops.push({client:s.endLocation,address:''});
+                    const trip = { id:(Date.now()+i).toString(), date:d.date, date_end:d.date,
+                                   type:s.type, start_time:stateFormatTime(s.startTime),
+                                   end_time:stateFormatTime(s.endTime), ks, ke,
+                                   allowance:'-', note:'', stops };
+                    await new Promise((res,rej) => {
+                        const tx = db.transaction(['trips'],'readwrite');
+                        tx.objectStore('trips').add(trip);
+                        tx.oncomplete=res; tx.onerror=rej;
+                    });
+                }
+                await setDoc(doc(fs, COLLECTIONS.stateDays, d.id), stateClean({...d, committed:true}));
+                showToast('✅ '+segsWithKm.length+' merkintää viety ajopäiväkirjaan');
+                loadDashboard(); loadEntries(); populateMonths();
+            } catch(e) { showToast('❌ Vienti epäonnistui: '+e.message); }
         }
+
+        function stateResetForNewDay() { stateLastFinishedId=null; stateRender(); }
 
         function stateRenderActiveCard(active) {
-            document.getElementById('state-current-type').textContent = active.open.type;
-            document.getElementById('state-current-type').style.color = stateTypeColor(active.open.type);
-            document.getElementById('state-current-info').textContent = `Alkoi klo ${stateFormatTime(active.open.startTime)} — mittari ${active.open.startKm} km — ${active.open.location || '(sijainti puuttuu)'}`;
-            ['oy', 'tmi', 'oma'].forEach(t => {
-                const btn = document.getElementById('state-btn-' + t);
-                const label = t.charAt(0).toUpperCase() + t.slice(1);
-                if (btn) btn.style.opacity = (label === active.open.type) ? '0.4' : '1';
+            const card = document.getElementById('state-status-card');
+            if (card) card.style.background = stateTypeBg(active.open.type);
+            const typeEl = document.getElementById('state-current-type');
+            if (typeEl) { typeEl.textContent = active.open.type.toUpperCase(); typeEl.style.color='#fff'; }
+            const infoEl = document.getElementById('state-current-info');
+            if (infoEl) { infoEl.style.color='rgba(255,255,255,0.75)';
+                infoEl.textContent='Alkoi klo '+stateFormatTime(active.open.startTime)+(active.open.location?' · '+active.open.location:''); }
+            stateStartElapsed(active.open.startTime);
+            ['oy','tmi','oma'].forEach(t => {
+                const btn = document.getElementById('state-btn-'+t);
+                if (!btn) return;
+                const label = t.charAt(0).toUpperCase()+t.slice(1);
+                btn.style.opacity = label===active.open.type?'0.35':'1';
+                btn.style.transform = label===active.open.type?'scale(0.94)':'scale(1)';
             });
-            const segs = active.segments || [];
+            const segs = active.segments||[];
             const listEl = document.getElementById('state-segments-list');
-            if (segs.length === 0) {
-                listEl.innerHTML = '<p style="font-size:12px;color:#94a3b8;">Ei vielä suljettuja jaksoja tältä päivältä.</p>';
-            } else {
-                listEl.innerHTML = '<p style="font-weight:700;font-size:12px;margin-bottom:6px;">Tämän päivän jaksot:</p>' +
-                    segs.map(s => `<div style="font-size:13px;padding:6px 0;border-bottom:1px solid #e2e8f0;">
-                        <div style="display:flex;justify-content:space-between;">
-                            <span style="color:${stateTypeColor(s.type)};font-weight:700;">${s.type}</span>
-                            <span>${stateFormatTime(s.startTime)}–${stateFormatTime(s.endTime)}</span>
-                            <span>${(s.endKm - s.startKm).toFixed(0)} km</span>
-                        </div>
-                        <div style="color:#94a3b8;font-size:11px;">${s.startLocation || '?'} → ${s.endLocation || '?'}</div>
-                    </div>`).join('');
-            }
+            if (!listEl) return;
+            if (segs.length===0) { listEl.innerHTML=''; return; }
+            listEl.innerHTML = '<div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#64748b;">TÄNÄÄN:</div>'+
+                segs.map(s => {
+                    const mins = Math.round((new Date(s.endTime)-new Date(s.startTime))/60000);
+                    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;margin-bottom:6px;background:'+stateTypeColor(s.type)+'22;border-left:4px solid '+stateTypeColor(s.type)+';"><span style="font-weight:800;color:'+stateTypeColor(s.type)+';min-width:36px;">'+s.type+'</span><span style="font-size:13px;">'+stateFormatTime(s.startTime)+'–'+stateFormatTime(s.endTime)+'</span><span style="font-size:12px;color:#64748b;">'+mins+'min</span>'+(s.startLocation?'<span style="font-size:11px;color:#94a3b8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+s.startLocation+'</span>':'')+'</div>';
+                }).join('');
         }
 
         function stateRenderFinishedSummary(d) {
             const s = stateComputeSummary(d);
-            document.getElementById('state-finished-summary').innerHTML = `
-                <p style="font-weight:700;margin-bottom:8px;">✅ Päivä ${d.date} valmis</p>
-                <div style="font-size:14px;line-height:1.8;">
-                    <div>Oy: <strong>${s.totals.Oy.toFixed(0)} km</strong></div>
-                    <div>Tmi: <strong>${s.totals.Tmi.toFixed(0)} km</strong></div>
-                    <div>Oma: <strong>${s.totals.Oma.toFixed(0)} km</strong></div>
-                    <div>Kesto: <strong>${s.hours.toFixed(1)} h</strong></div>
-                    <div>PV-raha (kotimaa): <strong>${s.pvraha} €</strong></div>
-                    <div>Km-korvaus: <strong>${s.kmKorvaus.toFixed(2)} €</strong></div>
-                    <div style="font-weight:800;margin-top:6px;">Yhteensä: ${s.yhteensa.toFixed(2)} €</div>
-                </div>
-                <p style="font-size:11px;color:#94a3b8;margin-top:8px;">Huom: ulkomaan päivärahaa ei lasketa automaattisesti tässä BETA-näkymässä — tarkista käsin jos matka suuntautui ulkomaille.</p>
-            `;
+            document.getElementById('state-finished-summary').innerHTML =
+                '<div style="text-align:center;padding:12px 0;"><div style="font-size:32px;">✅</div>'+
+                '<div style="font-weight:800;font-size:18px;">'+new Date(d.date+'T00:00:00').toLocaleDateString('fi-FI')+'</div>'+
+                '<div style="color:#64748b;font-size:13px;">'+s.hours.toFixed(1)+'h · '+((d.endKm||0)-(d.startKm||0))+' km</div></div>'+
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0;">'+
+                ['Oy','Tmi','Oma'].map(t =>
+                    '<div style="background:'+stateTypeColor(t)+'22;border:2px solid '+stateTypeColor(t)+';border-radius:10px;padding:12px;text-align:center;">'+
+                    '<div style="font-weight:800;color:'+stateTypeColor(t)+';font-size:15px;">'+t+'</div>'+
+                    '<div style="font-size:22px;font-weight:700;">'+s.totals[t]+'</div>'+
+                    '<div style="font-size:11px;color:#64748b;">km</div></div>'
+                ).join('')+'</div>'+
+                '<div style="background:#f1f5f9;border-radius:10px;padding:14px;font-size:14px;line-height:2;">'+
+                '<div>💰 PV-raha: <strong>'+s.pvraha+' €</strong></div>'+
+                '<div>🚙 Km-korvaus: <strong>'+s.kmKorvaus.toFixed(2)+' €</strong></div>'+
+                '<div style="font-weight:800;font-size:16px;border-top:1px solid #e2e8f0;padding-top:8px;">Yhteensä: '+s.yhteensa.toFixed(2)+' €</div></div>'+
+                (d.committed?'<div style="text-align:center;color:#16a34a;font-weight:700;padding:10px;">✅ Viety ajopäiväkirjaan</div>':'');
+            const commitBtn = document.querySelector('#state-finished-day button');
+            if (commitBtn) commitBtn.style.display = d.committed?'none':'';
         }
 
         function stateRenderHistory() {
             const el = document.getElementById('state-history-list');
             if (!el) return;
-            const finished = stateAllDays.filter(d => d.finished).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
-            if (finished.length === 0) {
-                el.innerHTML = '<p style="font-size:13px;color:#94a3b8;">Ei vielä kirjattuja päiviä.</p>';
-                return;
-            }
-            el.innerHTML = finished.slice(0, 20).map(d => {
+            const finished = stateAllDays.filter(d => d.finished)
+                .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+            if (!finished.length) { el.innerHTML='<p style="font-size:13px;color:#94a3b8;">Ei vielä kirjattuja päiviä.</p>'; return; }
+            el.innerHTML = finished.slice(0,10).map(d => {
                 const s = stateComputeSummary(d);
-                return `<div style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px;">
-                    <strong>${d.date}</strong> — Oy ${s.totals.Oy.toFixed(0)}km, Tmi ${s.totals.Tmi.toFixed(0)}km, Oma ${s.totals.Oma.toFixed(0)}km
-                    · ${s.hours.toFixed(1)}h · ${s.yhteensa.toFixed(2)}€
-                </div>`;
+                return '<div style="padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:13px;display:flex;justify-content:space-between;align-items:center;">'+
+                    '<div><strong>'+new Date(d.date+'T00:00:00').toLocaleDateString('fi-FI')+'</strong>'+
+                    '<span style="color:#64748b;margin-left:8px;">'+s.hours.toFixed(1)+'h · '+((d.endKm||0)-(d.startKm||0))+'km</span>'+
+                    (d.committed?' <span style="color:#16a34a;font-size:11px;">✅</span>':'')+'</div>'+
+                    '<div style="text-align:right;font-size:12px;color:#64748b;">Oy '+s.totals.Oy+'km · Tmi '+s.totals.Tmi+'km<br>'+
+                    '<strong style="color:#0a4272;">'+s.yhteensa.toFixed(0)+' €</strong></div></div>';
             }).join('');
         }
 
         function stateRender() {
             const active = stateGetActiveDay();
-            const noDayEl = document.getElementById('state-no-day');
-            const activeEl = document.getElementById('state-active-day');
-            const finishedEl = document.getElementById('state-finished-day');
-            if (!noDayEl) return; // sivua ei vielä renderöity DOMiin
+            const noDayEl=document.getElementById('state-no-day');
+            const activeEl=document.getElementById('state-active-day');
+            const finishedEl=document.getElementById('state-finished-day');
+            if (!noDayEl) return;
             if (active) {
-                stateLastFinishedId = null;
-                noDayEl.style.display = 'none'; activeEl.style.display = 'block'; finishedEl.style.display = 'none';
+                stateLastFinishedId=null;
+                noDayEl.style.display='none'; activeEl.style.display='block'; finishedEl.style.display='none';
                 stateRenderActiveCard(active);
             } else if (stateLastFinishedId) {
-                const d = stateAllDays.find(x => x.id === stateLastFinishedId);
-                if (d) {
-                    noDayEl.style.display = 'none'; activeEl.style.display = 'none'; finishedEl.style.display = 'block';
-                    stateRenderFinishedSummary(d);
-                } else {
-                    stateLastFinishedId = null;
-                    noDayEl.style.display = 'block'; activeEl.style.display = 'none'; finishedEl.style.display = 'none';
-                }
+                const d = stateAllDays.find(x => x.id===stateLastFinishedId);
+                if (d) { noDayEl.style.display='none'; activeEl.style.display='none'; finishedEl.style.display='block'; stateRenderFinishedSummary(d); }
+                else { stateLastFinishedId=null; noDayEl.style.display='block'; activeEl.style.display='none'; finishedEl.style.display='none'; }
             } else {
-                noDayEl.style.display = 'block'; activeEl.style.display = 'none'; finishedEl.style.display = 'none';
-                document.getElementById('state-start-km').value = '';
+                noDayEl.style.display='block'; activeEl.style.display='none'; finishedEl.style.display='none';
             }
             stateRenderHistory();
         }
 
-        // ============ WINDOW-ALTISTUS ============
+                // ============ WINDOW-ALTISTUS ============
         // type="module" ei altista funktioita automaattisesti globaaliin scopeen,
         // joten kaikki HTML:n onclick/onchange-attribuuteista kutsutut funktiot
         // täytyy nimenomaisesti liittää window-objektiin.
@@ -3177,7 +3301,7 @@ td.num { text-align: right; }
             renderStopPicker, updateReport,
             checkGap, gapAccept, gapSkip,
             showReport, printReport,
-            stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS,
+            stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS, stateCommitToTrips,
             openQuickEdit, saveQuickEdit, closeQuickEdit, qeOverlayClick, qeSetType
         });
     </script>
