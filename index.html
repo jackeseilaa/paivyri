@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.2-dev - Firestore</title>
+<title>Päivyri v8.1.3-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -238,7 +238,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.2-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.3-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -608,7 +608,7 @@ td.num { text-align: right; }
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         // Sama jaettu Firebase-projekti jota Tilaukset (jackeseilaa/tilaukset) jo käyttää.
@@ -849,18 +849,37 @@ td.num { text-align: right; }
 
         function initAuth() {
             let accessDeniedMsg = '';
+
+            // iOS (Safari ja Chrome iPhonessa/iPadissa) ei tue signInWithRedirect:iä luotettavasti,
+            // koska ITP estää kolmannen osapuolen evästeen säilymisen uudelleenohjauksen yli.
+            // Desktop Chromessa taas signInWithPopup kaatui storage-partitioning-virheeseen.
+            // Ratkaisu: iOS saa popupin, desktop saa redirectin.
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
             document.getElementById('btnGoogleLogin')?.addEventListener('click', async () => {
-                try {
-                    const provider = new GoogleAuthProvider();
-                    await signInWithRedirect(auth, provider);
-                } catch (e) {
-                    renderAuthScreen('Kirjautuminen epäonnistui: ' + e.message);
+                const provider = new GoogleAuthProvider();
+                if (isIOS) {
+                    // iOS: popup toimii hyvin ja pysyy saman välilehden sisällä Safari-moottorin vuoksi
+                    try {
+                        await signInWithPopup(auth, provider);
+                    } catch (e) {
+                        if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+                            // Popup estettiin — fallback redirectiin
+                            try { await signInWithRedirect(auth, provider); }
+                            catch (e2) { renderAuthScreen('Kirjautuminen epäonnistui: ' + e2.message); }
+                        } else {
+                            renderAuthScreen('Kirjautuminen epäonnistui: ' + e.message);
+                        }
+                    }
+                } else {
+                    // Desktop: redirect välttää Chromen storage-partitioning-ongelman
+                    try { await signInWithRedirect(auth, provider); }
+                    catch (e) { renderAuthScreen('Kirjautuminen epäonnistui: ' + e.message); }
                 }
             });
 
-            // Käsitellään mahdolliset virheet jotka tulivat takaisin Google-uudelleenohjauksesta
-            // (esim. auth/unauthorized-domain). Onnistunut kirjautuminen havaitaan joka tapauksessa
-            // alla olevalla onAuthStateChanged-kuuntelijalla.
+            // Redirect-paluun käsittely (desktop-virta ja iOS-fallback)
             getRedirectResult(auth).catch((e) => {
                 if (e && e.code && e.code !== 'auth/no-current-user') {
                     renderAuthScreen('Kirjautuminen epäonnistui: ' + e.message);
@@ -1748,7 +1767,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.2-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.3-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1758,7 +1777,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.2-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.3-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
