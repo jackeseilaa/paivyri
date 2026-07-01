@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.10-dev - Firestore</title>
+<title>Päivyri v8.1.11-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.10-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.11-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -983,50 +983,46 @@ td.num { text-align: right; }
         }
 
         function fixMay13Lux() {
-            const KEY = 'fix_v3_may13_lux';
+            const KEY = 'fix_v4_may13_lux';
             if (localStorage.getItem(KEY)) return;
             const tx = db.transaction(['trips'], 'readonly');
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 const all = e.target.result;
                 const may13 = all.filter(t => t.date === '2026-05-13');
 
-                // Oikea merkintä: 164km (520932→521096), note='CSV Tuonti'
-                const target = may13.find(t =>
-                    t.note && t.note.toLowerCase() === 'csv tuonti' && (t.ke - t.ks) > 0
-                );
-                // Duplikaatti: 0km, ei reittiä
+                // Oikea merkintä: 164km (520932→521096)
+                const target = may13.find(t => (t.ke - t.ks) > 0);
+                // Duplikaatti: 0km, ei reittiä, ei aikoja
                 const dupe = may13.find(t =>
                     (t.ke - t.ks) === 0 && (!t.note || t.note.trim() === '') && !t.start_time && !t.end_time
                 );
 
-                if (!target && !dupe) {
-                    localStorage.setItem(KEY, '1');
-                    return;
-                }
+                if (!target && !dupe) { localStorage.setItem(KEY, '1'); return; }
 
                 const tx2 = db.transaction(['trips'], 'readwrite');
                 const store = tx2.objectStore('trips');
 
                 if (target) {
-                    target.note = 'Lux-haastattelu Aaltonen (13:30)';
+                    target.note = 'Kontutek kartoitus / veneen katsastus / Lux-haastattelu';
+                    target.start_time = '06:15';
+                    target.end_time = '16:30';
+                    target.allowance = 'Kokopäivä';
                     target.stops = [
                         { client: 'Kontiontie 55, Riihimäki', address: '' },
-                        { client: 'Taksi Helsinki Oy, Lux-haastattelu Aaltonen (13:30), Ratamestarinkatu 7 B, Helsinki', address: '' },
-                        { client: 'Roihuvuoren Venekerho ry', address: '' },
-                        { client: 'Kontiontie 55', address: '' }
+                        { client: 'Kontutek Oy / Niemi kartoitus, Atomitie 5, Helsinki', address: '' },
+                        { client: 'Roihuvuoren Venekerho ry (veneen katsastus)', address: '' },
+                        { client: 'Lux-haastattelu Aaltonen, Ratamestarinkatu 7 A 2krs, Helsinki', address: '' },
+                        { client: 'Kontiontie 55, Riihimäki', address: '' }
                     ];
                     store.put(target);
                 }
-
-                if (dupe) {
-                    store.delete(dupe.id);
-                }
+                if (dupe) store.delete(dupe.id);
 
                 tx2.oncomplete = () => {
                     localStorage.setItem(KEY, '1');
                     const msg = [
-                        target ? '✅ 13.5 Lux-selite korjattu' : '',
-                        dupe   ? '🗑️ 13.5 tyhjä duplikaatti poistettu' : ''
+                        target ? '✅ 13.5 korjattu: ajat + reitti + kokopäiväraha' : '',
+                        dupe   ? '🗑️ duplikaatti poistettu' : ''
                     ].filter(Boolean).join(' | ');
                     showToast(msg);
                     loadDashboard();
@@ -1993,7 +1989,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.10-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.11-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -2003,7 +1999,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.10-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.11-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
