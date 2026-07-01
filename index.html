@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.14-dev - Firestore</title>
+<title>Päivyri v8.1.15-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.14-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.15-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -409,12 +409,23 @@ td.num { text-align: right; }
             <div class="form-row">
                 <div>
                     <label>🚙 LÄHTO (KM alku) *</label>
-                    <input type="number" id="f-ks" required>
+                    <input type="number" id="f-ks" required oninput="checkGap()">
                 </div>
                 <div>
                     <label>🏁 PALUU (KM loppu) *</label>
                     <input type="number" id="f-ke" required>
                 </div>
+            </div>
+
+            <!-- Gap-banneri: näkyy kun aloitusKM > edellinen lopetusKM -->
+            <div id="gap-banner" style="display:none; background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 14px; margin-bottom:12px;">
+                <div style="font-weight:600; color:#92400e; margin-bottom:8px;">⚠️ <span id="gap-km-text"></span> km kirjaamatta</div>
+                <div style="font-size:13px; color:#78350f; margin-bottom:10px;">Merkitäänkö automaattisesti Oma-ajoksi (<span id="gap-date-text"></span>)?</div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-sm btn-success" onclick="gapAccept()" id="gap-btn-yes" style="margin:0; flex:1;">✓ Kyllä, lisää Oma</button>
+                    <button class="btn btn-sm" onclick="gapSkip()" style="margin:0; flex:1; background:#e2e8f0; color:#334155;">✗ Ohita</button>
+                </div>
+                <div id="gap-accepted-msg" style="display:none; color:#16a34a; font-weight:600; margin-top:8px;">✅ Oma-merkintä lisätään tallennuksen yhteydessä</div>
             </div>
 
             <label>📝 SELITE / AJON TARKOITUS</label>
@@ -1245,6 +1256,56 @@ td.num { text-align: right; }
         }
 
         // ============ SYÖTE ============
+        // ===== GAP-LOGIIKKA (automaattinen Oma-merkintä) =====
+        let gapLastTrip = null;   // edellinen matka {ke, date}
+        let gapState = 'none';    // 'none' | 'pending' | 'accepted' | 'skipped'
+
+        function checkGap() {
+            if (currentEditingTripId) return; // ei gap-logiikkaa muokkaustilassa
+            if (!gapLastTrip) return;
+            const ks = parseInt(document.getElementById('f-ks').value);
+            if (isNaN(ks)) { hideGapBanner(); return; }
+            const gap = ks - gapLastTrip.ke;
+            if (gap <= 0) { hideGapBanner(); gapState = 'none'; return; }
+            // Näytetään banneri
+            document.getElementById('gap-km-text').textContent = gap;
+            document.getElementById('gap-date-text').textContent =
+                new Date(gapLastTrip.date + 'T00:00:00').toLocaleDateString('fi-FI');
+            document.getElementById('gap-banner').style.display = 'block';
+            if (gapState === 'none') gapState = 'pending';
+            // Päivitetään bannerin tila
+            const acceptedMsg = document.getElementById('gap-accepted-msg');
+            const yesBtn = document.getElementById('gap-btn-yes');
+            if (gapState === 'accepted') {
+                acceptedMsg.style.display = 'block';
+                yesBtn.style.display = 'none';
+            } else {
+                acceptedMsg.style.display = 'none';
+                yesBtn.style.display = '';
+            }
+        }
+
+        function hideGapBanner() {
+            document.getElementById('gap-banner').style.display = 'none';
+        }
+
+        function gapAccept() {
+            gapState = 'accepted';
+            document.getElementById('gap-accepted-msg').style.display = 'block';
+            document.getElementById('gap-btn-yes').style.display = 'none';
+        }
+
+        function gapSkip() {
+            gapState = 'skipped';
+            hideGapBanner();
+        }
+
+        function resetGap() {
+            gapLastTrip = null;
+            gapState = 'none';
+            hideGapBanner();
+        }
+
         function addNewTrip() {
             currentEditingTripId = null;
             currentStops = [];
@@ -1270,9 +1331,13 @@ td.num { text-align: right; }
                     const trips = e.target.result.sort((a, b) => new Date(b.date) - new Date(a.date));
                     if (trips.length > 0) {
                         document.getElementById('f-ks').value = trips[0].ke || '';
+                        gapLastTrip = { ke: trips[0].ke || 0, date: trips[0].date };
                     } else {
                         document.getElementById('f-ks').value = '';
+                        gapLastTrip = null;
                     }
+                    gapState = 'none';
+                    hideGapBanner();
                     document.getElementById('f-ke').value = '';
                     document.getElementById('f-ks').focus();
                 };
@@ -1341,6 +1406,7 @@ td.num { text-align: right; }
         function cancelEdit() {
             currentEditingTripId = null;
             currentStops = [];
+            resetGap();
             document.getElementById('trip-form').style.display = 'none';
             document.getElementById('stop-picker').style.display = 'none';
         }
@@ -1557,26 +1623,55 @@ td.num { text-align: right; }
                 stops: currentStops
             };
 
-            const tx = db.transaction(['trips'], 'readwrite');
-            if (currentEditingTripId) {
-                tx.objectStore('trips').put(trip);
-            } else {
-                tx.objectStore('trips').add(trip);
-            }
+            // Gap-logiikka: lisätään Oma-merkintä ennen varsinaista merkintää
+            const shouldAddGap = !isDraft && !currentEditingTripId &&
+                                 gapState === 'accepted' && gapLastTrip &&
+                                 ks > gapLastTrip.ke;
 
-            tx.oncomplete = () => {
-                if (isDraft) {
-                    showToast('💾 Luonnos tallennettu (15 sekuntia inaktiivisuudesta)');
+            const finalize = () => {
+                const tx = db.transaction(['trips'], 'readwrite');
+                if (currentEditingTripId) {
+                    tx.objectStore('trips').put(trip);
                 } else {
-                    showToast(currentEditingTripId ? '✅ Ajo päivitetty' : '✅ Ajo tallennettu');
-                    currentEditingTripId = null;
-                    currentStops = [];
-                    cancelEdit();
+                    tx.objectStore('trips').add(trip);
                 }
-                loadDashboard();
-                loadEntries();
-                populateMonths();
+                tx.oncomplete = () => {
+                    if (isDraft) {
+                        showToast('💾 Luonnos tallennettu (15 sekuntia inaktiivisuudesta)');
+                    } else {
+                        const gapMsg = shouldAddGap ? ` + Oma ${ks - gapLastTrip.ke} km` : '';
+                        showToast(currentEditingTripId ? '✅ Ajo päivitetty' : `✅ Ajo tallennettu${gapMsg}`);
+                        currentEditingTripId = null;
+                        currentStops = [];
+                        resetGap();
+                        cancelEdit();
+                    }
+                    loadDashboard();
+                    loadEntries();
+                    populateMonths();
+                };
             };
+
+            if (shouldAddGap) {
+                const gapTrip = {
+                    id: (Date.now() - 1).toString(),
+                    date: gapLastTrip.date,
+                    date_end: gapLastTrip.date,
+                    type: 'Oma',
+                    start_time: '',
+                    end_time: '',
+                    ks: gapLastTrip.ke,
+                    ke: ks,
+                    allowance: '-',
+                    note: 'Oma-ajot (automaattinen)',
+                    stops: []
+                };
+                const txGap = db.transaction(['trips'], 'readwrite');
+                txGap.objectStore('trips').add(gapTrip);
+                txGap.oncomplete = () => finalize();
+            } else {
+                finalize();
+            }
         }
 
         let entriesMissingOnly = false;
@@ -2081,7 +2176,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.14-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.15-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -2091,7 +2186,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.14-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.15-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -3080,7 +3175,7 @@ td.num { text-align: right; }
             saveTrip, searchTripByDate, searchYTJ, selectStopOption, showPage,
             toggleStopPicker, importBackup, importCSV, loadEntries,
             renderStopPicker, updateReport,
-            entriesToggleMissing, entriesToggleSort, entriesToggleHideOma,
+            checkGap, gapAccept, gapSkip,
             showReport, printReport,
             stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS,
             openQuickEdit, saveQuickEdit, closeQuickEdit, qeOverlayClick, qeSetType
