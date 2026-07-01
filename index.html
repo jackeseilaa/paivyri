@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.11-dev - Firestore</title>
+<title>Päivyri v8.1.12-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.11-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.12-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -816,6 +816,43 @@ td.num { text-align: right; }
             '-': 0
         };
 
+        // Laskee päivärahan: käyttää tallennettua allowance-arvoa jos asetettu,
+        // muuten laskee automaattisesti start_time/end_time perusteella.
+        // Oma-tyyppi ei koskaan saa päivärahaa.
+        function resolveAllowance(t) {
+            if (t.type === 'Oma') return 0;
+            if (t.allowance === 'Ulkomaan PV-raha') return 82;
+            if (t.allowance && t.allowance !== '-') return ALLOWANCES[t.allowance] || 0;
+            // Automaattinen laskenta tunneista
+            if (t.start_time && t.end_time) {
+                const [sh, sm] = t.start_time.split(':').map(Number);
+                const [eh, em] = t.end_time.split(':').map(Number);
+                let mins = (eh * 60 + em) - (sh * 60 + sm);
+                if (mins < 0) mins += 24 * 60; // yli puolenyön
+                const h = mins / 60;
+                if (h >= 10) return 54;
+                if (h >= 6)  return 25;
+            }
+            return 0;
+        }
+
+        // Palauttaa allowance-tyypin tekstinä automaattilaskentaa varten
+        function resolveAllowanceLabel(t) {
+            if (t.type === 'Oma') return '-';
+            if (t.allowance === 'Ulkomaan PV-raha') return 'Ulkomaan PV-raha';
+            if (t.allowance && t.allowance !== '-') return t.allowance;
+            if (t.start_time && t.end_time) {
+                const [sh, sm] = t.start_time.split(':').map(Number);
+                const [eh, em] = t.end_time.split(':').map(Number);
+                let mins = (eh * 60 + em) - (sh * 60 + sm);
+                if (mins < 0) mins += 24 * 60;
+                const h = mins / 60;
+                if (h >= 10) return 'Kokopäivä';
+                if (h >= 6)  return 'Osapäivä';
+            }
+            return '-';
+        }
+
         let db = null;
         let currentEditingTripId = null;
         let currentEditingClientId = null;
@@ -1136,7 +1173,7 @@ td.num { text-align: right; }
                     const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
                     totalKm += km;
                     const kmCost = km * KM_RATE;
-                    const allowanceCost = ALLOWANCES[t.allowance] || 0;
+                    const allowanceCost = resolveAllowance(t);
                     const total = kmCost + allowanceCost;
                     if (t.type === 'Tmi') tmiTotal += total;
                     else if (t.type === 'Oy') oyTotal += total;
@@ -1889,10 +1926,10 @@ td.num { text-align: right; }
                 const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
                 totalKm += km;
                 kmCost += km * KM_RATE;
-                const allowType = t.allowance;
+                const allowType = resolveAllowanceLabel(t);
                 if (allowCounts.hasOwnProperty(allowType)) {
                     allowCounts[allowType]++;
-                    allowanceCost += ALLOWANCES[allowType];
+                    allowanceCost += resolveAllowance(t);
                 }
             });
 
@@ -1939,7 +1976,7 @@ td.num { text-align: right; }
             trips.forEach(t => {
                 const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
                 const kmCostTrip = km * KM_RATE;
-                const allowCost = ALLOWANCES[t.allowance] || 0;
+                const allowCost = resolveAllowance(t);
                 const tripTotal = kmCostTrip + allowCost;
                 const stopText = formatStopText(t);
 
@@ -1989,7 +2026,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.11-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.12-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1999,7 +2036,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.11-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.12-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2081,7 +2118,7 @@ td.num { text-align: right; }
 
                     monthTrips.forEach(t => {
                         const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
-                        const allowCost = ALLOWANCES[t.allowance] || 0;
+                        const allowCost = resolveAllowance(t);
                         const kmCost = km * KM_RATE;
                         const total = allowCost + kmCost;
                         const weekday = FI_WEEKDAYS[new Date(t.date + 'T00:00:00').getDay()];
