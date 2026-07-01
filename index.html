@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.6-dev - Firestore</title>
+<title>Päivyri v8.1.7-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.6-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.7-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -466,6 +466,10 @@ td.num { text-align: right; }
             <button id="entries-sort-btn" class="btn btn-sm" onclick="entriesToggleSort()"
                 style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;font-weight:600;">
                 📅 Vanhin ensin
+            </button>
+            <button id="entries-hideoma-btn" class="btn btn-sm" onclick="entriesToggleHideOma()"
+                style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;font-weight:600;">
+                👤 Piilota Oma
             </button>
         </div>
         <div id="entries-list"></div>
@@ -1473,6 +1477,7 @@ td.num { text-align: right; }
 
         let entriesMissingOnly = false;
         let entriesSortAsc = false;
+        let entriesHideOma = false;
 
         function entriesToggleMissing() {
             entriesMissingOnly = !entriesMissingOnly;
@@ -1488,6 +1493,14 @@ td.num { text-align: right; }
             btn.textContent = entriesSortAsc ? '📅 Uusin ensin' : '📅 Vanhin ensin';
             btn.style.background = entriesSortAsc ? '#0a4272' : '#e2e8f0';
             btn.style.color = entriesSortAsc ? 'white' : '#334155';
+            loadEntries();
+        }
+
+        function entriesToggleHideOma() {
+            entriesHideOma = !entriesHideOma;
+            const btn = document.getElementById('entries-hideoma-btn');
+            btn.style.background = entriesHideOma ? '#475569' : '#e2e8f0';
+            btn.style.color = entriesHideOma ? 'white' : '#334155';
             loadEntries();
         }
 
@@ -1526,6 +1539,9 @@ td.num { text-align: right; }
                 }
                 if (entriesMissingOnly) {
                     trips = trips.filter(t => !t.start_time || !t.end_time);
+                }
+                if (entriesHideOma) {
+                    trips = trips.filter(t => t.type !== 'Oma');
                 }
 
                 // EI enää 30 merkinnän rajaa - kaikki suodatetut merkinnät näytetään ja ovat muokattavissa
@@ -1905,7 +1921,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.6-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.7-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1915,7 +1931,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.6-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.7-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2902,7 +2918,7 @@ td.num { text-align: right; }
             saveTrip, searchTripByDate, searchYTJ, selectStopOption, showPage,
             toggleStopPicker, importBackup, importCSV, loadEntries,
             renderStopPicker, updateReport,
-            entriesToggleMissing, entriesToggleSort,
+            entriesToggleMissing, entriesToggleSort, entriesToggleHideOma,
             stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS,
             openQuickEdit, saveQuickEdit, closeQuickEdit, qeOverlayClick, qeSetType
         });
