@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.12-dev - Firestore</title>
+<title>Päivyri v8.1.13-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.12-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.13-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -302,7 +302,7 @@ td.num { text-align: right; }
         <button class="tab active" onclick="showPage('dashboard')">📊 Kojelauta</button>
         <button class="tab" onclick="showPage('input')">✏️ Syöte</button>
         <button class="tab" onclick="showPage('crm')">👥 CRM</button>
-        <button class="tab" onclick="showPage('report')">📋 Raportti</button>
+        <button class="tab" onclick="showPage('report'); showReport()">📋 Raportti</button>
         <button class="tab" onclick="showPage('backup')">💾 Varmuuskopio</button>
         <button class="tab" onclick="showPage('statepage'); stateEnsureInit();" style="background:#7c3aed;color:#fff;">🔄 Tila (BETA)</button>
     </div>
@@ -551,7 +551,7 @@ td.num { text-align: right; }
                     </select>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="window.print()" style="width: 100%;">🖨️ TULOSTA PDF</button>
+            <button class="btn btn-primary" onclick="printReport()" style="width: 100%;">🖨️ TULOSTA PDF</button>
         </div>
         <div id="report-content"></div>
     </div>
@@ -1878,6 +1878,61 @@ td.num { text-align: right; }
             };
         }
 
+        // Avataan raportti-välilehti: täytetään valikko ja valitaan automaattisesti viimeisin kuukausi
+        function showReport() {
+            populateMonths();
+            setTimeout(() => {
+                const sel = document.getElementById('rep-month');
+                if (sel && (!sel.value || sel.value === '') && sel.options.length > 1) {
+                    // Valitaan ensimmäinen kuukausi-vaihtoehto (ei koko vuosi -optio)
+                    const firstMonth = Array.from(sel.options).find(o => o.value && !o.value.startsWith('year:'));
+                    if (firstMonth) {
+                        sel.value = firstMonth.value;
+                        updateReport();
+                    }
+                }
+            }, 200);
+        }
+
+        // Tulostus iOS- ja desktop-yhteensopivasti
+        function printReport() {
+            const content = document.getElementById('report-content');
+            if (!content || !content.innerHTML.trim()) {
+                const sel = document.getElementById('rep-month');
+                if (!sel || !sel.value) {
+                    showToast('⚠️ Valitse ensin kuukausi');
+                } else {
+                    showToast('⚠️ Ei tulostettavaa – odota että raportti latautuu');
+                }
+                return;
+            }
+            // iOS Safari: window.print() ei toimi → avataan tulostettava sisältö uudessa ikkunassa
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            if (isIOS) {
+                const win = window.open('', '_blank');
+                if (!win) { showToast('⚠️ Salli ponnahdusikkunat selaimen asetuksista'); return; }
+                win.document.write(`<!DOCTYPE html><html><head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width">
+                    <title>Päivyri – Raportti</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                        th, td { border: 1px solid #ccc; padding: 4px 6px; }
+                        th { background: #f0f0f0; }
+                        h2, h3 { margin: 12px 0 6px 0; }
+                        .summary { margin-top: 16px; }
+                    </style>
+                </head><body>${content.innerHTML}</body></html>`);
+                win.document.close();
+                win.focus();
+                setTimeout(() => { win.print(); }, 400);
+            } else {
+                window.print();
+            }
+        }
+
         function updateReport() {
             const sel = document.getElementById('rep-month').value;
             if (!sel) {
@@ -2026,7 +2081,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.12-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.13-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -2036,7 +2091,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.12-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.13-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -3026,6 +3081,7 @@ td.num { text-align: right; }
             toggleStopPicker, importBackup, importCSV, loadEntries,
             renderStopPicker, updateReport,
             entriesToggleMissing, entriesToggleSort, entriesToggleHideOma,
+            showReport, printReport,
             stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS,
             openQuickEdit, saveQuickEdit, closeQuickEdit, qeOverlayClick, qeSetType
         });
