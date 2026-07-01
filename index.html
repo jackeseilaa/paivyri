@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Päivyri v8.1.5-dev - Firestore</title>
+<title>Päivyri v8.1.6-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -294,7 +294,7 @@ td.num { text-align: right; }
 </div>
 <div id="app-root" style="display:none;">
     <div class="header">
-        <h1>📓 Päivyri v8.1.5-dev - Firestore-synkronointi</h1>
+        <h1>📓 Päivyri v8.1.6-dev - Firestore-synkronointi</h1>
         <p>✓ Reitit osoitteilla | ✓ GPS reverse geocoding | ✓ Auto-save draft | ✓ KM autofill | ✓ Aloitusaika | ✓ CSV-tuonti | ✓ Pilvisynkronointi</p>
     </div>
 
@@ -457,6 +457,16 @@ td.num { text-align: right; }
                 <label>Hae (selite/pysähdys)</label>
                 <input type="text" id="entries-search" placeholder="esim. RMK, OP Kipparit..." oninput="loadEntries()" style="margin-bottom: 0;">
             </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+            <button id="entries-missing-btn" class="btn btn-sm" onclick="entriesToggleMissing()"
+                style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;font-weight:600;">
+                ⚠️ Vain puuttuvat ajat
+            </button>
+            <button id="entries-sort-btn" class="btn btn-sm" onclick="entriesToggleSort()"
+                style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;font-weight:600;">
+                📅 Vanhin ensin
+            </button>
         </div>
         <div id="entries-list"></div>
     </div>
@@ -1461,11 +1471,35 @@ td.num { text-align: right; }
             };
         }
 
+        let entriesMissingOnly = false;
+        let entriesSortAsc = false;
+
+        function entriesToggleMissing() {
+            entriesMissingOnly = !entriesMissingOnly;
+            const btn = document.getElementById('entries-missing-btn');
+            btn.style.background = entriesMissingOnly ? '#f59e0b' : '#fef3c7';
+            btn.style.color = entriesMissingOnly ? 'white' : '#92400e';
+            loadEntries();
+        }
+
+        function entriesToggleSort() {
+            entriesSortAsc = !entriesSortAsc;
+            const btn = document.getElementById('entries-sort-btn');
+            btn.textContent = entriesSortAsc ? '📅 Uusin ensin' : '📅 Vanhin ensin';
+            btn.style.background = entriesSortAsc ? '#0a4272' : '#e2e8f0';
+            btn.style.color = entriesSortAsc ? 'white' : '#334155';
+            loadEntries();
+        }
+
         function loadEntries() {
             if (!db) return;
             const tx = db.transaction(['trips'], 'readonly');
             tx.objectStore('trips').getAll().onsuccess = (e) => {
-                let trips = e.target.result.sort((a, b) => new Date(b.date) - new Date(a.date));
+                let trips = e.target.result.sort((a, b) =>
+                    entriesSortAsc
+                        ? new Date(a.date) - new Date(b.date)
+                        : new Date(b.date) - new Date(a.date)
+                );
 
                 // Täytä kuukausivalikko (vain jos vielä tyhjä, ettei nykyinen valinta katoa)
                 const monthSelect = document.getElementById('entries-month-filter');
@@ -1490,29 +1524,35 @@ td.num { text-align: right; }
                         return hay.includes(searchTerm);
                     });
                 }
+                if (entriesMissingOnly) {
+                    trips = trips.filter(t => !t.start_time || !t.end_time);
+                }
 
                 // EI enää 30 merkinnän rajaa - kaikki suodatetut merkinnät näytetään ja ovat muokattavissa
                 const html = trips.map(t => {
                     const km = Math.max(0, (t.ke || 0) - (t.ks || 0));
                     const stopText = formatStopText(t);
                     const typeClass = t.type === 'Tmi' ? 'tmi' : (t.type === 'Oy' ? 'oy' : '');
+                    const missingTime = !t.start_time || !t.end_time;
 
                     const dateDisplay = t.date_end && t.date_end !== t.date
                         ? `${new Date(t.date).toLocaleDateString('fi-FI')} - ${new Date(t.date_end).toLocaleDateString('fi-FI')}`
                         : new Date(t.date).toLocaleDateString('fi-FI');
 
                     const noteHtml = t.note ? `<div style="font-style: italic;">📝 ${t.note}</div>` : '';
+                    const timeDisplay = `${t.start_time || '⚠️--:--'} - ${t.end_time || '⚠️--:--'}`;
 
-                    return `<div class="trip-item ${typeClass}" style="padding: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div style="flex: 1;">
-                                <div style="font-weight: 500;">${dateDisplay} | ${t.type}</div>
+                    return `<div class="trip-item ${typeClass}${missingTime ? ' missing-time' : ''}" style="padding: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap:8px;">
+                            <div style="flex: 1; min-width:0;">
+                                <div style="font-weight: 600;">${dateDisplay} <span style="font-weight:400;color:var(--text-light);">| ${t.type}</span>${missingTime ? ' <span class="missing-time-badge">⚠️ aika</span>' : ''}</div>
                                 ${noteHtml}
-                                <div style="font-size: 11px; color: var(--text-light);">${stopText} | ${t.ks}-${t.ke} (${km}km) | ${t.allowance}</div>
+                                <div style="font-size: 12px; color: var(--text-light);">🕐 ${timeDisplay} &nbsp;|&nbsp; ${stopText}</div>
+                                <div style="font-size: 12px; color: var(--text-light);">🚙 ${t.ks}→${t.ke} (${km}km) | ${t.allowance}</div>
                             </div>
-                            <div style="display: flex; gap: 6px;">
-                                <button class="btn btn-sm btn-warning" onclick="editTrip('${t.id}')" style="margin: 0;">✏️</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteTrip('${t.id}')" style="margin: 0;">🗑️</button>
+                            <div style="display: flex; gap: 6px; flex-shrink:0;">
+                                <button class="btn btn-sm btn-warning" onclick="openQuickEdit('${t.id}')" style="margin:0;" title="Pikamuokkaa">⚡</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTrip('${t.id}')" style="margin: 0;" title="Poista">🗑️</button>
                             </div>
                         </div>
                     </div>`;
@@ -1865,7 +1905,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.5-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.6-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -1875,7 +1915,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.5-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.6-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -2862,6 +2902,7 @@ td.num { text-align: right; }
             saveTrip, searchTripByDate, searchYTJ, selectStopOption, showPage,
             toggleStopPicker, importBackup, importCSV, loadEntries,
             renderStopPicker, updateReport,
+            entriesToggleMissing, entriesToggleSort,
             stateEnsureInit, stateStartDay, stateChangeStatus, stateFinishDay, stateResetForNewDay, stateGetGPS,
             openQuickEdit, saveQuickEdit, closeQuickEdit, qeOverlayClick, qeSetType
         });
