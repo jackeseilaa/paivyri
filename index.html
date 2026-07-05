@@ -8,7 +8,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Päivyri v8.1.19-dev - Firestore</title>
+<title>Päivyri v8.1.20-dev - Firestore</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -299,7 +299,7 @@ td.num { text-align: right; }
 <div id="app-root" style="display:none;">
     <div class="header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;">
         <div>
-            <h1>📓 Päivyri v8.1.19-dev</h1>
+            <h1>📓 Päivyri v8.1.20-dev</h1>
             <p>Firestore-synkronointi | KM autofill | GPS | CSV-tuonti</p>
         </div>
         <button onclick="location.reload(true)"
@@ -833,7 +833,7 @@ td.num { text-align: right; }
         };
         const ALLOWED_EMAIL = "jacke.seilaa@gmail.com";
         // Omat kokoelmat - eivät törmää Tilauksen sailings/customers-kokoelmiin.
-        const COLLECTIONS = { trips: 'paivyri_trips', clients: 'paivyri_clients', stateDays: 'paivyri_dev_state_days' };
+        const COLLECTIONS = { trips: 'paivyri_trips', clients: 'paivyri_clients', stateDays: 'paivyri_dev_state_days', settings: 'paivyri_settings' };
 
         const fbApp = initializeApp(FIREBASE_CONFIG);
         const auth = getAuth(fbApp);
@@ -843,28 +843,24 @@ td.num { text-align: right; }
         const KM_RATE = 0.55; // 2026
 
         // ============ YRITYS-/AJONEUVOASETUKSET (kirjanpitokelpoinen raportti) ============
-        // Tallennetaan selaimen localStorageen (ei IndexedDB:hen, koska kyse on
-        // muuttumattomista perustiedoista eikä ajodatasta).
+        // Synkronoidaan Firestoreen (COLLECTIONS.settings/'company'), jotta samat tiedot
+        // näkyvät reaaliaikaisesti kaikilla laitteilla - ei enää pelkkä paikallinen localStorage.
+        const COMPANY_SETTINGS_DEFAULTS = {
+            vehicleReg: 'ENJ-257',
+            driverName: 'Jarmo Aaltonen',
+            tmiName: 'J Sailing Tmi',
+            tmiYtunnus: '1728993-9',
+            tmiAddress: 'Kontiontie 55, 11120 Riihimäki',
+            oyName: 'AJarmo Oy',
+            oyYtunnus: '',
+            oyAddress: ''
+        };
+
         function getCompanySettings() {
-            const defaults = {
-                vehicleReg: 'ENJ-257',
-                driverName: 'Jarmo Aaltonen',
-                tmiName: 'J Sailing Tmi',
-                tmiYtunnus: '1728993-9',
-                tmiAddress: 'Kontiontie 55, 11120 Riihimäki',
-                oyName: 'AJarmo Oy',
-                oyYtunnus: '',
-                oyAddress: ''
-            };
-            try {
-                const saved = JSON.parse(localStorage.getItem('paivyri_company_settings') || '{}');
-                return Object.assign({}, defaults, saved);
-            } catch (e) {
-                return defaults;
-            }
+            return Object.assign({}, COMPANY_SETTINGS_DEFAULTS, cache.settings || {});
         }
 
-        function saveCompanySettings() {
+        async function saveCompanySettings() {
             const s = {
                 vehicleReg: document.getElementById('set-vehicle').value.trim(),
                 driverName: document.getElementById('set-driver').value.trim(),
@@ -875,8 +871,12 @@ td.num { text-align: right; }
                 oyYtunnus: document.getElementById('set-oy-ytunnus').value.trim(),
                 oyAddress: document.getElementById('set-oy-address').value.trim()
             };
-            localStorage.setItem('paivyri_company_settings', JSON.stringify(s));
-            showToast('✅ Yritystiedot tallennettu');
+            try {
+                await setDoc(doc(fs, COLLECTIONS.settings, 'company'), s);
+                showToast('✅ Yritystiedot tallennettu (synkronoitu kaikille laitteille)');
+            } catch (e) {
+                showToast('❌ Tallennus epäonnistui: ' + e.message);
+            }
         }
 
         function loadCompanySettingsForm() {
@@ -943,8 +943,8 @@ td.num { text-align: right; }
         let autoSaveTimeout = null;
 
         // ============ FIRESTORE-VÄLIMUISTI (reaaliaikainen, onSnapshot pitää ajan tasalla) ============
-        const cache = { trips: [], clients: [] };
-        const cacheReady = { trips: false, clients: false };
+        const cache = { trips: [], clients: [], settings: null };
+        const cacheReady = { trips: false, clients: false, settings: false };
         let unsubscribers = [];
         let rerenderTimer = null;
 
@@ -965,6 +965,7 @@ td.num { text-align: right; }
             unsubscribers = [];
             cacheReady.trips = false;
             cacheReady.clients = false;
+            cacheReady.settings = false;
             unsubscribers.push(onSnapshot(collection(fs, COLLECTIONS.trips), snap => {
                 cache.trips = snap.docs.map(d => d.data());
                 cacheReady.trips = true;
@@ -975,6 +976,24 @@ td.num { text-align: right; }
                 cacheReady.clients = true;
                 scheduleRerender();
             }, err => console.error('clients onSnapshot', err)));
+            unsubscribers.push(onSnapshot(doc(fs, COLLECTIONS.settings, 'company'), async snap => {
+                if (snap.exists()) {
+                    cache.settings = snap.data();
+                } else if (!cacheReady.settings) {
+                    // Ensimmäinen käynnistys tällä tilillä: siirretään mahdolliset vanhat
+                    // localStorage-asetukset Firestoreen kertaluontoisesti (ei enää käytössä sen jälkeen).
+                    try {
+                        const legacy = JSON.parse(localStorage.getItem('paivyri_company_settings') || 'null');
+                        if (legacy) {
+                            await setDoc(doc(fs, COLLECTIONS.settings, 'company'), legacy);
+                            return; // seuraava onSnapshot-kutsu päivittää cache.settings-arvon
+                        }
+                    } catch (e) { console.error('settings migration', e); }
+                    cache.settings = null;
+                }
+                cacheReady.settings = true;
+                loadCompanySettingsForm();
+            }, err => console.error('settings onSnapshot', err)));
         }
 
         // ---- IndexedDB-yhteensopiva rajapinta: db.transaction([...], mode).objectStore(name).getAll/get/put/add/delete/clear ----
@@ -1084,7 +1103,7 @@ td.num { text-align: right; }
 
         function waitForFirstLoad() {
             const check = setInterval(() => {
-                if (cacheReady.trips && cacheReady.clients) {
+                if (cacheReady.trips && cacheReady.clients && cacheReady.settings) {
                     clearInterval(check);
                     showApp();
                     loadDashboard();
@@ -1256,7 +1275,7 @@ td.num { text-align: right; }
 
             // Nykyinen km-lukema: viimeisimmän (uusimman) ajon loppulukema - tarvitaan
             // joka kerta kun uutta ajoa aloitetaan, joten tämä on hyödyllisin yksittäinen luku.
-            const sorted = [...trips].sort((a, b) => new Date(b.date_end || b.date) - new Date(a.date_end || a.date));
+            const sorted = [...trips].sort((a, b) => (new Date(b.date_end || b.date) - new Date(a.date_end || a.date)) || ((b.ke || 0) - (a.ke || 0)));
             const latest = sorted[0];
             document.getElementById('current-odometer').textContent = latest ? Number(latest.ke).toLocaleString('fi-FI') + ' km' : '–';
             document.getElementById('current-odometer-date').textContent = latest ? new Date(latest.date_end || latest.date).toLocaleDateString('fi-FI') : 'Ei merkintöjä vielä';
@@ -1413,7 +1432,7 @@ td.num { text-align: right; }
             if (db) {
                 const tx = db.transaction(['trips'], 'readonly');
                 tx.objectStore('trips').getAll().onsuccess = (e) => {
-                    const trips = e.target.result.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    const trips = e.target.result.sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((b.ke || 0) - (a.ke || 0)));
                     if (trips.length > 0) {
                         document.getElementById('f-ks').value = trips[0].ke || '';
                         gapLastTrip = { ke: trips[0].ke || 0, date: trips[0].date };
@@ -2261,7 +2280,7 @@ td.num { text-align: right; }
         function exportJSON() {
             if (!db) return;
             const tx = db.transaction(['trips', 'clients'], 'readonly');
-            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.19-dev' };
+            const data = { trips: [], clients: [], _backup_date: new Date().toISOString(), version: 'v8.1.20-dev' };
 
             tx.objectStore('trips').getAll().onsuccess = (e) => {
                 data.trips = e.target.result;
@@ -2271,7 +2290,7 @@ td.num { text-align: right; }
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Paivyri_v8.1.19-dev_${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `Paivyri_v8.1.20-dev_${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     showToast('✅ JSON viety');
                 };
@@ -3065,7 +3084,7 @@ td.num { text-align: right; }
             if (db) {
                 const tx = db.transaction(['trips'],'readonly');
                 tx.objectStore('trips').getAll().onsuccess = e => {
-                    const trips = e.target.result.sort((a,b) => new Date(b.date)-new Date(a.date));
+                    const trips = e.target.result.sort((a,b) => (new Date(b.date)-new Date(a.date)) || ((b.ke||0)-(a.ke||0)));
                     const kmEl = document.getElementById('state-start-km');
                     const hint = document.getElementById('state-last-km-hint');
                     if (trips.length > 0 && kmEl && !kmEl.value) {
