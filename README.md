@@ -9,7 +9,7 @@ Jarmo Aaltosen päivittäinen ajopäiväkirja / kirjaustyökalu. Nykyinen versio
 - Tietovarasto: Firestore (real-time, synkronoituu kaikkien laitteiden kesken).
   IndexedDB-yhteensopiva shim-kerros pitää vanhan sovelluslogiikan ennallaan.
 
-⚠️ **Viimeisin deploy epäonnistui**: GitHub Pagesin build commitille `7d3cb60f` (v8.1.20-dev, 2026-07-05) päättyi `failure`-tilaan. ✅ **Tarkistettu 23.7.2026**: live-sivu palvelee tällä hetkellä versiota **v8.1.19-dev**, ei repon HEAD:iä. HEAD:in muutos (yritysasetusten Firestore-synkka kaikille laitteille) ei siis ole vielä oikeasti julkaistuna — kannattaa yrittää uudelleenjulkaisua (esim. tyhjä commit tai Settings → Pages).
+**Deploy oli jumissa v8.1.19-dev:ssä** (GitHub Pagesin build commitille `7d3cb60f`/v8.1.20-dev päättyi `failure`-tilaan 2026-07-05). ✅ **Korjattu 23.7.2026**: uudelleenjulkaisu ajettu, live-sivu vastaa nyt varmennetusti HEAD:iä (v8.1.20-dev, yritysasetusten Firestore-synkka kaikille laitteille).
 
 ✅ **Firestore-suojaus tarkistettu 23.7.2026**: tunnistautumaton REST-pyyntö kaikkiin neljään kokoelmaan (`paivyri_trips`, `paivyri_clients`, `paivyri_settings/company`, `paivyri_dev_state_days`) palautti `403 PERMISSION_DENIED` — konsoliin julkaistut säännöt vastaavat käytännössä alla olevaa `firestore.rules`-tiedostoa (yksi sallittu sähköposti per kokoelma, muu oletuksena estetty).
 
